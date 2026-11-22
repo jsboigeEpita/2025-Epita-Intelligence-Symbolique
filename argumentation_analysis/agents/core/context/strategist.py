@@ -237,24 +237,59 @@ def _words_share_family(word: str, other: str) -> bool:
     return shared >= _NAMING_FAMILY_PREFIX
 
 
+#: #3556 (c16) — a leading article in the REPLY's name is the reply's own
+#: grammar, not the document's: the recorded c16 shape is a player whose
+#: name field carries « Les … » while the text names the player once,
+#: without any determiner. ONE article from this closed set is stripped,
+#: and only when the whole name is absent — the plain check keeps priority
+#: wherever the text carries the full string. A bare preposition is not an
+#: article, so a family name must survive the rule untouched.
+_LEADING_ARTICLE = re.compile(
+    r"^(?:(?:les|la|le|une|un|des|du|the|an|a)\s+|l['’])",
+    re.IGNORECASE,
+)
+
+
+def _name_without_leading_article(name: str) -> Optional[str]:
+    """#3556 (c16) — the name minus ONE leading article, when that leaves a
+    name. ``None`` when there is nothing to strip (no article in the set,
+    nothing left after it, no letter in what remains, or the name already
+    articleless): the caller keeps its whole-name behaviour unchanged."""
+    cleaned = str(name or "").strip()
+    if not cleaned:
+        return None
+    stripped = _LEADING_ARTICLE.sub("", cleaned, count=1).strip()
+    if not stripped or stripped == cleaned:
+        return None
+    if not re.search(r"[^\W\d_]", stripped, re.UNICODE):
+        return None
+    return stripped
+
+
 def _name_offset_in_text(name: str, raw_text: str) -> Optional[int]:
-    """#3556 (c14) — where the text names ``name``, compounds included.
+    """#3556 (c14, c16) — where the text names ``name``, compounds and a
+    leading article included.
 
     The plain check runs FIRST: a name the text carries whole keeps the
-    plain check's offset, wherever its first conjunct occurs alone. Only
-    when the whole string is absent does a compound rule apply — a name
-    built on a conjunction (`` et `` / `` and ``) names the player when
-    EVERY conjunct occurs contiguously AND inside ONE sentence: the
-    text's own conjunction of the two parties, not a word-bag of parts
-    scattered through the document. A sentence must carry every conjunct
-    after the first, around an occurrence of the first — each occurrence
-    of the first conjunct is tried. One missing or reworded conjunct
-    leaves the player unnamed, exactly as the plain check would. Returns
-    the first conjunct's offset in that sentence.
+    plain check's offset, wherever its first conjunct occurs alone. When
+    the whole string is absent, ONE leading article of the reply's name is
+    tried without it (#3556, c16) — still a whole-word check on the name,
+    one determiner shorter, never a word-bag of parts. Only then does a
+    compound rule apply — a name built on a conjunction (`` et `` /
+    `` and ``) names the player when EVERY conjunct occurs contiguously
+    AND inside ONE sentence: the text's own conjunction of the two
+    parties, not a word-bag of parts scattered through the document. A
+    sentence must carry every conjunct after the first, around an
+    occurrence of the first — each occurrence of the first conjunct is
+    tried. One missing or reworded conjunct leaves the player unnamed,
+    exactly as the plain check would. Returns the first conjunct's offset
+    in that sentence.
 
     Declared: a compound named this way keeps ``named_offset`` only —
     ``_naming_sentence`` compiles the whole name, so no naming sentence is
-    recorded for a conjunct-by-conjunct match (#3556, c13/c14).
+    recorded for a conjunct-by-conjunct match (#3556, c13/c14). An
+    articleless match DOES get its naming sentence, on the same
+    articleless form.
     """
     cleaned = str(name or "").strip()
     if not cleaned or not raw_text:
@@ -262,6 +297,11 @@ def _name_offset_in_text(name: str, raw_text: str) -> Optional[int]:
     whole = _name_in_text(cleaned, raw_text)
     if whole is not None:
         return whole
+    articleless = _name_without_leading_article(cleaned)
+    if articleless is not None:
+        found = _name_in_text(articleless, raw_text)
+        if found is not None:
+            return found
     lowered = cleaned.casefold()
     for separator in _NAME_CONJUNCTIONS:
         parts = [part.strip() for part in lowered.split(separator)]
@@ -292,8 +332,11 @@ def _naming_sentence(
     distinctive-word rule, read against EVERY sentence that carries the
     name — a recorded shape keeps its role vocabulary at a later
     occurrence — family forms included, so a text noun rides the reply's
-    matching adjective. Returns ``(lo, hi, sentence)`` computed from the
-    text, never relayed from the reply, or ``None``.
+    matching adjective. The whole name's sentences are read first; when
+    the text never carries the whole name, the articleless form's are read
+    (#3556, c16 — the reply's article is not the document's). Returns
+    ``(lo, hi, sentence)`` computed from the text, never relayed from the
+    reply, or ``None``.
     """
     name = str(player.get("name") or "").strip()
     if not name or not raw_text:
@@ -303,14 +346,22 @@ def _naming_sentence(
     )
     if not vocabulary:
         return None
-    pattern = re.compile(r"(?<!\w)" + re.escape(name) + r"(?!\w)", re.IGNORECASE)
-    for match in pattern.finditer(raw_text):
-        lo, hi = _sentence_span(raw_text, match.start(), match.end())
-        sentence_words = _distinctive_words(raw_text[lo:hi])
-        for word in vocabulary:
-            for sentence_word in sentence_words:
-                if word == sentence_word or _words_share_family(word, sentence_word):
-                    return lo, hi, raw_text[lo:hi].strip()
+    patterns = [re.compile(r"(?<!\w)" + re.escape(name) + r"(?!\w)", re.IGNORECASE)]
+    articleless = _name_without_leading_article(name)
+    if articleless is not None:
+        patterns.append(
+            re.compile(r"(?<!\w)" + re.escape(articleless) + r"(?!\w)", re.IGNORECASE)
+        )
+    for pattern in patterns:
+        for match in pattern.finditer(raw_text):
+            lo, hi = _sentence_span(raw_text, match.start(), match.end())
+            sentence_words = _distinctive_words(raw_text[lo:hi])
+            for word in vocabulary:
+                for sentence_word in sentence_words:
+                    if word == sentence_word or _words_share_family(
+                        word, sentence_word
+                    ):
+                        return lo, hi, raw_text[lo:hi].strip()
     return None
 
 

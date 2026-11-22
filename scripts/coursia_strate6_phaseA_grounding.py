@@ -9,9 +9,10 @@ For each real corpus (corpusA / corpusB / corpusC, decrypted in-memory via
    pipeline). Writes a deterministic ``tpm.json`` per corpus, containing
    ``states`` + ``transition_counts`` + ergodicity verdict (TPM-2 #1491).
 2. **Reads** the produced JSON.
-3. **Adds the spectral-gap leg** (R664 — ``np.linalg.eigvals`` on the
-   row-stochastic matrix, used as a *refinement* of the reducible /
-   non-mixing verdict when the chain is irreducible-ap-periodic).
+3. **Adds the spectral-gap and entropy-production legs** (R664 / R1107 —
+   ``np.linalg.eigvals`` and the stationary entropy production on the
+   row-stochastic matrix; the gap is a mixing rate only when the chain is
+   irreducible).
 4. **Emits** the S6-A1 verdict (``verdict.json`` + ``verdict.md``) under
    ``evaluation/results/strate6_phaseA/corpusX/`` (gitignored).
 
@@ -43,6 +44,7 @@ from __future__ import annotations
 import argparse
 import json
 import logging
+import math
 import os
 import shutil
 import subprocess
@@ -83,8 +85,8 @@ CANDIDATES_FOR_SEED = [
         "delivered_in": "this driver (S6-A1, PR pending)",
         "scope": "Stochastic transition matrix over *belief states* extracted "
         "from real corpus propositions via the democratech pipeline. "
-        "Verdict: ergodic / reducible / aperiodic + spectral gap "
-        "refinement (R664).",
+        "Verdict: structured ergodicity + spectral gap (R664) + entropy "
+        "production (R1107).",
         "engine": "scripts.extract_belief_trajectories + this driver",
         "data_substrate": "real corpus (corpusA / corpusB / corpusC) "
         "decrypted in-memory via _tpm_corpus_loader",
@@ -209,6 +211,152 @@ def spectral_gap(stochastic_matrix: List[List[float]]) -> SpectralResult:
         eigenvalues_abs=abs_sorted,
         spectral_gap=float(gap),
         second_largest_abs=float(lambda2),
+        analysis_skipped=False,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Entropy production (#1506 R1107 — the third discrimination quantity)
+# ---------------------------------------------------------------------------
+
+
+def ergodicity_from_matrix(stochastic_matrix: List[List[float]]) -> Dict[str, Any]:
+    """Derive structural ergodicity without scraping the rendered report.
+
+    The inner extractor owns the graph analysis.  This adapter rebuilds its
+    already-delivered ``TPM`` from the transition probabilities, preserving
+    their support and the self-loop evidence used by its aperiodicity
+    heuristic.  A periodic chain may still have a unique stationary
+    distribution; ``ergodic`` deliberately keeps the extractor's stricter
+    irreducible-and-aperiodic meaning.
+    """
+    from scripts.extract_belief_trajectories import TPM, _analyze_ergodicity
+
+    counts = [[int(value > 0.0) for value in row] for row in stochastic_matrix]
+    tpm = TPM(
+        states=[f"state_{i}" for i in range(len(stochastic_matrix))],
+        transition_counts=counts,
+        n_transitions=sum(sum(row) for row in counts),
+        n_trajectories=1,
+        n_observations_total=sum(sum(row) for row in counts) + 1,
+    )
+    result = _analyze_ergodicity(tpm)
+    return asdict(result)
+
+
+@dataclass
+class EntropyProductionResult:
+    """Entropy-production rate of a stationary finite Markov chain."""
+
+    n: int
+    sigma: Optional[float]
+    stationary: Optional[List[float]]
+    irreducible: bool
+    one_way_pairs: int
+    analysis_skipped: bool
+    skip_reason: Optional[str] = None
+
+
+def entropy_production(stochastic_matrix: List[List[float]]) -> EntropyProductionResult:
+    """Compute ``sigma = sum(pi_i * P_ij * ln(P_ij / P_ji))``.
+
+    ``pi`` is a stationary distribution.  The computation requires it to be
+    unique: that also covers a reducible chain with one recurrent class and
+    transient states.  Aperiodicity is not required (the four-state periodic
+    reference ring still has the uniform stationary distribution).
+    Forward-only pairs contribute ``+inf`` and are counted explicitly.  With
+    several recurrent classes no occupancy surrogate is substituted for the
+    missing unique stationary reference.
+    """
+    n = len(stochastic_matrix)
+    empty = EntropyProductionResult(
+        n=n,
+        sigma=None,
+        stationary=None,
+        irreducible=False,
+        one_way_pairs=0,
+        analysis_skipped=True,
+    )
+    if n < 2:
+        empty.skip_reason = f"degenerate matrix (n={n} < 2)"
+        return empty
+    try:
+        import numpy as np
+    except ImportError as exc:  # pragma: no cover — numpy is a soft dep
+        empty.skip_reason = f"numpy unavailable: {exc}"
+        return empty
+
+    P = np.asarray(stochastic_matrix, dtype=float)
+    if (
+        P.shape != (n, n)
+        or not np.all(np.isfinite(P))
+        or np.any(P < 0.0)
+        or not np.allclose(P.sum(axis=1), 1.0, atol=1e-9)
+    ):
+        empty.skip_reason = (
+            "expected a finite, non-negative row-stochastic square matrix"
+        )
+        return empty
+
+    ergodicity = ergodicity_from_matrix(stochastic_matrix)
+    empty.irreducible = bool(ergodicity.get("irreducible", False))
+    if ergodicity.get("analysis_skipped"):
+        empty.skip_reason = str(
+            ergodicity.get("skip_reason") or "ergodicity unavailable"
+        )
+        return empty
+
+    # pi P = pi, sum(pi) = 1.  Append the normalisation constraint and check
+    # the original stationary equations explicitly below.
+    system = np.vstack([P.T - np.eye(n), np.ones(n)])
+    target = np.concatenate([np.zeros(n), [1.0]])
+    pi, *_ = np.linalg.lstsq(system, target, rcond=None)
+    if not np.all(np.isfinite(pi)) or abs(float(pi.sum())) < 1e-12:
+        empty.skip_reason = "stationary solve did not produce a valid distribution"
+        return empty
+    pi = np.clip(pi, 0.0, None)
+    pi /= pi.sum()
+    empty.stationary = [float(value) for value in pi]
+
+    # Rank(πP − π) = n − 1 iff the stationary distribution is unique.  A
+    # reducible chain with one recurrent class passes; two recurrent classes
+    # do not.  The sum constraint is redundant whenever this rank is full.
+    if int(np.linalg.matrix_rank(P.T - np.eye(n), tol=1e-8)) != n - 1:
+        empty.skip_reason = (
+            "no unique stationary distribution (several recurrent classes)"
+        )
+        return empty
+
+    sigma = 0.0
+    one_way_pairs = 0
+    for i in range(n):
+        for j in range(n):
+            forward = float(P[i, j])
+            reverse = float(P[j, i])
+            mass = float(pi[i]) * forward
+            # A transient state's stationary mass is exactly 0; the least-
+            # squares solve leaves ~1e-17 there.  That numerical dust must not
+            # turn a zero-mass one-way edge into sigma = +inf.
+            if mass <= 1e-12:
+                continue
+            if reverse == 0.0:
+                one_way_pairs += 1
+                continue
+            sigma += mass * math.log(forward / reverse)
+    if one_way_pairs:
+        empty.stationary = [float(value) for value in pi]
+        empty.one_way_pairs = one_way_pairs
+        empty.skip_reason = (
+            f"entropy production is +inf: {one_way_pairs} one-way transition pair(s)"
+        )
+        return empty
+
+    return EntropyProductionResult(
+        n=n,
+        sigma=float(max(sigma, 0.0) if abs(sigma) < 1e-12 else sigma),
+        stationary=[float(value) for value in pi],
+        irreducible=bool(ergodicity.get("irreducible", False)),
+        one_way_pairs=0,
         analysis_skipped=False,
     )
 
@@ -363,6 +511,7 @@ class Verdict:
     state_space: Dict[str, Any]
     coursia_seed_issue: str
     candidate_id: str
+    entropy: Dict[str, Any] = field(default_factory=dict)
     privacy: Dict[str, str] = field(default_factory=dict)
 
 
@@ -371,12 +520,11 @@ def _build_verdict(
     tpm_payload: Dict[str, Any],
     ergo_payload: Dict[str, Any],
     spectral_result: SpectralResult,
+    entropy_result: Optional[EntropyProductionResult] = None,
 ) -> Verdict:
-    """Build the S6-A1 verdict from the inner extractor + spectral leg."""
-    # Ergodic leg: prefer the embedded one in tpm_payload if the inner
-    # extractor already computed it (it does — TPM-2 #1491). We re-read the
-    # raw values from the report, not via _analyze_ergodicity, to keep this
-    # driver stateless and reproducible from the JSON alone.
+    """Build the S6-A1 verdict from the inner extractor + structural legs."""
+    # Ergodic leg: the runner derives it from the matrix through the inner
+    # extractor's graph analyser (TPM-2 #1491), never from rendered Markdown.
     ergo_block = ergo_payload if ergo_payload else {}
     return Verdict(
         corpus_letter=corpus_letter,
@@ -387,6 +535,18 @@ def _build_verdict(
         impossible=bool(tpm_payload.get("impossible", False)),
         impossibility_reason=str(tpm_payload.get("impossibility_reason", "") or ""),
         ergodicity=ergo_block,
+        entropy=asdict(
+            entropy_result
+            or EntropyProductionResult(
+                n=spectral_result.n,
+                sigma=None,
+                stationary=None,
+                irreducible=False,
+                one_way_pairs=0,
+                analysis_skipped=True,
+                skip_reason="entropy production was not computed",
+            )
+        ),
         # #1506 R1107 — what the matrix is actually made of. A chain over
         # phase status words is not a chain over belief states, and the verdict
         # must say which one it holds.
@@ -408,52 +568,6 @@ def _build_verdict(
             "in_memory_decrypt": "yes",
         },
     )
-
-
-def _parse_ergodicity_from_report(report_md_path: Path) -> Dict[str, Any]:
-    """Best-effort scrape of the inner report's ergodicity section.
-
-    The inner report (``report.md``) renders an "Analyse d'ergodicité"
-    section. We don't re-implement the leg; we just lift the already-rendered
-    numbers so the S6-A1 verdict is self-contained without re-running scipy.
-
-    Returns an empty dict if the section is absent (e.g. impossible TPM).
-    """
-    if not report_md_path.exists():
-        return {}
-    text = report_md_path.read_text(encoding="utf-8")
-    if "Analyse d'ergodicité" not in text:
-        return {}
-    # Section is bounded by the next "## " header.
-    start = text.index("Analyse d'ergodicité")
-    rest = text[start:]
-    # Find next "## " at the same level (start of line) — fallback: take
-    # the next 30 lines.
-    lines = rest.splitlines()
-    section_lines: List[str] = []
-    for ln in lines[1:]:
-        if ln.startswith("## "):
-            break
-        section_lines.append(ln)
-    block: Dict[str, Any] = {"raw_section": "\n".join(section_lines).strip()}
-    # Pull a few numbers if present.
-    for line in section_lines:
-        if "SCC (composantes fortement connexes)" in line:
-            # Pattern: **N**
-            try:
-                block["n_scc"] = int(line.split("**")[1])
-            except (IndexError, ValueError):
-                pass
-        elif "WCC (composantes faiblement connexes)" in line:
-            try:
-                block["n_wcc"] = int(line.split("**")[1])
-            except (IndexError, ValueError):
-                pass
-        elif "Irréductible" in line and "**" in line:
-            block["irreducible"] = "**OUI**" in line
-        elif "**Ergodique**" in line:
-            block["ergodic_line"] = line.strip()
-    return block
 
 
 def _render_verdict_markdown(
@@ -551,6 +665,29 @@ def _render_verdict_markdown(
         if "irreducible" in verdict.ergodicity:
             lines.append(f"- Irréductible : **{verdict.ergodicity['irreducible']}**")
     lines.append("")
+    lines.append("## Production d'entropie (R1107 — troisième quantité)")
+    lines.append("")
+    entropy = verdict.entropy
+    sigma = entropy.get("sigma")
+    if entropy.get("analysis_skipped"):
+        if entropy.get("one_way_pairs", 0):
+            lines.append(
+                f"- **σ = +inf** : {entropy['one_way_pairs']} paire(s) de "
+                "transitions à sens unique sous la distribution stationnaire."
+            )
+        else:
+            lines.append(f"- **σ non calculable** : {entropy.get('skip_reason')}.")
+    elif sigma is not None:
+        lines.append(f"- σ = **{sigma:.4f}** nat(s)/transition.")
+        lines.append(
+            "- σ = Σᵢⱼ πᵢPᵢⱼ ln(Pᵢⱼ/Pⱼᵢ), avec π stationnaire ; "
+            "0 décrit une chaîne réversible."
+        )
+    else:
+        lines.append(
+            f"- **σ non calculé** : {entropy.get('skip_reason') or 'jambe absente du verdict'}."
+        )
+    lines.append("")
     lines.append("## Spectrale (R664 — jambe ajoutée par ce driver)")
     lines.append("")
     if verdict.spectral["analysis_skipped"]:
@@ -565,19 +702,19 @@ def _render_verdict_markdown(
         lines.append(f"- λ₂ (|deuxième valeur propre|) = **{lam2:.4f}**")
         lines.append(f"- **Spectral gap** (1 − |λ₂|) = **{gap:.4f}**")
         # #1506 R1107 — the gap is a MIXING RATE only for an irreducible chain.
-        # On a reducible chain λ₂ = 0 gives g = 1, which the old branch read as
-        # « mixing rapide » while the very same page said « Ergodique : NON —
-        # réductible ». A chain that falls into one absorbing class in one step
-        # does not mix toward anything: there is no unique stationary
-        # distribution to converge to.
+        # On a reducible one λ₂ = 0 gives g = 1, which the old branch read as
+        # « mixing rapide » while the same page said « réductible ».  And
+        # reducibility alone does not decide stationarity: one recurrent class
+        # plus transient states still has a unique pi, several recurrent
+        # classes do not.  The entropy leg owns that question, not the spectre.
         irreducible = verdict.ergodicity.get("irreducible")
         if irreducible is False:
             lines.append(
                 "- **g n'est pas un taux de mélange ici** : la chaîne est "
-                "réductible (≥ 2 SCC), donc il n'existe aucune distribution "
-                "stationnaire unique vers laquelle converger. λ₂ = 0 avec "
-                "g = 1 dit qu'une classe absorbante est atteinte en une étape, "
-                "pas que la chaîne mélange."
+                "réductible (≥ 2 SCC). Une chaîne réductible peut avoir une "
+                "stationnaire unique (une seule classe récurrente) ou non "
+                "(plusieurs) — ce n'est pas la spectrale qui en décide : la "
+                "jambe « Production d'entropie » ci-dessus nomme l'unicité."
             )
         elif gap is not None and gap >= 0.3:
             lines.append(
@@ -593,8 +730,9 @@ def _render_verdict_markdown(
         elif gap == 0.0:
             lines.append(
                 "- **Non-mixing** : structure bloc-diagonale ou valeurs "
-                "propres multiples en |λ| = 1. Pas de distribution "
-                "stationnaire unique accessible globalement."
+                "propres multiples en |λ| = 1 (ex. chaîne périodique). "
+                "Le gap seul ne décide pas de l'unicité du stationnaire — "
+                "voir la jambe « Production d'entropie »."
             )
         lines.append("")
         eigs = verdict.spectral["eigenvalues_abs"]
@@ -700,8 +838,6 @@ def run_for_corpus(
         corpus_letter, inner_dir, max_wall_seconds, timeout_seconds
     )
     tpm_payload = _read_tpm_payload(tpm_json_path)
-    report_md = inner_dir / "report.md"
-    ergo_payload = _parse_ergodicity_from_report(report_md)
 
     # Reconstruct the row-stochastic matrix from the JSON for the spectral
     # leg — anti-pendule: do NOT re-run the pipeline, just re-normalize
@@ -720,18 +856,28 @@ def run_for_corpus(
                 stochastic[i][j] = counts[i][j] / total
 
     spectral_result = spectral_gap(stochastic)
-    verdict = _build_verdict(corpus_letter, tpm_payload, ergo_payload, spectral_result)
+    ergo_payload = ergodicity_from_matrix(stochastic) if stochastic else {}
+    entropy_result = entropy_production(stochastic)
+    verdict = _build_verdict(
+        corpus_letter,
+        tpm_payload,
+        ergo_payload,
+        spectral_result,
+        entropy_result=entropy_result,
+    )
 
     verdict_json_path = verdict_dir / "verdict.json"
     verdict_md_path = verdict_dir / "verdict.md"
     inner_rel = f"../../_inner_tpm/corpus{corpus_letter}/report.md"
-    verdict_json_path.write_text(
-        json.dumps(asdict(verdict), indent=2, ensure_ascii=False),
-        encoding="utf-8",
+    # Write gitignored run artifacts with the checkout's LF convention, rather
+    # than letting Windows text mode introduce CRLF into reproducible outputs.
+    verdict_json_path.write_bytes(
+        (json.dumps(asdict(verdict), indent=2, ensure_ascii=False) + "\n").encode(
+            "utf-8"
+        )
     )
-    verdict_md_path.write_text(
-        _render_verdict_markdown(verdict, tpm_payload, inner_rel),
-        encoding="utf-8",
+    verdict_md_path.write_bytes(
+        _render_verdict_markdown(verdict, tpm_payload, inner_rel).encode("utf-8")
     )
 
     # Drop the bulky trajectories into a sibling file under the verdict dir
@@ -748,16 +894,18 @@ def run_for_corpus(
             }
             for t in tpm_payload["trajectories"]
         ]
-        (verdict_dir / "trajectories_summary.json").write_text(
-            json.dumps(traj_payload, indent=2, ensure_ascii=False),
-            encoding="utf-8",
+        (verdict_dir / "trajectories_summary.json").write_bytes(
+            (json.dumps(traj_payload, indent=2, ensure_ascii=False) + "\n").encode(
+                "utf-8"
+            )
         )
 
     logger.info(
-        "S6-A1 verdict for corpus %s → %s (spectral gap=%s)",
+        "S6-A1 verdict for corpus %s → %s (spectral gap=%s, sigma=%s)",
         corpus_letter,
         verdict_md_path,
         spectral_result.spectral_gap,
+        entropy_result.sigma,
     )
     return verdict_dir
 
@@ -795,7 +943,8 @@ def _print_dry_run() -> int:
     print("Anti-pendule invariants:")
     print("  * This driver does NOT re-implement the TPM pipeline.")
     print("  * Inner extractor is subprocessed as a black box (TPM-1/2).")
-    print("  * Spectral gap is a small ADDITION (R664), not a duplication.")
+    print("  * Spectral gap and entropy production are small ADDITIONS.")
+    print("  * Non-unique stationarity names sigma as uncomputable.")
     print("  * Privacy HARD: 0 raw_text, opaque IDs, in-memory decrypt only.")
     print()
     print(f"Output root: {DEFAULT_OUTPUT_ROOT}")
@@ -808,7 +957,8 @@ def main() -> int:
         description=(
             "S6-A1 #1506 — CoursIA strate-6 Phase-A grounding (candidate #2). "
             "Subprocesses the TPM-1/2 extractor for each real corpus, adds "
-            "the spectral-gap leg, and emits a verdict per corpus."
+            "the spectral-gap and entropy-production legs, and emits a "
+            "verdict per corpus."
         )
     )
     parser.add_argument(

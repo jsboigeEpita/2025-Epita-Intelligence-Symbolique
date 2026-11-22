@@ -35,8 +35,29 @@ independent falsifiability substrates required by contract
 > Also corrected here: `g = 1 − |λ₂|` was read as « mixing rapide » even on a
 > chain the same page called « réductible ». **g is a mixing rate only for an
 > irreducible chain** — on a reducible one λ₂ = 0 says an absorbing class is
-> reached in one step, and there is no unique stationary distribution to
-> converge to.
+> reached in one step. Reducibility alone does not decide stationarity: one
+> recurrent class plus transient states still has a unique stationary
+> distribution, several recurrent classes do not — the entropy leg names
+> which case holds.
+>
+> **Instrument update 2026-11-22 (R1107, before the coordinator's paired
+> record run):** the driver now reports all three quantities per input —
+> entropy production σ, the directed spectral gap, and the structured
+> ergodicity verdict. It no longer scrapes ergodicity out of the inner
+> Markdown report. For an irreducible chain,
+> `σ = Σᵢⱼ πᵢPᵢⱼ ln(Pᵢⱼ/Pⱼᵢ)` uses the unique stationary distribution π;
+> a forward-only stationary transition gives σ = +inf with its pair count. A
+> stationary distribution is required and must be unique. This also covers a
+> reducible chain with one recurrent class and transient states. With several
+> recurrent classes σ is explicitly uncomputable — no trajectory-occupancy
+> surrogate is substituted.
+>
+> The zero-spend discrimination control uses two four-state reference rings.
+> Both are irreducible and have directed gap 0, but the reversible ring has
+> σ = 0 while the 0.9/0.1 drift ring has σ = 0.8 ln 9 ≈ 1.7578. Thus σ
+> separates a pair the gap does not. This proves the analysis leg on reference
+> regimes only; it does not supply the two missing argumentative inputs and
+> does not change the decision not to propose candidate #2.
 
 ## The thesis
 
@@ -51,8 +72,10 @@ eigenvalue of $P$ (R664). A gap of $g \approx 0$ exposes a near-block-diagonal
 chain (slow mixing); a gap of $g \approx 1$ confirms rapid convergence.
 
 The substrate is *the matrix itself*: a downstream CoursIA model can read off
-(1) the irreducible-structure (SCC/WCC), (2) the stationary distribution, and
-(3) the mixing rate, from a single JSON artifact (`verdict.json`).
+(1) the irreducible-structure (SCC/WCC), (2) the entropy production and the
+stationary-uniqueness verdict, and (3) the spectral gap — read as a mixing
+rate only when the chain is irreducible — from a single JSON artifact
+(`verdict.json`).
 
 ## The candidate scope (delivered here)
 
@@ -65,16 +88,19 @@ is a **thin coordinator**:
    for each real corpus (A / B / C) — *no re-implementation* of the TPM
    pipeline (anti-pendule).
 2. **Read** the inner extractor output (`tpm.json` + `report.md`).
-3. **Add** the spectral-gap leg on the already-row-normalised stochastic
-   matrix — a small, additive refinement (R664).
-4. **Render** a verdict per corpus: ergodicity (inherited from #1491),
-   spectral gap (this driver), corpus-level counts, and a candidate-mapping
-   block that points at CoursIA seed issue #7289.
+3. **Add** the spectral-gap and entropy-production legs on the
+   already-row-normalised stochastic matrix — small, additive refinements
+   (R664 / R1107).
+4. **Render** a verdict per corpus: structured ergodicity derived through the
+   inner extractor's graph analyser, spectral gap, entropy production,
+   corpus-level counts, and a candidate-mapping block that points at CoursIA
+   seed issue #7289.
 
 The driver is the *CoursIA-facing* artifact. The verdict is *machine-checked*
-and *falsifiable*: any disagreement between the candidate matrix and the
-ergodicity verdict scrapes from the inner report is reported verbatim — never
-auto-reconciled (anti-théâtre #1019).
+and *falsifiable*: ergodicity is derived from the matrix through the inner
+extractor's graph analyser — the runner never scrapes it back out of the
+rendered Markdown — and every skipped analysis names its reason instead of
+being auto-padded (anti-théâtre #1019).
 
 ## Anti-pendule invariants
 
@@ -95,6 +121,13 @@ auto-reconciled (anti-théâtre #1019).
 ```bash
 # Dry-run (contract + candidate mapping, no execution):
 python scripts/coursia_strate6_phaseA_grounding.py --dry-run
+
+# Zero-spend discrimination controls: reversible and drift reference regimes.
+# The same invocation runs the prior Phase-A witnesses and the egress liveness
+# controls; none of these tests reads a corpus or invokes an LLM.
+python -m pytest tests/unit/scripts/test_strate6_phase_a_entropy_1506.py \
+    tests/unit/scripts/test_strate6_phase_a_grounding_1506.py \
+    tests/unit/test_llm_egress_counter.py -q
 
 # Real run on corpus A (per-corpus budget 180s, outer timeout 30 min):
 python scripts/coursia_strate6_phaseA_grounding.py \
@@ -121,10 +154,11 @@ python scripts/coursia_strate6_phaseA_grounding.py --corpus ALL
   scale (current corpora are small — see `verdict.md` per corpus). The
   scaling lane (TPM-2 #1491) is delivered and merged; the substrate is
   reproducible on any future corpus that exposes the same decryption contract.
-- **Falsifiability**: a candidate verdict that fails to expose (1) ergodicity
-  (SCC, WCC, irreducible) and (2) a numeric spectral gap in $[0, 1]$ is
-  **incomplete**. The driver fails-fast on missing fields and reports the
-  underlying reason verbatim — no auto-padding.
+- **Falsifiability**: a candidate verdict that fails to expose (1) structured
+  ergodicity (SCC, WCC, irreducible), (2) a numeric directed spectral gap in
+  $[0, 1]$, and (3) entropy production σ — finite, +inf, or an explicit
+  uncomputability reason — is **incomplete**. Missing numerical analysis is
+  reported with its reason, never auto-padded.
 
 ## Relation to the sibling substrate
 

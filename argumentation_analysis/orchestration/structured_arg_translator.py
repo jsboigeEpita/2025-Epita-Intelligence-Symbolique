@@ -627,6 +627,17 @@ async def _llm_extract_relations(
     )
     if response_format is not None:
         llm_kwargs["response_format"] = response_format
+    # #3658 follow-up (R1203): an explicit cap - the DeLP/ASPIC phases that
+    # call this translator stopped at claudish's 4096 ingress default on the
+    # measured doc_J pass. The shared PHASE_MAX_TOKENS ceiling sizes thinking
+    # plus the JSON; 0 omits the param. A model whose endpoint rejects the
+    # max_tokens spelling keeps the existing 400-driven refusal below.
+    from argumentation_analysis.orchestration.invoke_callables import (
+        _PHASE_MAX_TOKENS,
+    )
+
+    if _PHASE_MAX_TOKENS and "max_tokens" not in llm_kwargs:
+        llm_kwargs["max_tokens"] = _PHASE_MAX_TOKENS
     response = await _guarded_chat_completion(
         client,
         model=model_id,
