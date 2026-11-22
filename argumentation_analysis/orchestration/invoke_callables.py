@@ -5252,7 +5252,7 @@ def _semantic_query_from_state(state: Any) -> Tuple[str, str]:
     return "\n".join(parts), ""
 
 
-def _analysed_document_ids(state: Any) -> set:
+def _analysed_document_ids(state: Any) -> "set[str]":
     """Every id under which the analysed document appears in the corpus (#3548).
 
     The corpus is keyed by ``source_name``; the panel names a document by its
@@ -5260,7 +5260,7 @@ def _analysed_document_ids(state: Any) -> set:
     extract). Exclusion by id therefore names BOTH forms, or the document
     would answer its own query. Ids only — a name is never returned.
     """
-    ids = set()
+    ids: "set[str]" = set()
     if state is None:
         return ids
     metadata = getattr(state, "source_metadata", None)
