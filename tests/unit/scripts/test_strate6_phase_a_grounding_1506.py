@@ -127,6 +127,10 @@ class TestTheVerdictRefusesTheEmptyClaim:
         )
         assert "n'est pas un taux de mélange" in text
         assert "Mixing rapide" not in text
+        # Reducibility alone does not decide stationarity uniqueness: a chain
+        # with one recurrent class plus transient states has a unique pi.  The
+        # spectral branch must not claim otherwise.
+        assert "aucune distribution stationnaire unique" not in text
 
 
 class TestTheControlStillDelivers:
