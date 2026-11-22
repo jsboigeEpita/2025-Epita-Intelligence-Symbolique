@@ -15605,8 +15605,13 @@ def _build_persona_callable(
 
     ``max_completion_tokens`` (#3511) is the site's OWN output cap — the first
     reading passes one so its inventory's end is a DECISION, not the
-    provider's default. ``None`` (every other persona) sends no cap, exactly
-    as before.
+    provider's default. ``None`` now falls to the shared ``PHASE_MAX_TOKENS``
+    ceiling (#3658 item 36b): the measured doc_J re-run showed where an
+    uncapped persona call lands — the strategist (2 calls on 2),
+    ``coverage_review`` and ``cross_passage_consistency`` all stopped at
+    exactly 4 096, the route's ingress default, and the strategist's two
+    stops left the phase in ``parse_error``. ``PHASE_MAX_TOKENS=0`` omits the
+    key entirely (the pre-fix wire form).
 
     ``response_format`` (#3600) is NOT spelled here: the ONE per-provider
     decision of #3096 owns it. All five personas ask for JSON in their
@@ -15627,6 +15632,14 @@ def _build_persona_callable(
     sampling = sampling_kwargs(_resolve_llm_route()[1], dict(_get_determinism_params()))
     if max_completion_tokens:
         sampling = {**sampling, "max_completion_tokens": max_completion_tokens}
+    elif _PHASE_MAX_TOKENS:
+        # #3658 item 36b — a persona call without its OWN cap sent none at
+        # all, and the measured doc_J re-run shows where that lands: the three
+        # sites above stopped at exactly 4 096 (the route's ingress default)
+        # and the strategist's two stops left the phase in parse_error. The
+        # #3670 doctrine applies to this seam unchanged: the ONE shared
+        # ceiling rides every call site that had none.
+        sampling = {**sampling, "max_completion_tokens": _PHASE_MAX_TOKENS}
 
     # #3600 — the ONE decision (#3096), read from the endpoint the client was
     # built from. ``None`` means prompt-only JSON: the key is not sent.
