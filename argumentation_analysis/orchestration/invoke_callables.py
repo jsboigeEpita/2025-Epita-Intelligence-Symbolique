@@ -5252,6 +5252,109 @@ def _semantic_query_from_state(state: Any) -> Tuple[str, str]:
     return "\n".join(parts), ""
 
 
+def _analysed_document_ids(state: Any) -> set:
+    """Every id under which the analysed document appears in the corpus (#3548).
+
+    The corpus is keyed by ``source_name``; the panel names a document by its
+    opaque id (``opaque_id(source_name)``, with an ``_ext<N>`` suffix per
+    extract). Exclusion by id therefore names BOTH forms, or the document
+    would answer its own query. Ids only — a name is never returned.
+    """
+    ids = set()
+    if state is None:
+        return ids
+    metadata = getattr(state, "source_metadata", None)
+    if not isinstance(metadata, dict):
+        return ids
+    name = str(metadata.get("source_name") or "").strip()
+    if name:
+        try:
+            from argumentation_analysis.evaluation.opaque_id import opaque_id
+
+            ids.add(opaque_id(name))
+        except Exception:  # noqa: BLE001 — no salt: the opaque form is absent
+            pass
+    return ids
+
+
+async def _corpus_second_reader(
+    state: Any, context: Dict[str, Any], route: Any
+) -> Dict[str, Any]:
+    """The corpus as a second reader: the same claim, elsewhere (#3548 wiring).
+
+    Loads the encrypted definitions IN MEMORY (never persisted), builds the
+    KB ONCE PER PROCESS (a module-level holder keyed by the route — a KB per
+    document would multiply the embedding spend by the panel size), excluding
+    the analysed document by id, and answers ``corpus_matches`` for the claim
+    ``corpus_claim_from_state`` names. A missing passphrase, source or claim
+    names itself in ``status`` and makes no call.
+    """
+    from argumentation_analysis.services import semantic_retrieval as sr
+
+    claim, claim_reason = sr.corpus_claim_from_state(state)
+    if not claim:
+        return {"status": "skipped: no_corpus_claim", "reason": claim_reason}
+    passphrase = (os.environ.get("TEXT_CONFIG_PASSPHRASE") or "").strip()
+    if not passphrase:
+        return {
+            "status": "skipped: no_corpus_key",
+            "reason": "TEXT_CONFIG_PASSPHRASE is unset — the corpus stays encrypted",
+        }
+    cache = context.setdefault("_corpus_kb_cache", {})
+    key = (route.base_url, route.model, route.source)
+    kb = cache.get(key)
+    if kb is None:
+        from argumentation_analysis.core.io_manager import load_extract_definitions
+        from argumentation_analysis.core.utils.crypto_utils import (
+            derive_encryption_key,
+        )
+        from pathlib import Path
+
+        derived = derive_encryption_key(passphrase)
+        definitions = load_extract_definitions(
+            Path("argumentation_analysis/data/extract_sources.json.gz.enc"),
+            derived.decode("utf-8") if isinstance(derived, bytes) else derived,
+        )
+        entries = []
+        for definition in definitions or []:
+            if not isinstance(definition, dict):
+                continue
+            try:
+                from argumentation_analysis.evaluation.opaque_id import opaque_id
+
+                doc_id = opaque_id(str(definition.get("source_name") or ""))
+            except Exception:  # noqa: BLE001 — unnamed definition: no id, no KB
+                continue
+            entry = dict(definition)
+            entry["id"] = doc_id
+            entries.append(entry)
+        built, reason = sr.build_corpus_kb(entries, route)
+        if not built:
+            return {
+                "status": "skipped: no_corpus",
+                "reason": reason or "no corpus document yielded a chunk",
+            }
+        # Exclusion by id, both forms (base opaque id and _ext<N>): the
+        # analysed document never answers its own query. Filtering the built
+        # KB keeps it built ONCE for the process, not once per document.
+        exclude = _analysed_document_ids(state)
+        kb = [e for e in built if e.doc_id not in exclude]
+        cache[key] = kb
+    try:
+        answer = await asyncio.to_thread(sr.query_corpus_for_claim, claim, kb, route)
+    except Exception as exc:  # noqa: BLE001 — named skip, never a silent success
+        logger.warning("corpus reader: embedding failed: %s", exc)
+        return {
+            "status": "skipped: corpus_failed",
+            "reason": f"{type(exc).__name__}: {exc}",
+        }
+    return {
+        "corpus_matches": answer["matches"],
+        "corpus_threshold": answer["threshold"],
+        "corpus_chunks": answer["chunks"],
+    }
+
+
 async def _invoke_semantic_index(
     input_text: str, context: Dict[str, Any]
 ) -> Dict[str, Any]:
@@ -5295,6 +5398,26 @@ async def _invoke_semantic_index(
     if not query:
         return {"status": "skipped: no_reading_query", "reason": query_reason}
 
+    # #3548 wiring (item 35) — the corpus is a second reader: the same claim,
+    # elsewhere. Runs BEFORE the document's own spans so a skip of the latter
+    # never costs the corpus its say. A named absence (no key, no claim, no
+    # corpus) rides ``corpus_status``; a hit rides ``corpus_matches`` and the
+    # state writer stores the offsets-only refs (#3548 ask 7).
+    corpus = await _corpus_second_reader(context.get("_state_object"), context, route)
+    corpus_fields = {
+        "corpus_status": corpus.get("status", "ran"),
+        **({"corpus_reason": corpus["reason"]} if corpus.get("reason") else {}),
+        **(
+            {
+                "corpus_matches": corpus["corpus_matches"],
+                "corpus_threshold": corpus["corpus_threshold"],
+                "corpus_chunks": corpus["corpus_chunks"],
+            }
+            if "corpus_matches" in corpus
+            else {}
+        ),
+    }
+
     if not input_text or len(input_text.strip()) < 200:
         return {
             "status": "skipped: no_document_text",
@@ -5302,6 +5425,7 @@ async def _invoke_semantic_index(
                 "the analysed text is absent or too short to chunk "
                 f"({len(input_text or '')} chars)"
             ),
+            **corpus_fields,
         }
 
     try:
@@ -5315,6 +5439,7 @@ async def _invoke_semantic_index(
             "reason": f"{type(exc).__name__}: {exc}",
             "embedding_model": route.model,
             "route_source": route.source,
+            **corpus_fields,
         }
 
     if not retrieval["spans"]:
@@ -5324,6 +5449,7 @@ async def _invoke_semantic_index(
             or "no chunk of the text could be located",
             "route_source": route.source,
             "embedding_model": route.model,
+            **corpus_fields,
         }
 
     return {
@@ -5336,6 +5462,7 @@ async def _invoke_semantic_index(
         "query_chars": len(query),
         "route_source": route.source,
         "embedding_model": route.model,
+        **corpus_fields,
     }
 
 
