@@ -1911,26 +1911,26 @@ class TestStateWriters:
         assert len(state.neural_fallacy_scores) == 0
 
     def test_write_semantic_index_to_state(self):
-        """_write_semantic_index_to_state writes search results."""
+        """_write_semantic_index_to_state writes corpus matches (#3548)."""
         from argumentation_analysis.orchestration.unified_pipeline import (
             _write_semantic_index_to_state,
         )
 
         state = self._make_state()
         output = {
-            "results": [{"id": "doc1", "score": 0.95, "snippet": "relevant text"}]
+            "corpus_matches": [{"doc": "doc1", "start": 5, "end": 60, "score": 0.95}]
         }
-        _write_semantic_index_to_state(output, state, {"input_data": "query"})
+        _write_semantic_index_to_state(output, state, {})
         assert len(state.semantic_index_refs) == 1
 
     def test_write_semantic_index_to_state_non_list(self):
-        """_write_semantic_index_to_state handles non-list results."""
+        """_write_semantic_index_to_state handles non-list matches."""
         from argumentation_analysis.orchestration.unified_pipeline import (
             _write_semantic_index_to_state,
         )
 
         state = self._make_state()
-        _write_semantic_index_to_state({"results": "not list"}, state, {})
+        _write_semantic_index_to_state({"corpus_matches": "not list"}, state, {})
         assert len(state.semantic_index_refs) == 0
 
     def test_write_speech_to_state(self):

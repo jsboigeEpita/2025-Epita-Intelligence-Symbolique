@@ -467,6 +467,62 @@ def pipeline_verdict(log: Path) -> Optional[str]:
     return None
 
 
+# #3540 — the native-failure watch: ONE source for the three families'
+# signatures. The page docs/guides/NATIVE_FAILURES_WATCH.md prints the very
+# strings below (test_native_watch_3540 pins that): the grep it documents is
+# the grep the runner counts. Exact, case-sensitive — a case-insensitive
+# "GIL" matches French words of the prompts, and a Python traceback says
+# "most recent call LAST" while only a faulthandler dump says "first".
+# A faulthandler dump lists EVERY thread (its thread headers each carry
+# "(most recent call first):" — 3 on the real #2080 positive-control dump,
+# measured): counting the header would count THREADS, not dumps. The dump
+# EVENT is its one-shot "Timeout (" line — exactly one per dump (same
+# measurement), and a Python traceback never carries it.
+NATIVE_PATTERNS: Dict[str, str] = {
+    "teardown_armed": "teardown watchdog armed",
+    "teardown_dumps": "Timeout (",
+    "pybind11_signature": "pybind11::handle::dec_ref()",
+    "fatal_abort": "Fatal Python error",
+    "jpype_terminate": "_JTerminate",
+}
+
+# A count that meets a family's trigger is reported with the issue that
+# named the trigger (ask 4). A report, never a gate: the cycle's exit
+# status is unchanged. teardown_armed has NO print issue — its trigger is
+# "armed followed by a dump" (the dump counts above), so arming alone is
+# the healthy path; "most recent call first" printing #2005/#2080 reflects
+# the threads that NAMED this signature (no common cause is asserted).
+NATIVE_PRINT_ISSUES: Dict[str, str] = {
+    "teardown_dumps": "#2080",
+    "pybind11_signature": "#2005",
+    "fatal_abort": "#2005",
+    "jpype_terminate": "#2894",
+}
+
+
+def native_watch(text: str) -> Dict[str, int]:
+    """#3540 ask 3 — count each family's signature in a batch log's text."""
+    return {name: text.count(pattern) for name, pattern in NATIVE_PATTERNS.items()}
+
+
+def native_watch_log(log: Path) -> Dict[str, Any]:
+    """The count over a pipeline log — or the ABSENCE named, never a 0."""
+    if not log.is_file():
+        return {"absent": True}
+    return native_watch(log.read_text(encoding="utf-8", errors="replace"))
+
+
+def report_native_watch(counts: Dict[str, Any]) -> None:
+    """#3540 ask 4 — print every count that meets a trigger, with its issue."""
+    if counts.get("absent"):
+        print("native-watch: no pipeline log — absence recorded, not a zero")
+        return
+    for name, issue in NATIVE_PRINT_ISSUES.items():
+        value = counts.get(name, 0)
+        if value:
+            print(f"native-watch: {name}={value} (see {issue})")
+
+
 def missing_zeroshot(cfg: Config, panel: Sequence[str]) -> List[str]:
     """Panel documents without a zero-shot answer: the judge would refuse
     them, after the pipeline was paid."""
@@ -508,6 +564,32 @@ def harvest(cfg: Config, panel: Sequence[str], started: float) -> Dict[str, List
                 shutil.copy2(source, target / source.name)
             report["copied"].append(doc)
     return report
+
+
+def length_stop_phases(states_dir: Path, docs: Sequence[str]) -> List[str]:
+    """Phase names whose harvested states count replies cut at the token cap
+    (#3658 ask 2) — ``length_stops > 0`` in a state's ``llm_usage``.
+
+    Reads the states this cycle just harvested (the copies, not the kb
+    originals), unions the names across documents, sorts them. Only names:
+    the counts stay in the state, where the reader who needs them looks. A
+    missing or unreadable state is skipped — the harvest already named
+    missing documents as its own stop.
+    """
+    phases = set()
+    for doc in docs:
+        try:
+            usage = json.loads(
+                (states_dir / f"state_full_{doc}.json").read_text(encoding="utf-8")
+            ).get("llm_usage")
+        except (OSError, ValueError, AttributeError):
+            continue
+        if not isinstance(usage, dict):
+            continue
+        for phase, bucket in usage.items():
+            if isinstance(bucket, dict) and bucket.get("length_stops"):
+                phases.add(str(phase))
+    return sorted(phases)
 
 
 def recorded_pipeline(cfg: Config) -> Optional[Dict[str, Any]]:
@@ -781,15 +863,22 @@ def run_cycle(
         rc = dispatch(step)
         seconds = round(now() - started)
         report = harvest(cfg, panel, started)
+        # #3540 ask 3 — the native-failure watch rides the pipeline record
+        # beside the verdict: each family's count read from the log, or the
+        # absence named. Ask 4: a count that meets a trigger is printed with
+        # its issue; the cycle's exit status never changes (a report).
+        native = native_watch_log(step.log)
         record = {
             **at_start,
             "head_after": head()["head"],
             "started": summary["started"],
             "rc": rc,
             "verdict": pipeline_verdict(step.log),
+            "native_watch": native,
             "seconds": seconds,
             "harvest": {key: len(value) for key, value in report.items()},
         }
+        report_native_watch(native)
         (cfg.cycle_dir / PIPELINE_RECORD).write_text(
             json.dumps(record, ensure_ascii=False, indent=1), encoding="utf-8"
         )
@@ -799,6 +888,9 @@ def run_cycle(
             **record,
             missing_documents=report["missing"],
             stale_documents=report["stale"],
+            # #3658 ask 2 — a PASS with replies cut at the token cap must be
+            # visible without opening the state.
+            length_stop_phases=length_stop_phases(cfg.states_dir, report["copied"]),
         )
         summary["credit_after_pipeline"] = credit()
         status.event(

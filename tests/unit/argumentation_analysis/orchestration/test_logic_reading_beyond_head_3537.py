@@ -335,6 +335,126 @@ class TestPerWindowYield:
         assert metrics.get("reading_yields") == [1]
 
 
+class TestPerWindowNewYield:
+    """R1202 item 27b on #3537 — ``new_reading_yields`` beside
+    ``reading_yields``.
+
+    The fake's pool is cumulative (``atome_fenetre_0`` in EVERY window,
+    ``Pred1``..``PredN`` likewise), so a window's NEW count is exactly the
+    names no earlier ANSWERED window returned — attribution and dedup are
+    both pinned by the same data. ``None`` keeps the reading-yields
+    semantics: a call that never answered brought nothing back, so it counts
+    as nothing-new-but-unknown, never 0 (#3099). RED on main: the field does
+    not exist there.
+    """
+
+    def _pool_of(self, window: str) -> set:
+        count = _yield_of(window)
+        return {f"atome_fenetre_{i}" for i in range(count)}
+
+    def _expected_new_yields(
+        self, text: str, none_when: Optional[str] = None
+    ) -> List[Optional[int]]:
+        """Each window's names minus every earlier ANSWERED window's — a
+        failed window contributes nothing to what its successors are deduped
+        against, exactly as the merge loop does."""
+        spans = [
+            (o, min(o + WHOLE_TEXT_CALL_CAPACITY, len(text)))
+            for o in chunked_reading_offsets(len(text), WHOLE_TEXT_CALL_CAPACITY)
+        ]
+        seen: set = set()
+        out: List[Optional[int]] = []
+        for _lo, _hi in spans:
+            window = text[_lo:_hi]
+            if none_when is not None and none_when in window:
+                out.append(None)
+                continue
+            names = self._pool_of(window)
+            out.append(len(names - seen))
+            seen |= names
+        return out
+
+    async def test_pl_metrics_count_only_what_no_earlier_window_returned(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        _PROMPTS.clear()
+        _wire_loopback(monkeypatch)
+        state = _state(_TEXT)
+
+        out = await ic._invoke_propositional_logic(_TEXT, {"_state_object": state})
+
+        metrics = out.get("pl_metrics", {})
+        expected = self._expected_new_yields(_TEXT)
+        assert metrics.get("new_reading_yields") == expected, (
+            f"pl_metrics new_reading_yields is "
+            f"{metrics.get('new_reading_yields')!r}, expected {expected!r} — "
+            f"a window's slot must count only the atoms no earlier answered "
+            f"window returned (#3537 item 27b)"
+        )
+        # The two lists describe the same calls: same length, and the new
+        # count never exceeds the window's own yield.
+        yields = metrics.get("reading_yields") or []
+        news = metrics.get("new_reading_yields") or []
+        assert len(news) == len(yields)
+        for own, new in zip(yields, news):
+            assert new is None or own is None or new <= own
+
+    async def test_fol_metrics_count_only_new_predicates(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        _PROMPTS.clear()
+        _wire_loopback(monkeypatch)
+        state = _state(_TEXT)
+
+        out = await ic._invoke_fol_reasoning(_TEXT, {"_state_object": state})
+
+        metrics = out.get("fol_metrics", {})
+        expected = self._expected_new_yields(_TEXT)
+        assert metrics.get("new_reading_yields") == expected, (
+            f"fol_metrics new_reading_yields is "
+            f"{metrics.get('new_reading_yields')!r}, expected {expected!r} — "
+            f"the FOL arm counts predicates, with the same earlier-window "
+            f"rule (#3537 item 27b)"
+        )
+
+    async def test_a_failed_window_stays_none_and_later_windows_dedup_against_the_answered(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """The window carrying ``_MARK_2`` fails: its slot is None AND its
+        names never enter the seen set — the next window that answers those
+        names counts them as new, because no earlier ANSWERED window had."""
+        global _RAISE_MARKER
+        _PROMPTS.clear()
+        _wire_loopback(monkeypatch)
+        _RAISE_MARKER = _MARK_2
+        state = _state(_TEXT)
+
+        out = await ic._invoke_propositional_logic(_TEXT, {"_state_object": state})
+
+        metrics = out.get("pl_metrics", {})
+        expected = self._expected_new_yields(_TEXT, none_when=_MARK_2)
+        assert metrics.get("new_reading_yields") == expected, (
+            f"new_reading_yields is {metrics.get('new_reading_yields')!r}, "
+            f"expected {expected!r} — a failed window's slot is None and "
+            f"contributes nothing to the dedup (#3537 item 27b)"
+        )
+
+    async def test_a_short_document_yields_a_one_slot_new_list(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Control: one call, one slot, everything it returned is new."""
+        _PROMPTS.clear()
+        _wire_loopback(monkeypatch)
+        state = _state(_SHORT_TEXT)
+
+        out = await ic._invoke_propositional_logic(
+            _SHORT_TEXT, {"_state_object": state}
+        )
+
+        metrics = out.get("pl_metrics", {})
+        assert metrics.get("new_reading_yields") == [1]
+
+
 class TestShortDocumentUnchanged:
     """Ask 3: at or under one call's capacity, today's prompt and entry."""
 

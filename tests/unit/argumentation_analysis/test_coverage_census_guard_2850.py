@@ -1174,8 +1174,10 @@ REGISTRY = {
         "union of the spans that answered) and reading_calls, plus the "
         "propositional_logic entry's windows/chars_read when k>1, plus "
         "reading_yields (the atoms each call returned, None for a call "
-        "that never answered) — #2850 lot 4, whole-text read #3537, "
-        "per-window yield R1199",
+        "that never answered) and new_reading_yields (the atoms no earlier "
+        "ANSWERED window returned, same order and None semantics) — "
+        "#2850 lot 4, whole-text read #3537, per-window yield R1199, "
+        "per-window new yield R1202",
     ),
     (
         "argumentation_analysis/orchestration/invoke_callables.py",
@@ -1193,8 +1195,10 @@ REGISTRY = {
         "union of the spans that answered) and reading_calls, plus the "
         "fol_reasoning entry's windows/chars_read when k>1, plus "
         "reading_yields (the predicates each call returned, None for a "
-        "call that never answered) — #2850 lot 4, whole-text read #3537, "
-        "per-window yield R1199",
+        "call that never answered) and new_reading_yields (the predicates "
+        "no earlier ANSWERED window returned, same order and None "
+        "semantics) — #2850 lot 4, whole-text read #3537, per-window "
+        "yield R1199, per-window new yield R1202",
     ),
     (
         "argumentation_analysis/orchestration/invoke_callables.py",

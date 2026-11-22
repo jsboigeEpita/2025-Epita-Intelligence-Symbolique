@@ -1412,8 +1412,13 @@ def _write_semantic_index_to_state(
 
     #3387 — the repointed phase answers with ``priority_spans`` (offsets into
     the analysed text, never its content). They are recorded on the state so
-    the budget selector reads them; the legacy ``results`` list is still
-    accepted when a caller produces one.
+    the budget selector reads them.
+
+    #3548 ask 7 — the corpus reader's record replaces the legacy ``results``
+    arm: ``corpus_matches`` entries are ``{doc, start, end, score}`` and the
+    state stores them as offsets-only refs (no ``query``, no ``snippet`` —
+    the two text fields the former producer-less arm used to write). Bad
+    entries are dropped by the state, never repaired.
     """
     if not output or not isinstance(output, dict):
         return
@@ -1424,18 +1429,17 @@ def _write_semantic_index_to_state(
         and hasattr(state, "record_semantic_priority_spans")
     ):
         state.record_semantic_priority_spans(spans)
-    results = output.get("results", [])
-    if not isinstance(results, list):
+    matches = output.get("corpus_matches")
+    if not isinstance(matches, list):
         return
-    query = str(ctx.get("input_data", ""))
-    for r in results:
-        if not isinstance(r, dict):
+    for m in matches:
+        if not isinstance(m, dict):
             continue
         state.add_semantic_index_ref(
-            query=query,
-            document_id=str(r.get("id", "unknown")),
-            score=float(r.get("score", 0.0)),
-            snippet=r.get("snippet"),
+            document_id=str(m.get("doc", "")),
+            start=m.get("start"),
+            end=m.get("end"),
+            score=float(m.get("score", 0.0)),
         )
 
 
