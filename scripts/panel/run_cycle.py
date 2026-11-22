@@ -592,6 +592,51 @@ def length_stop_phases(states_dir: Path, docs: Sequence[str]) -> List[str]:
     return sorted(phases)
 
 
+def skipped_phases(states_dir: Path, docs: Sequence[str]) -> Dict[str, int]:
+    """Phases a harvested state names ``skipped: …`` on, per document (#3667 ask 2).
+
+    The phase table records ``completed`` over a skipped output (the c21
+    split); this reads the OUTPUT — ``formal_synthesis_reports[*].phase_results
+    .<phase>.status`` — and counts, per phase, the documents where at least
+    one report skips it. Names and counts only: never a reason string, which
+    could carry document text. A missing or unreadable state is skipped — the
+    harvest already named missing documents as its own stop.
+    """
+    counts: Dict[str, int] = {}
+    for doc in docs:
+        try:
+            state = json.loads(
+                (states_dir / f"state_full_{doc}.json").read_text(encoding="utf-8")
+            )
+        except (OSError, ValueError):
+            continue
+        reports = state.get("formal_synthesis_reports")
+        if not isinstance(reports, list):
+            continue
+        seen = set()
+        for report in reports:
+            if not isinstance(report, dict):
+                continue
+            results = report.get("phase_results")
+            if not isinstance(results, dict):
+                continue
+            for phase, result in results.items():
+                if (
+                    isinstance(result, dict)
+                    and str(result.get("status", "")).startswith("skipped:")
+                    and phase not in seen
+                ):
+                    seen.add(phase)
+                    counts[phase] = counts.get(phase, 0) + 1
+    return dict(sorted(counts.items()))
+
+
+def report_skipped_phases(counts: Dict[str, int]) -> None:
+    """End-of-cycle print of :func:`skipped_phases` — a report, never a gate."""
+    for phase, count in counts.items():
+        print(f"skipped-phases: {phase} on {count} document(s)")
+
+
 def recorded_pipeline(cfg: Config) -> Optional[Dict[str, Any]]:
     """What the pipeline stage recorded for this cycle — the commit its states
     were produced at, its exit code, the harvest — or ``None`` for a cycle
@@ -868,6 +913,10 @@ def run_cycle(
         # absence named. Ask 4: a count that meets a trigger is printed with
         # its issue; the cycle's exit status never changes (a report).
         native = native_watch_log(step.log)
+        # #3667 ask 2 — the cycle names the lenses that were absent: phases
+        # whose own output says ``skipped:`` on at least one document (the
+        # phase table says ``completed`` over them). A report, not a gate.
+        skipped = skipped_phases(cfg.states_dir, report["copied"])
         record = {
             **at_start,
             "head_after": head()["head"],
@@ -875,10 +924,12 @@ def run_cycle(
             "rc": rc,
             "verdict": pipeline_verdict(step.log),
             "native_watch": native,
+            "skipped_phases": skipped,
             "seconds": seconds,
             "harvest": {key: len(value) for key, value in report.items()},
         }
         report_native_watch(native)
+        report_skipped_phases(skipped)
         (cfg.cycle_dir / PIPELINE_RECORD).write_text(
             json.dumps(record, ensure_ascii=False, indent=1), encoding="utf-8"
         )
