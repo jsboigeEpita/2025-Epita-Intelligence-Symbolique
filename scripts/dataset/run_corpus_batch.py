@@ -805,7 +805,13 @@ async def _run_single(
 
     # --- Resume logic -------------------------------------------------------
     resume_from: Optional[Set[str]] = None
-    resume_context: Optional[Dict[str, Any]] = None
+    # #3548 R1205 — the analysed document's opaque id travels by CONTEXT, the
+    # one path that reaches the semantic-index phase. Never source_metadata:
+    # Act I renders every key of that block, and the recorded states carry no
+    # source_name there (0 of 407, measured).
+    resume_context: Dict[str, Any] = {
+        "analysed_document_id": opaque_id_str,
+    }
     checkpoint_snapshot: Optional[Dict[str, Any]] = None
 
     if checkpoint_mgr is not None:
@@ -822,7 +828,6 @@ async def _run_single(
                 )
 
                 phase_outputs = deserialize_phase_outputs(ckpt.get("phase_outputs", {}))
-                resume_context = {}
                 resume_from = completed
                 checkpoint_snapshot = ckpt.get("state_snapshot")
 
