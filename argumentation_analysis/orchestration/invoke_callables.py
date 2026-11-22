@@ -530,6 +530,32 @@ _EXTRACTION_MAX_ATTEMPTS = max(1, _env_number("EXTRACTION_MAX_ATTEMPTS", 3, int)
 # EXTRACTION_MAX_TOKENS=8192 (set 0 to omit the param entirely).
 _EXTRACTION_MAX_TOKENS = _env_number("EXTRACTION_MAX_TOKENS", 8192, int)
 
+# #3658 follow-up (R1203) - the calls that send NO explicit cap get claudish's
+# ingress default (4096): on the measured doc_J pass, DeLP, ASPIC and Act II
+# stopped at exactly 4 096, and the route rewrites enable_thinking:false to
+# adaptive, so the cap must size thinking PLUS the JSON. One named ceiling,
+# shared by every call site that had none (translator + acts), MEASURED from
+# the phases that carried our configured cap (8192). Override via
+# PHASE_MAX_TOKENS; 0 omits the param (the pre-fix behaviour, never advised).
+_PHASE_MAX_TOKENS = _env_number("PHASE_MAX_TOKENS", 8192, int)
+
+
+def _with_phase_max_tokens(settings: Any) -> Any:
+    """Pin the shared cap on an act's SK settings when it carries none (#3658).
+
+    An explicit per-call cap always wins; ``PHASE_MAX_TOKENS=0`` adds nothing.
+    """
+    if not _PHASE_MAX_TOKENS or settings is None:
+        return settings
+    try:
+        ext = getattr(settings, "extension_data", None)
+        if isinstance(ext, dict) and not ext.get("max_tokens"):
+            ext["max_tokens"] = _PHASE_MAX_TOKENS
+    except Exception:  # noqa: BLE001 - a cap must never break the act
+        logger.warning("phase max_tokens not applied: settings without extension_data")
+    return settings
+
+
 # #3511 — the FIRST READING's own completion cap, named apart from the
 # extraction constant above: a capacity is an INPUT bound (chars per chunk,
 # ``WHOLE_TEXT_CALL_CAPACITY``); this is an OUTPUT bound on the reading's one
@@ -15474,7 +15500,9 @@ async def _invoke_act2_narrative(
         # Conducted LLM call bound to the resolved kernel/service.
         if not llm_service_id or kernel is None:
             return ""
-        settings = kernel.get_prompt_execution_settings_from_service_id(llm_service_id)
+        settings = _with_phase_max_tokens(
+            kernel.get_prompt_execution_settings_from_service_id(llm_service_id)
+        )
         result = await kernel.invoke_prompt(
             function_name="act2_narrative_conducted",
             plugin_name="restitution",
@@ -16342,7 +16370,9 @@ async def _invoke_act1_framing(
     async def _llm(prompt: str) -> str:
         if not llm_service_id or kernel is None:
             return ""
-        settings = kernel.get_prompt_execution_settings_from_service_id(llm_service_id)
+        settings = _with_phase_max_tokens(
+            kernel.get_prompt_execution_settings_from_service_id(llm_service_id)
+        )
         result = await kernel.invoke_prompt(
             function_name="act1_framing_conducted",
             plugin_name="restitution",
@@ -16454,7 +16484,9 @@ async def _invoke_act3_conclusion(
     async def _llm(prompt: str) -> str:
         if not llm_service_id or kernel is None:
             return ""
-        settings = kernel.get_prompt_execution_settings_from_service_id(llm_service_id)
+        settings = _with_phase_max_tokens(
+            kernel.get_prompt_execution_settings_from_service_id(llm_service_id)
+        )
         result = await kernel.invoke_prompt(
             function_name="act3_conclusion_conducted",
             plugin_name="restitution",
