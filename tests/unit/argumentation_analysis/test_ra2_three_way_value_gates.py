@@ -20,6 +20,8 @@ Gates:
 Markers: requires_api (LLM calls), llm_light (single-case smoke)
 """
 
+import json
+
 import pytest
 
 from pathlib import Path
@@ -60,6 +62,40 @@ def _build_gate_llm_service():
     kernel = Kernel()
     kernel.add_service(llm_service)
     return kernel, llm_service, model_id
+
+
+def _assert_working_run_json(result) -> dict:
+    """#3653 — assert the run ANSWERED, not merely that it returned a string.
+
+    ``run_guided_analysis`` never raises on a broken LLM: the run-level
+    catch-all and the one-shot all-error pool both answer the SAME
+    non-empty JSON string — ``{"error": ..., "fallacies": []}``. The smoke
+    gate asserted exactly that shape, so it PASSED while every model call
+    got a 401 (measured on the live seat, #3653). This is the read the
+    gate owes: a truthy ``error`` key means the run is broken — fail loud
+    naming the cause instead of passing on the envelope.
+    """
+    assert isinstance(result, str) and result.strip(), (
+        f"run_guided_analysis should return a non-empty JSON string, got "
+        f"{type(result).__name__}: {result!r}"
+    )
+    try:
+        payload = json.loads(result)
+    except json.JSONDecodeError as exc:
+        pytest.fail(
+            f"run_guided_analysis returned invalid JSON ({exc}): {result[:200]!r}"
+        )
+    assert isinstance(payload, dict), (
+        f"run_guided_analysis should answer a JSON object, got "
+        f"{type(payload).__name__}: {result!r}"
+    )
+    error = payload.get("error")
+    if error:
+        pytest.fail(
+            f"the workflow answered an error envelope — the run is broken, "
+            f"not passing: {error}"
+        )
+    return payload
 
 
 # Reference cases from EPITA validation
@@ -321,11 +357,11 @@ class TestGuidedDescentDepthGate:
         # #2290: `run_guided_analysis` is async. Called without `await` (as it
         # was), it returns a coroutine — never None, never executed, no LLM
         # call. `assert result is not None` then passed on an unrun workflow in
-        # 1.7s. Assert the declared return type instead: a non-empty JSON str.
-        assert isinstance(result, str) and result.strip(), (
-            f"run_guided_analysis should return a non-empty JSON string, got "
-            f"{type(result).__name__}: {result!r}"
-        )
+        # 1.7s.
+        # #3653: "a non-empty JSON string" is not a PASS either — the plugin
+        # catches every provider failure and answers its error envelope,
+        # so the gate must read the answer, not measure its length.
+        _assert_working_run_json(result)
 
     async def test_guided_reaches_deeper_than_flat(self, fallacy_workflow):
         """
@@ -417,6 +453,83 @@ class TestGuidedDescentDepthGate:
         )
 
 
+class TestSmokeGateReadsTheErrorKey3653:
+    """#3653 — the smoke gate must not pass on a broken run.
+
+    Measured on the live seat: with a resolved-but-invalid API key, every
+    model call got a 401, and ``run_guided_analysis`` — which never raises
+    on provider failures — answered its error envelope
+    (``{"error": ..., "fallacies": []}``: the raised-path catch-all and the
+    one-shot all-error pool both produce it). The smoke test asserted only
+    "a non-empty JSON string", so it PASSED while the run was broken. The
+    witness stubs the service at the seam production uses (an SK
+    ChatCompletionClientBase whose every call raises the 401) and holds
+    the gate to the read it owes: an error envelope is a FAIL, not a PASS.
+    No API key is involved — the stub answers nothing.
+    """
+
+    async def test_the_gate_fails_on_a_dead_key_run(self):
+        from semantic_kernel.connectors.ai.chat_completion_client_base import (
+            ChatCompletionClientBase,
+        )
+
+        from argumentation_analysis.plugins.fallacy_workflow_plugin import (
+            FallacyWorkflowPlugin,
+        )
+
+        class _DeadKeyChat(ChatCompletionClientBase):
+            """Every model call dies the way a rejected key dies (HTTP 401)."""
+
+            async def _inner_get_chat_message_contents(self, chat_history, settings):
+                raise Exception("Incorrect API key (HTTP 401)")
+
+        taxonomy_path = (
+            Path(__file__).parent.parent.parent.parent
+            / "argumentation_analysis"
+            / "data"
+            / "taxonomy_full.csv"
+        )
+        if not taxonomy_path.exists():
+            pytest.skip("taxonomy_full.csv not found")
+
+        plugin = FallacyWorkflowPlugin(
+            master_kernel=None,
+            llm_service=_DeadKeyChat(
+                ai_model_id="dead-key-3653", service_id="dead-key-3653"
+            ),
+            taxonomy_file_path=str(taxonomy_path),
+        )
+        assert plugin.taxonomy_state == "loaded", (
+            f"fixture regression: taxonomy_state={plugin.taxonomy_state!r} — "
+            "the witness must drive the real funnel, not the empty-navigator "
+            "shortcut"
+        )
+
+        result = await plugin.run_guided_analysis(
+            argument_text=REFERENCE_CASES[0]["dialogue"],
+        )
+
+        # The defect, said live: the OLD smoke assertion PASSES on this
+        # broken run — "a non-empty JSON string" is all it ever checked.
+        assert isinstance(result, str) and result.strip()
+
+        # And this is what that string holds: the plugin's error envelope —
+        # the exact dead-key signature measured on the live seat.
+        payload = json.loads(result)
+        assert payload.get("error"), (
+            "fixture regression: the stub no longer reproduces the dead-key "
+            f"envelope — got {payload!r}"
+        )
+        assert payload.get("fallacies") == []
+
+        # The read the gate owes (#3653): this answer is a FAIL, not a PASS.
+        # (pytest.fail.Exception is the outcome raised by pytest.fail —
+        # pytest 9 exposes no top-level pytest.Failed.)
+        with pytest.raises(pytest.fail.Exception) as failed:
+            _assert_working_run_json(result)
+        assert "error envelope" in str(failed.value)
+
+
 class TestCompareDetectionModes:
     """
     VG-RA2-2: Verify the 3-way comparison infrastructure.
@@ -475,6 +588,13 @@ class TestGateServiceProvenance2840:
     modèle de production, sinon son verdict n'a pas de lecteur."""
 
     def test_retired_env_id_is_substituted_not_measured(self, monkeypatch):
+        # The substitution (#1930) lives on the OpenAI branch of the
+        # resolver. Two declarations precede that branch: the named
+        # Anthropic route (#3096 item 6), which the live band declares since
+        # #3653, and the OpenRouter toggle. Both are removed here so the test
+        # reaches the branch it names on every seat and in every lane.
+        monkeypatch.delenv("ANTHROPIC_CHAT_MODEL_ID", raising=False)
+        monkeypatch.delenv("OPENROUTER_BASE_URL", raising=False)
         monkeypatch.setenv("OPENAI_CHAT_MODEL_ID", "gpt-5-mini")
         _, _, model_id = _build_gate_llm_service()
         assert model_id != "gpt-5-mini", (

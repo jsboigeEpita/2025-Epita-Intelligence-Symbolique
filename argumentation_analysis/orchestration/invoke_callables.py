@@ -36,6 +36,7 @@ from argumentation_analysis.core.reading_window import (
     LOGIC_ARGUMENT_WINDOW,
     LOGIC_READING_WINDOW,
     STATUS_SELECTED,
+    WHOLE_TEXT_CALL_CAPACITY,
     WindowSelection,
     chunked_reading_offsets,
     gather_k_calls,
@@ -8109,15 +8110,75 @@ async def _invoke_eaf(input_text: str, context: Dict[str, Any]) -> Dict[str, Any
 async def _invoke_delp(input_text: str, context: Dict[str, Any]) -> Dict[str, Any]:
     """Invoke DeLP handler (#89) with JVM fallback.
 
-    #1215 (FP-12): requires an explicit ``program`` in context. Never feeds raw
-    text to ``DelpParser`` — DeLP syntax (facts / strict rules / defeasible
-    rules) is not prose; the old ``input_text[:500]`` default guaranteed a parse
-    failure AND leaked corpus text into the parser (correctness + privacy).
-    Honest-absent when no program is supplied, not a fake parse.
+    #1215 (FP-12): the DOCUMENT's prose is never fed to ``DelpParser`` — DeLP
+    syntax (facts / strict rules / defeasible rules) is not prose. Two whole
+    ways a program reaches the handler, both validated: (1) an explicit
+    ``program`` in context; (2) #3546 asks 2-6 — the structured-arg
+    translator derives a program from the run's own units, whose atoms are
+    ASCII snake_case identifiers, no free text (privacy: #1702). Honest-absent
+    when neither yields a program, never a fake parse.
     """
     program_text = context.get("program")
     queries = context.get("queries", [])
     criterion = context.get("criterion", "generalized_specificity")
+    program_origin = "context" if program_text else None
+    # #3546 (R1198 rework) — the units the translator derives from: an
+    # explicit ``context["arguments"]`` first (a caller-supplied inventory),
+    # else the SAME shared helper the PL/FOL/NTL arms use. The executor
+    # fills only ``phase_<name>_output`` (workflow_dsl.py:1258), so reading
+    # ``context["arguments"]`` alone left the producer at ZERO units in a
+    # real run (coordinator's probe on this head: 0 translator call) — the
+    # anti-pendulum rule bars making the executor write ``arguments`` for
+    # this one phase; the canonical source is the shared helper.
+    _delp_basis: Dict[str, Any] = {}
+    _explicit_units = context.get("arguments")
+    if isinstance(_explicit_units, list) and _explicit_units:
+        _delp_units = [
+            a.get("text", str(a)) if isinstance(a, dict) else str(a)
+            for a in _explicit_units
+        ]
+        _delp_basis.update(
+            path="context_arguments",
+            selected=len(_delp_units),
+            available=len(_explicit_units),
+        )
+    else:
+        _delp_units = _extract_arguments_from_context(
+            input_text, context, basis=_delp_basis
+        )
+
+    if not program_text:
+        # #3546 asks 2-6: one producer derives the defeasible KB (facts +
+        # strict rules + defeasible rules) and the contested queries from
+        # the run's own units. The translator's output is validated DeLP
+        # (whole literals, ASCII snake_case identifiers, no free text) —
+        # #1215 bars the prose itself, not a derived program.
+        try:
+            from argumentation_analysis.orchestration.structured_arg_translator import (
+                translate_to_delp_program,
+            )
+
+            outcome = await translate_to_delp_program(input_text, _delp_units)
+            _propagate_structured_arg_cause(
+                context, "delp_reasoning", outcome.cause, outcome.error
+            )
+            if outcome.relations.get("program_text"):
+                program_text = outcome.relations["program_text"]
+                queries = queries or list(outcome.relations.get("queries", []))
+                program_origin = "translator"
+                logger.info(
+                    "DeLP: translator-derived program (%d lines, %d queries).",
+                    len(program_text.splitlines()),
+                    len(queries),
+                )
+        except Exception as e:
+            logger.warning(
+                "DeLP program translator unavailable (%s); translator_failed.",
+                e,
+            )
+            _propagate_structured_arg_cause(
+                context, "delp_reasoning", "translator_failed", type(e).__name__
+            )
 
     if not program_text:
         # #3546 (ask 1): an unavailable DeLP result must be filed DEGRADED,
@@ -8131,15 +8192,21 @@ async def _invoke_delp(input_text: str, context: Dict[str, Any]) -> Dict[str, An
             "status": "unavailable",
             "degraded": True,
             "degradation_reason": (
-                "no DeLP 'program' in context (prose is never parsed as DeLP, "
-                "#1215) — the phase did not reason over any defeasible KB"
+                "no DeLP 'program' in context and the translator derived none "
+                "(prose is never parsed as DeLP, #1215) — the phase did not "
+                "reason over any defeasible KB"
             ),
             "message": (
                 "DeLP analysis requires an explicit 'program' in context "
                 "(DeLP syntax: 'fact.', 'head <- body.' strict, "
-                "'head -< body.' defeasible). Raw text is not a valid program."
+                "'head -< body.' defeasible) or a translator-derived one. "
+                "Raw text is not a valid program."
             ),
             "queries": queries,
+            # #2850 lot 5 — the k-of-N the units came from, even on the
+            # honest-absent path: 0 units selected names WHY no program
+            # was derived instead of leaving it unsourced.
+            "arguments_basis": dict(_delp_basis),
         }
 
     try:
@@ -8150,9 +8217,13 @@ async def _invoke_delp(input_text: str, context: Dict[str, Any]) -> Dict[str, An
 
         initializer = ready_initializer()
         handler = DeLPHandler(initializer)
-        return await asyncio.to_thread(
+        result = await asyncio.to_thread(
             handler.analyze_delp, program_text, queries, criterion
         )
+        if isinstance(result, dict):
+            result.setdefault("program_origin", program_origin)
+            result.setdefault("arguments_basis", dict(_delp_basis))
+        return result
     except Exception as e:
         raise RuntimeError(
             f"DeLP analysis unavailable: JVM/Tweety required ({e}). "
@@ -9326,6 +9397,38 @@ def _record_per_argument_reading(
     )
 
 
+def _record_per_argument_outcomes(
+    context: Dict[str, Any], outcomes: Dict[str, int]
+) -> None:
+    """#3558 — the pass's per-unit conclusion, beside the units it selected.
+
+    The selection record (#2966) says WHICH units the pass submitted; this
+    key says what it CONCLUDED on each — the findings it kept, ``0`` meaning
+    examined and clean, a recorded judgment the render and the tracer read.
+    Without it the conclusions lived only in ``identified_fallacies``, keyed
+    by target, so an examined unit with no finding left no trace that it was
+    judged at all.
+
+    Set directly on the coverage entry the selection wrote (same units, same
+    run — no geometry to recompute), NOT through ``record_analysis_coverage``
+    which rebuilds the entry from scratch; the one writer that rebuilds it
+    (#3326, the winner reading) carries the key through its rebuild.
+
+    Silent when no state is reachable or the selection left no record — the
+    same rule as every reading site.
+    """
+    state: Any = context.get("_state_object")
+    if state is None:
+        return
+    coverage = getattr(state, "analysis_coverage", None)
+    record = (
+        coverage.get("fallacy_per_argument") if isinstance(coverage, dict) else None
+    )
+    if not isinstance(record, dict) or not outcomes:
+        return
+    record["per_unit_outcomes"] = {str(k): int(v) for k, v in outcomes.items()}
+
+
 def _record_logic_units_reading(state_obj: Any, site: str, selection: Any) -> None:
     """#3136 — the logic arms' formulas come from k stratified UNITS.
 
@@ -9973,6 +10076,27 @@ async def _invoke_hierarchical_fallacy_per_argument(
                 f"fallacy runs got no answer: {run_failures[0]}"
             )
 
+        # #3558 — the pass's own conclusion, per examined unit: the findings
+        # it kept on each, or none. Only ANSWERED walks conclude — a walk
+        # that got no answer was selected, not examined (#3326's
+        # ``examined_ids`` rule) — and the dedup above already decided what
+        # the pass keeps, so the counts agree with the findings it returns.
+        # Without this, an examined unit with no finding left no trace that
+        # it was judged at all: the render could let a judgment of « propre »
+        # read as « jamais examiné » (panel c7, the doc_E judge note).
+        per_unit_outcomes: Dict[str, int] = {}
+        for result in per_arg_results:
+            if isinstance(result, dict) and not _unanswered(result):
+                arg_id = str(result.get("source_arg_id") or "")
+                if arg_id:
+                    per_unit_outcomes[arg_id] = 0
+        for f in deduped:
+            if not isinstance(f, dict):
+                continue
+            arg_id = str(f.get("source_arg_id") or "")
+            if arg_id in per_unit_outcomes:
+                per_unit_outcomes[arg_id] += 1
+
         exploration_method = (
             "+".join(sorted(methods_used)) if methods_used else "per_argument_parallel"
         )
@@ -9992,6 +10116,7 @@ async def _invoke_hierarchical_fallacy_per_argument(
             "per_argument_count": len(arguments),
             "parallel_executed": True,
             "descent_budget_exceeded": any_descent_budget_exceeded,
+            "per_unit_outcomes": per_unit_outcomes,
         }
         if run_failures:
             per_arg_output["degraded"] = True
@@ -10002,6 +10127,11 @@ async def _invoke_hierarchical_fallacy_per_argument(
             )
         # #3105 — the reading this pass actually did, on its own site.
         _record_per_argument_reading(context, arguments)
+        # #3558 — and what it concluded on each unit, beside the units the
+        # selection recorded. Written by the invoker like the reading
+        # record: both lanes (pipeline and conversational) reach the state
+        # through this one seam.
+        _record_per_argument_outcomes(context, per_unit_outcomes)
         return per_arg_output
 
     except FallacyDetectionFailed:
@@ -11100,7 +11230,6 @@ async def _invoke_propositional_logic(
                 # Honors the OpenRouter toggle via _get_openai_client.
                 client, model_id = _get_openai_client()
                 if client is not None and input_text and len(input_text) > 100:
-
                     # #1737: the phase's reading window — one selection, two
                     # feeds (pass 1 inventory + the wide-net pass below).
                     # #3136 — the selection is kept: the wide-net pass amends
@@ -11112,37 +11241,146 @@ async def _invoke_propositional_logic(
                         "propositional_logic",
                         state=reading_state_from_context(context),
                     )
-                    # #2850 lot 4 — the document window's k of N on the
-                    # payload; the trace entry at the selection gate below
-                    # names it too (counts only, no source text — #2908).
-                    pl_metrics["reading_window_chars"] = len(pl_reading)
-                    pl_metrics["source_total"] = len(input_text)
-                    # ── Pass 1: Atom inventory from the reading window ──
-                    pass1_prompt = (
-                        "You are an expert in propositional logic. Your task is to identify "
-                        "atomic propositions (basic facts) in the given text.\n\n"
-                        "Output a JSON object with a single key 'propositions' mapping to a "
-                        "list of strings. Each string is an atomic proposition name in "
-                        "lowercase snake_case (e.g. 'is_mortal', 'foreign_threat').\n\n"
-                        f"Text:\n{pl_reading}"
-                    )
+                    # #3537 — head-first, tiled beyond it (coordinator
+                    # decision, 2026-11-20: tiled in full, no cap on k).
+                    # Below one call's capacity the plan IS this selection,
+                    # so the pass-1 prompt is byte-identical and no cassette
+                    # key moves (ask 3). Above it the atom inventory reads
+                    # the WHOLE text in k contiguous chunks at the measured
+                    # capacity, from the selector's offset — the #2850 lot-10
+                    # plan. LOGIC_READING_WINDOW is NOT raised: the head-first
+                    # order and every downstream slice stay as measured.
+                    _pl_offset = _pl_head_selection.offset
+                    if len(input_text) - _pl_offset <= LOGIC_READING_WINDOW:
+                        _pl_spans: List[Tuple[int, int]] = [
+                            (_pl_offset, _pl_offset + len(pl_reading))
+                        ]
+                        _pl_readings = [pl_reading]
+                    else:
+                        _pl_spans = [
+                            (o, min(o + WHOLE_TEXT_CALL_CAPACITY, len(input_text)))
+                            for o in chunked_reading_offsets(
+                                len(input_text),
+                                WHOLE_TEXT_CALL_CAPACITY,
+                                start=_pl_offset,
+                            )
+                        ]
+                        _pl_readings = [input_text[_lo:_hi] for _lo, _hi in _pl_spans]
                     det_params = _get_determinism_params()
-                    pass1_resp = await _guarded_chat_completion(
-                        client,
-                        model=model_id,
-                        messages=[{"role": "user", "content": pass1_prompt}],
-                        **det_params,
+
+                    async def _pl_atoms_one_reading(
+                        _reading: str,
+                    ) -> Optional[List[str]]:
+                        """One atom-inventory call over one planned reading."""
+                        _prompt = (
+                            "You are an expert in propositional logic. Your task is to identify "
+                            "atomic propositions (basic facts) in the given text.\n\n"
+                            "Output a JSON object with a single key 'propositions' mapping to a "
+                            "list of strings. Each string is an atomic proposition name in "
+                            "lowercase snake_case (e.g. 'is_mortal', 'foreign_threat').\n\n"
+                            f"Text:\n{_reading}"
+                        )
+                        try:
+                            _resp = await _guarded_chat_completion(
+                                client,
+                                model=model_id,
+                                messages=[{"role": "user", "content": _prompt}],
+                                **det_params,
+                            )
+                        except LLMCacheMiss:
+                            raise  # #2320 — a replay miss traverses
+                        except Exception as _atom_err:  # noqa: BLE001
+                            logger.warning(
+                                f"PL atom inventory reading failed: {_atom_err}"
+                            )
+                            return None
+                        _data = _parse_json_from_llm(
+                            _resp.choices[0].message.content or ""
+                        )
+                        # Validate atoms: alphanumeric + underscore.
+                        return [
+                            a
+                            for a in _data.get("propositions", [])
+                            if isinstance(a, str)
+                            and re.match(r"^[a-zA-Z_][a-zA-Z0-9_]*$", a)
+                        ]
+
+                    # ── Pass 1: atom inventory over every planned reading ──
+                    _pl_atom_answers = await gather_k_calls(
+                        [_pl_atoms_one_reading(_r) for _r in _pl_readings]
                     )
-                    pass1_raw = pass1_resp.choices[0].message.content or ""
-
-                    # Parse propositions
-                    props_data = _parse_json_from_llm(pass1_raw)
-                    raw_atoms = props_data.get("propositions", [])
-
-                    # Validate atoms: must be alphanumeric + underscore
-                    valid_atoms = [
-                        a for a in raw_atoms if re.match(r"^[a-zA-Z_][a-zA-Z0-9_]*$", a)
-                    ]
+                    _pl_windows_ok = 0
+                    _pl_read_spans: List[Tuple[int, int]] = []
+                    valid_atoms: List[str] = []
+                    _seen_atoms: Set[str] = set()
+                    # #3537 (R1199 decision) — per-window yield: the atoms
+                    # each call RETURNED, plan order, None for a call that
+                    # never answered. ``reading_calls`` says the whole text
+                    # was SENT; this says what each window brought BACK, so
+                    # the next panel cycle reads the extra windows' yield
+                    # from the state instead of estimating it.
+                    _pl_yields: List[Optional[int]] = [None] * len(_pl_readings)
+                    # #3537 (R1202 item 27b) — per-window NEW yield: the atoms
+                    # no earlier ANSWERED window returned, same plan order and
+                    # None semantics as the yields. The merge loop below is
+                    # where a name is first sighted, so the window that
+                    # contributes each name is counted where it happens.
+                    _pl_new_yields: List[Optional[int]] = [None] * len(_pl_readings)
+                    for _pl_index, _pl_atoms in enumerate(_pl_atom_answers):
+                        if _pl_atoms is None:
+                            continue  # this window never answered: it read nothing
+                        _pl_windows_ok += 1
+                        _pl_yields[_pl_index] = len(_pl_atoms)
+                        _pl_read_spans.append(_pl_spans[_pl_index])
+                        _pl_new_this_window = 0
+                        for _a in _pl_atoms:
+                            if _a not in _seen_atoms:
+                                _seen_atoms.add(_a)
+                                valid_atoms.append(_a)
+                                _pl_new_this_window += 1
+                        _pl_new_yields[_pl_index] = _pl_new_this_window
+                    # #2850 lot 4 — the document window's k of N on the
+                    # payload, the UNION of the spans that ANSWERED (a failed
+                    # window's span would overcount what it never saw).
+                    _pl_chars_read = 0
+                    _pl_span_end = -1
+                    for _lo, _hi in sorted(_pl_read_spans):
+                        if _hi <= _lo:
+                            continue
+                        _pl_chars_read += max(0, _hi - max(_lo, _pl_span_end))
+                        _pl_span_end = max(_pl_span_end, _hi)
+                    _pl_chars_read = min(_pl_chars_read, len(input_text))
+                    pl_metrics["reading_window_chars"] = _pl_chars_read
+                    # #3537 ask 1 — the reading calls ISSUED next to the k of
+                    # N: a document's cost is the calls it paid for, answered
+                    # or not (the coordinator asked for this figure in
+                    # pl_metrics beside the character count).
+                    pl_metrics["reading_calls"] = len(_pl_readings)
+                    # #3537 (R1199) — the per-window yield beside the call
+                    # count (see the loop above for the None semantics).
+                    pl_metrics["reading_yields"] = _pl_yields
+                    # #3537 (R1202 item 27b) — the NEW yield beside the yield:
+                    # what each window added, not what it repeated.
+                    pl_metrics["new_reading_yields"] = _pl_new_yields
+                    pl_metrics["source_total"] = len(input_text)
+                    if _pl_windows_ok > 1:
+                        # The record says k windows and the union read —
+                        # counts only (#2908), in the #3105 ``extra`` shape.
+                        # One answered window keeps today's entry untouched.
+                        _pl_recorder = getattr(
+                            reading_state_from_context(context),
+                            "record_reading_window",
+                            None,
+                        )
+                        if _pl_recorder is not None:
+                            _pl_recorder(
+                                "propositional_logic",
+                                _pl_head_selection,
+                                extra={
+                                    "windows": _pl_windows_ok,
+                                    "chars_read": _pl_chars_read,
+                                },
+                            )
                     if valid_atoms:
                         shared_atoms = valid_atoms
                         pl_metrics["pass1_atoms"] = len(shared_atoms)
@@ -11214,11 +11452,21 @@ async def _invoke_propositional_logic(
                         pl_metrics["argument_window_population"] = len(_pl_targets)
                         pl_metrics["argument_window_over_cap"] = len(_pl_over_cap)
                         _pl_window_bits = []
-                        if len(pl_reading) < len(input_text):
-                            _pl_window_bits.append(
-                                f"lecture {len(pl_reading)} des "
-                                f"{len(input_text)} caractères"
-                            )
+                        # #3537 — the note names what the pass-1 inventory
+                        # actually read (the union of the answered windows),
+                        # never the head slice it replaced.
+                        if _pl_chars_read < len(input_text):
+                            if _pl_windows_ok > 1:
+                                _pl_window_bits.append(
+                                    f"lecture {_pl_chars_read} des "
+                                    f"{len(input_text)} caractères en "
+                                    f"{_pl_windows_ok} fenêtres"
+                                )
+                            else:
+                                _pl_window_bits.append(
+                                    f"lecture {_pl_chars_read} des "
+                                    f"{len(input_text)} caractères"
+                                )
                         if _pl_over_cap:
                             _pl_window_bits.append(
                                 f"fenêtre par argument ({LOGIC_ARGUMENT_WINDOW} car.) "
@@ -11364,10 +11612,24 @@ async def _invoke_propositional_logic(
                                 if state_obj is not None and hasattr(
                                     state_obj, "record_reading_window"
                                 ):
+                                    # #3537 — this re-record REPLACES the
+                                    # entry (#1737): the tiled pass-1's
+                                    # ``windows``/``chars_read`` are carried
+                                    # forward, or the head's formula count
+                                    # would erase the k-of-N it just gained.
+                                    _wt_extra: Dict[str, Any] = {
+                                        "head_formulas": wide_net_extras
+                                    }
+                                    _wt_prev = getattr(
+                                        state_obj, "reading_window_status", {}
+                                    ).get("propositional_logic", {})
+                                    for _wt_key in ("windows", "chars_read"):
+                                        if _wt_key in _wt_prev:
+                                            _wt_extra[_wt_key] = _wt_prev[_wt_key]
                                     state_obj.record_reading_window(
                                         "propositional_logic",
                                         _pl_head_selection,
-                                        extra={"head_formulas": wide_net_extras},
+                                        extra=_wt_extra,
                                     )
                                 logger.info(
                                     f"PL wide-net pass: {wide_net_extras} extra formulas"
@@ -11753,6 +12015,184 @@ async def _invoke_propositional_logic(
         )
 
 
+#: #3545 — sentence-initial conclusion markers, a closed list (the languages
+#: the corpus and the translator work in). The split is the production rule;
+#: the planted texts of the witness merely carry it.
+_FOL_CONCLUSION_MARKERS: Tuple[str, ...] = (
+    "so ",
+    "therefore ",
+    "thus ",
+    "hence ",
+    "donc ",
+    "par conséquent ",
+    "d'où ",
+    "ainsi ",
+    "alors ",
+)
+
+
+def _split_conclusion_span(text: str) -> Optional[Tuple[str, str]]:
+    """Split a unit at its LAST sentence-initial conclusion marker (#3545).
+
+    Sentence-initial: at the start of the text, or after sentence punctuation
+    with only whitespace between. The marker belongs to neither span — it is
+    scaffolding, not a premise. Returns ``(premises, conclusion)`` or ``None``
+    when no marker fires or either span is empty: no honest query can be
+    minted from the remainder.
+    """
+
+    def _sentence_initial(lowered: str, idx: int) -> bool:
+        if idx == 0:
+            return True
+        j = idx - 1
+        while j >= 0 and lowered[j].isspace():
+            j -= 1
+        return j < 0 or lowered[j] in ".!?;:"
+
+    lowered = text.lower()
+    best: Optional[Tuple[int, int]] = None
+    for marker in _FOL_CONCLUSION_MARKERS:
+        search_from = 0
+        while True:
+            idx = lowered.find(marker, search_from)
+            if idx < 0:
+                break
+            if _sentence_initial(lowered, idx) and (best is None or idx > best[0]):
+                best = (idx, idx + len(marker))
+            search_from = idx + 1
+    if best is None:
+        return None
+    premises = text[: best[0]].strip()
+    conclusion = text[best[1] :].strip()
+    if not premises or not conclusion:
+        return None
+    return premises, conclusion
+
+
+#: #3545 — the tri-state verdict as a record's one word. ``None`` keeps its
+#: own name (#2447): a query the reasoner never answered is not "not entailed".
+_FOL_VERDICT_NAMES: Dict[Optional[bool], str] = {
+    True: "entailed",
+    False: "not_entailed",
+    None: "no_verdict",
+}
+
+
+async def _fol_entailment_inferences(
+    units: List[Any],
+    *,
+    fol_handler: Any = None,
+    situation_note: str = "",
+) -> List[Dict[str, Any]]:
+    """Mint one conclusion query per marked unit, answer it, record it (#3545).
+
+    The chain the panel never had: text → persona → KB → query → solver → act
+    sentence. Per unit whose text carries a conclusion marker:
+
+    * the KB is that unit's STATED premises — the spans come from the unit's
+      own text, and the historian's note never adds a premise formula of its
+      own; when the note was in the translation context the record names it
+      (``minted_under``, #3377) so model knowledge is never counted as the
+      speaker's (``premise_texts_source`` stays ``stated`` for the SPANS);
+    * the query is the conclusion span's first formula, renamed to the KB
+      signature's declared names;
+    * the answer comes from ``FOLHandler.execute_fol_query`` ->
+      ``_in_jvm_entailment`` (#2502): tri-state, and ``None`` records
+      ``no_verdict`` with its message — never "not entailed" (#2447).
+
+    Units without a marker, or whose spans do not translate, yield no record:
+    #1631's bar for what ``inferences`` carries stands.
+    """
+    marked: List[Tuple[Any, str, str]] = []
+    for unit in units:
+        split = _split_conclusion_span(str(getattr(unit, "text", "") or ""))
+        if split is not None:
+            marked.append((unit, split[0], split[1]))
+    if not marked:
+        return []
+
+    from argumentation_analysis.services.nl_to_logic import (
+        NLToLogicTranslator,
+        TranslationResult,
+    )
+
+    translator = NLToLogicTranslator(max_retries=2, logic_type="fol")
+    spans: List[str] = []
+    for _unit, premises_text, conclusion_text in marked:
+        spans.extend((premises_text, conclusion_text))
+    batch = await translator.translate_batch(
+        spans,
+        logic_type="fol",
+        check_consistency=False,
+        context_note=situation_note,
+    )
+    formulas_by_text: Dict[str, List[str]] = {}
+    for item in batch.translations:
+        key = " ".join(str(getattr(item, "original_text", "") or "").split())
+        if not bool(getattr(item, "is_valid", False)):
+            continue
+        for formula in TranslationResult.split_formulas(
+            str(getattr(item, "formula", "") or "")
+        ):
+            text = str(formula).strip()
+            if text:
+                formulas_by_text.setdefault(key, []).append(text)
+
+    from argumentation_analysis.agents.core.logic.fol_logic_agent import (
+        FOLLogicAgent,
+    )
+
+    minted_under = "historian_note" if str(situation_note).strip() else "document_text"
+    records: List[Dict[str, Any]] = []
+    for unit, premises_text, conclusion_text in marked:
+        key_p = " ".join(premises_text.split())
+        key_c = " ".join(conclusion_text.split())
+        premise_formulas = formulas_by_text.get(key_p, [])
+        conclusion_formulas = formulas_by_text.get(key_c, [])
+        if not premise_formulas or not conclusion_formulas:
+            continue
+        try:
+            meta = FOLLogicAgent.extract_fol_metadata(premise_formulas)
+            kb_text = "\n".join(
+                str(line)
+                for line in list(meta["signature_lines"])
+                + [""]
+                + list(meta["formulas"])
+            )
+            # #2468: the renaming is the renamer's own — the query reads the
+            # maps where they are produced, never re-implemented here.
+            query = FOLLogicAgent.rename_fol_query(conclusion_formulas[0], meta)
+        except Exception as signature_err:
+            logger.warning(
+                "FOL conclusion query: the premise signature could not be "
+                "built for %s (%s); no record.",
+                getattr(unit, "unit_id", "?"),
+                signature_err,
+            )
+            continue
+        verdict: Optional[bool] = None
+        message = "no handler; no query verdict"
+        if fol_handler is not None:
+            try:
+                verdict, message = await asyncio.to_thread(
+                    fol_handler.execute_fol_query, kb_text, query
+                )
+            except Exception as solver_err:
+                verdict, message = None, f"FOL query error: {solver_err}"
+        records.append(
+            {
+                "unit_ids": [str(getattr(unit, "unit_id", "") or "")],
+                "premises": premise_formulas,
+                "premise_texts_source": "stated",
+                "minted_under": minted_under,
+                "query": query,
+                "verdict": _FOL_VERDICT_NAMES.get(verdict, "no_verdict"),
+                "message": str(message or "")[:200],
+            }
+        )
+    return records
+
+
 async def _invoke_fol_reasoning(
     input_text: str, context: Dict[str, Any]
 ) -> Dict[str, Any]:
@@ -11878,55 +12318,176 @@ async def _invoke_fol_reasoning(
                 # Honors the OpenRouter toggle via _get_openai_client.
                 client, model_id = _get_openai_client()
                 if client is not None and input_text and len(input_text) > 100:
-
                     # #1737: reading window on the ORIGINAL document (not the
                     # directive-prepended input_text).
-                    fol_reading = selected_text(
+                    fol_reading, _fol_head_selection = selected_text_and_selection(
                         _doc_text_fol,
                         LOGIC_READING_WINDOW,
                         "fol_reasoning",
                         state=reading_state_from_context(context),
                     )
-                    # #2850 lot 4 — same k-of-N pair as the PL arm, over the
-                    # ORIGINAL document: `_doc_text_fol`, never the
-                    # directive-prepended `input_text`.
-                    fol_metrics["reading_window_chars"] = len(fol_reading)
-                    fol_metrics["source_total"] = len(_doc_text_fol)
-                    # ── Pass 1: Shared FOL signature from the reading window ──
-                    pass1_prompt = (
-                        "You are a formal logic expert. Analyze the text and extract a "
-                        "first-order logic signature.\n\n"
-                        "Output a JSON object with:\n"
-                        '- "sorts": dict mapping sort_name -> list of constant names '
-                        '(e.g. {"Person": ["socrates", "plato"]})\n'
-                        '- "predicates": dict mapping pred_name -> list of arg sort names '
-                        '(e.g. {"Mortal": ["Person"], "Human": ["Person"]})\n'
-                        '- "constants": dict mapping const_name -> description '
-                        '(e.g. {"socrates": "the philosopher"})\n\n'
-                        "Rules:\n"
-                        "- Sorts: group related constants (Person, Country, etc.)\n"
-                        "- Predicates: CamelCase, list arg sorts\n"
-                        "- Constants: lowercase\n"
-                        '- If unsure about sort, use "Thing"\n\n'
-                        f"Text:\n{fol_reading}"
-                    )
+                    # #3537 — the FOL lens tiles exactly like the PL one:
+                    # below one call's capacity the plan IS this selection
+                    # (byte-identical prompt, ask 3); above it the signature
+                    # pass reads the WHOLE original document in k contiguous
+                    # chunks at the measured capacity, from the selector's
+                    # offset (#2850 lot-10 plan). LOGIC_READING_WINDOW is not
+                    # raised.
+                    _fol_offset = _fol_head_selection.offset
+                    if len(_doc_text_fol) - _fol_offset <= LOGIC_READING_WINDOW:
+                        _fol_spans: List[Tuple[int, int]] = [
+                            (_fol_offset, _fol_offset + len(fol_reading))
+                        ]
+                        _fol_readings = [fol_reading]
+                    else:
+                        _fol_spans = [
+                            (
+                                o,
+                                min(o + WHOLE_TEXT_CALL_CAPACITY, len(_doc_text_fol)),
+                            )
+                            for o in chunked_reading_offsets(
+                                len(_doc_text_fol),
+                                WHOLE_TEXT_CALL_CAPACITY,
+                                start=_fol_offset,
+                            )
+                        ]
+                        _fol_readings = [
+                            _doc_text_fol[_lo:_hi] for _lo, _hi in _fol_spans
+                        ]
                     det_params = _get_determinism_params()
-                    pass1_resp = await _guarded_chat_completion(
-                        client,
-                        model=model_id,
-                        messages=[{"role": "user", "content": pass1_prompt}],
-                        **det_params,
-                    )
-                    pass1_raw = pass1_resp.choices[0].message.content or ""
 
-                    sig_data = _parse_json_from_llm(pass1_raw)
-                    sorts = sig_data.get("sorts", {})
-                    predicates = sig_data.get("predicates", {})
-                    constants_raw = sig_data.get("constants", {})
+                    async def _fol_signature_one_reading(
+                        _reading: str,
+                    ) -> Optional[Dict[str, Any]]:
+                        """One signature call over one planned reading."""
+                        _prompt = (
+                            "You are a formal logic expert. Analyze the text and extract a "
+                            "first-order logic signature.\n\n"
+                            "Output a JSON object with:\n"
+                            '- "sorts": dict mapping sort_name -> list of constant names '
+                            '(e.g. {"Person": ["socrates", "plato"]})\n'
+                            '- "predicates": dict mapping pred_name -> list of arg sort names '
+                            '(e.g. {"Mortal": ["Person"], "Human": ["Person"]})\n'
+                            '- "constants": dict mapping const_name -> description '
+                            '(e.g. {"socrates": "the philosopher"})\n\n'
+                            "Rules:\n"
+                            "- Sorts: group related constants (Person, Country, etc.)\n"
+                            "- Predicates: CamelCase, list arg sorts\n"
+                            "- Constants: lowercase\n"
+                            '- If unsure about sort, use "Thing"\n\n'
+                            f"Text:\n{_reading}"
+                        )
+                        try:
+                            _resp = await _guarded_chat_completion(
+                                client,
+                                model=model_id,
+                                messages=[{"role": "user", "content": _prompt}],
+                                **det_params,
+                            )
+                        except LLMCacheMiss:
+                            raise  # #2320 — a replay miss traverses
+                        except Exception as _sig_err:  # noqa: BLE001
+                            logger.warning(f"FOL signature reading failed: {_sig_err}")
+                            return None
+                        return _parse_json_from_llm(
+                            _resp.choices[0].message.content or ""
+                        )
+
+                    # ── Pass 1: shared signature over every planned reading ──
+                    _fol_sig_answers = await gather_k_calls(
+                        [_fol_signature_one_reading(_r) for _r in _fol_readings]
+                    )
+                    _fol_windows_ok = 0
+                    _fol_read_spans: List[Tuple[int, int]] = []
+                    sorts: Dict[str, List[str]] = {}
+                    predicates: Dict[str, List[str]] = {}
+                    constants_raw: Dict[str, Any] = {}
+                    # #3537 (R1199 decision) — per-window yield, FOL arm: the
+                    # PREDICATES each call returned (the R1199 table's unit),
+                    # plan order, None for a call that never answered.
+                    _fol_yields: List[Optional[int]] = [None] * len(_fol_readings)
+                    # #3537 (R1202 item 27b) — per-window NEW predicates, same
+                    # plan order and None semantics: a name first sighted HERE
+                    # counts for THIS window, and a failed window's names never
+                    # enter the merge, so a later window that answers them
+                    # counts them as new.
+                    _fol_new_yields: List[Optional[int]] = [None] * len(_fol_readings)
+                    for _fol_index, _sig in enumerate(_fol_sig_answers):
+                        if _sig is None:
+                            continue  # this window never answered: it read nothing
+                        _fol_windows_ok += 1
+                        _fol_yields[_fol_index] = len(_sig.get("predicates") or {})
+                        _fol_read_spans.append(_fol_spans[_fol_index])
+                        _fol_new_this_window = 0
+                        # Merge in plan order, first sighting wins — the
+                        # cross-window rule of #2850 lot 10.
+                        for _s, _names in (_sig.get("sorts") or {}).items():
+                            if not isinstance(_names, list):
+                                continue
+                            _merged = sorts.setdefault(_s, [])
+                            for _n in _names:
+                                if _n not in _merged:
+                                    _merged.append(_n)
+                        for _p, _args in (_sig.get("predicates") or {}).items():
+                            if not isinstance(_args, list):
+                                continue
+                            if _p not in predicates:
+                                _fol_new_this_window += 1
+                            _merged_p = predicates.setdefault(_p, [])
+                            for _arg in _args:
+                                if _arg not in _merged_p:
+                                    _merged_p.append(_arg)
+                        for _c, _desc in (_sig.get("constants") or {}).items():
+                            constants_raw.setdefault(_c, _desc)
+                        _fol_new_yields[_fol_index] = _fol_new_this_window
+                    # #2850 lot 4 — same k-of-N pair as the PL arm, over the
+                    # ORIGINAL document, the union of the spans that ANSWERED.
+                    _fol_chars_read = 0
+                    _fol_span_end = -1
+                    for _lo, _hi in sorted(_fol_read_spans):
+                        if _hi <= _lo:
+                            continue
+                        _fol_chars_read += max(0, _hi - max(_lo, _fol_span_end))
+                        _fol_span_end = max(_fol_span_end, _hi)
+                    _fol_chars_read = min(_fol_chars_read, len(_doc_text_fol))
+                    fol_metrics["reading_window_chars"] = _fol_chars_read
+                    # #3537 ask 1 — the reading calls ISSUED beside the k of N.
+                    fol_metrics["reading_calls"] = len(_fol_readings)
+                    # #3537 (R1199) — the per-window yield beside the call
+                    # count (see the loop above for the None semantics).
+                    fol_metrics["reading_yields"] = _fol_yields
+                    # #3537 (R1202 item 27b) — the NEW predicates beside the
+                    # yield: what each window added, not what it repeated.
+                    fol_metrics["new_reading_yields"] = _fol_new_yields
+                    fol_metrics["source_total"] = len(_doc_text_fol)
+                    if _fol_windows_ok > 1:
+                        _fol_recorder = getattr(
+                            reading_state_from_context(context),
+                            "record_reading_window",
+                            None,
+                        )
+                        if _fol_recorder is not None:
+                            _fol_recorder(
+                                "fol_reasoning",
+                                _fol_head_selection,
+                                extra={
+                                    "windows": _fol_windows_ok,
+                                    "chars_read": _fol_chars_read,
+                                },
+                            )
 
                     if sorts or constants_raw:
                         if not sorts and constants_raw:
                             sorts = {"Thing": list(constants_raw.keys())}
+                        # #3537 — pass 2 reads the MERGED signature: the
+                        # windows' union, in the shape the prompt builder
+                        # expects, exactly the parsed dict a single call
+                        # used to hand it.
+                        sig_data = {
+                            "sorts": sorts,
+                            "predicates": predicates,
+                            "constants": constants_raw,
+                        }
                         fol_metrics["pass1_sorts"] = len(sorts)
                         fol_metrics["pass1_predicates"] = len(predicates)
                         fol_metadata_shared = {
@@ -12005,11 +12566,21 @@ async def _invoke_fol_reasoning(
                             )
                             fol_metrics["argument_window_over_cap"] = len(_fol_over_cap)
                             _fol_window_bits = []
-                            if len(fol_reading) < len(_doc_text_fol):
-                                _fol_window_bits.append(
-                                    f"lecture {len(fol_reading)} des "
-                                    f"{len(_doc_text_fol)} caractères"
-                                )
+                            # #3537 — the note names what the signature pass
+                            # actually read (union of answered windows), never
+                            # the head slice it replaced.
+                            if _fol_chars_read < len(_doc_text_fol):
+                                if _fol_windows_ok > 1:
+                                    _fol_window_bits.append(
+                                        f"lecture {_fol_chars_read} des "
+                                        f"{len(_doc_text_fol)} caractères en "
+                                        f"{_fol_windows_ok} fenêtres"
+                                    )
+                                else:
+                                    _fol_window_bits.append(
+                                        f"lecture {_fol_chars_read} des "
+                                        f"{len(_doc_text_fol)} caractères"
+                                    )
                             if _fol_over_cap:
                                 _fol_window_bits.append(
                                     f"fenêtre par argument "
@@ -12227,7 +12798,11 @@ async def _invoke_fol_reasoning(
     # or by whole-dict serialization — the removal cannot change the deliverable.
     # Tweety can do deduction; wiring it is a separate question. Until then the
     # honest value is the empty list, and the field marks the place.
-    inferences: List[str] = []
+    # #3545 answers that question: the conclusion-query wiring below fills
+    # ``inferences`` with one RECORD per marked unit (premises, query, verdict,
+    # unit ids). The empty list stays the honest value on every path the
+    # wiring does not reach (no translation, no bridge).
+    inferences: List[Dict[str, Any]] = []
 
     def _cause_for(
         _checked: List[str],
@@ -12465,6 +13040,34 @@ async def _invoke_fol_reasoning(
         )
 
         bridge = TweetyBridge()
+
+        # #3545 — the conclusion query. One per marked unit of the same
+        # selection the arms formalised (#3030's one-selection doctrine):
+        # the unit's stated premises are the KB, its conclusion the query,
+        # answered by the same JVM the consistency check uses. Guarded: a
+        # query that cannot be minted or answered records its own absence —
+        # it never degrades the consistency verdict this phase exists to
+        # produce.
+        try:
+            from argumentation_analysis.agents.core.context.historian import (
+                context_note as _fol_historian_note,
+            )
+
+            _fol_note = _fol_historian_note(state_obj) if state_obj is not None else ""
+        except Exception:
+            _fol_note = ""
+        try:
+            inferences = await _fol_entailment_inferences(
+                list(_fol_selection.selected),
+                fol_handler=getattr(bridge, "fol_handler", None),
+                situation_note=_fol_note,
+            )
+        except Exception as _infer_err:
+            logger.warning(
+                "FOL conclusion query unavailable (%s); inferences stays " "empty.",
+                _infer_err,
+            )
+            inferences = []
 
         # Convert Unicode FOL operators to ASCII before signature extraction (#677)
         fol_metrics["pre_sanitize"] = len(formulas)
@@ -16821,6 +17424,7 @@ async def _invoke_stakes_extractor(
         model_id=model_id,
         llm_call=_guarded_chat_completion,
         deanonymized=bool(getattr(state, "deanonymized", True)),
+        state=state,
     )
 
     # #3096 — fail loud: an LLM failure in the extractor is a DEGRADED phase

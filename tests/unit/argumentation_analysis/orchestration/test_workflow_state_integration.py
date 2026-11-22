@@ -247,16 +247,20 @@ class TestStateWriters:
             _write_semantic_index_to_state,
         )
 
+        # #3548 — the corpus reader's offsets-only record replaces the
+        # former ``results`` arm (query/snippet retired).
         state = UnifiedAnalysisState("test")
         output = {
-            "results": [
-                {"id": "doc_1", "score": 0.85, "snippet": "relevant text"},
+            "corpus_matches": [
+                {"doc": "doc_1", "start": 12, "end": 90, "score": 0.85},
             ]
         }
-        ctx = {"input_data": "search query"}
+        ctx = {}
         _write_semantic_index_to_state(output, state, ctx)
         assert len(state.semantic_index_refs) == 1
         assert state.semantic_index_refs[0]["document_id"] == "doc_1"
+        assert state.semantic_index_refs[0]["start"] == 12
+        assert "snippet" not in state.semantic_index_refs[0]
 
     def test_write_speech_to_state(self):
         from argumentation_analysis.orchestration.unified_pipeline import (
@@ -527,7 +531,7 @@ class TestStateSnapshotSerialization:
         state.add_debate_transcript("topic", [{"speaker": "A", "text": "hi"}], "A")
         state.add_neural_fallacy_score("text", "ad_hominem", 0.9)
         state.add_transcription_segment(0.0, 1.5, "Hello", "Speaker1")
-        state.add_semantic_index_ref("query", "doc1", 0.7, "snippet")
+        state.add_semantic_index_ref("doc1", 10, 80, 0.7)
         state.set_workflow_results("test_wf", {"completed": 1})
 
         # Summarized snapshot

@@ -247,6 +247,11 @@ PROSE_BASELINE = frozenset(
         # this guard is that a new state read is never silent).
         "historical_context",
         "strategic_read",
+        # #3548 — the corpus reader's offsets-only record (other documents
+        # where a claim of this one already appears). Acte I renders the
+        # echo block from it; the read is COUNTS AND OFFSETS only — the
+        # record holds no text by construction.
+        "semantic_index_refs",
         # #3547 — the JTMS counterfactual: premises whose withdrawal would
         # drop other beliefs' only justification, read by the act3 projector
         # (and through it the persona lookup above). Counts and texts only;
@@ -335,6 +340,13 @@ PROSE_ONLY = frozenset(
         # wording is model knowledge the export boundary scrubs (pass 8).
         "historical_context",
         "strategic_read",
+        # #3548 — the corpus echo: a rendering carrier (the offsets-only
+        # finding sentence Acte I projects), not an analytical dimension —
+        # the appendix has no "disponible / mobilisée" row for it, same
+        # family as the persona reads above. It holds no text by
+        # construction (ask 7), so the annexe's provenance table gains
+        # nothing by attesting it.
+        "semantic_index_refs",
         # #3547 — the JTMS counterfactual: a rendering carrier (the
         # withdrawal sentence act3 projects), not an analytical dimension —
         # the appendix has no "disponible / mobilisée" row for it, same

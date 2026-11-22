@@ -237,6 +237,15 @@ class Config:
                 found.append((int(suffix), path))
         return max(found)[1] if found else None
 
+    @property
+    def previous_cycle_dir(self) -> Optional[Path]:
+        """The compared cycle's directory — where its ``condition2.json``
+        (the counter this cycle's reading chains from) lives, when a
+        comparison cycle is configured."""
+        if not self.compare_with_tag:
+            return None
+        return self.results_root / "panel_cycles" / self.compare_with_tag
+
 
 # ---------------------------------------------------------------------------
 # The commands
@@ -334,6 +343,49 @@ def trace_step(cfg: Config, judges: Sequence[Judge]) -> Step:
     return Step(name="trace", argv=argv, log=cfg.logs_dir / "trace.log")
 
 
+def condition2_step(cfg: Config, judges: Sequence[Judge]) -> Step:
+    """#3543: the condition-2 counter as the cycle's own step — the two
+    roles' consensus directories in (one ``--judge`` per family, tag mode
+    resolves them under ``--results-root``), the reading written to the
+    cycle directory where the runbook files the cycle's artifacts. Two
+    classes of exit stop the cycle, never a green finish: the standalone
+    command's provenance refusals (rc 1), and — under ``--refuse-holds``,
+    the runner's mode — a held reading (rc 3: unproven, not independent,
+    or the same run in both roles)."""
+    argv = [
+        cfg.python,
+        "scripts/panel/condition2.py",
+        "--tag",
+        cfg.tag,
+        "--passes",
+        str(cfg.passes),
+        "--results-root",
+        str(cfg.results_root),
+        "--cycle-dir",
+        str(cfg.cycle_dir),
+        "--panel-file",
+        str(cfg.panel_file),
+    ]
+    for judge in judges:
+        argv += ["--judge", judge.name]
+    if cfg.compare_with_tag:
+        argv += [
+            "--previous-tag",
+            cfg.compare_with_tag,
+            "--previous-cycle-dir",
+            str(cfg.previous_cycle_dir),
+        ]
+    else:
+        argv += ["--new-series"]
+    # R1199 review: the real command exits 0 on a held reading (a hold is a
+    # diagnosis, not a refusal), so watching the rc alone would finish the
+    # cycle green over an unread counter. The runner asks the counter to
+    # refuse held readings: a non-empty hold list exits EXIT_HELD (3) and
+    # the cycle stops; the standalone diagnostic replay keeps rc 0.
+    argv += ["--refuse-holds"]
+    return Step(name="condition2", argv=argv, log=cfg.logs_dir / "condition2.log")
+
+
 def plan(cfg: Config) -> List[Step]:
     """Every command the cycle can run, in order. ``--plan`` prints it; the
     run itself goes through the same builders."""
@@ -348,6 +400,7 @@ def plan(cfg: Config) -> List[Step]:
             steps += [consensus_step(cfg, judge, k) for k in cfg.consensus_sizes()]
         if cfg.judges and cfg.passes >= 2:
             steps.append(trace_step(cfg, cfg.judges))
+            steps.append(condition2_step(cfg, cfg.judges))
     return steps
 
 
@@ -414,6 +467,62 @@ def pipeline_verdict(log: Path) -> Optional[str]:
     return None
 
 
+# #3540 — the native-failure watch: ONE source for the three families'
+# signatures. The page docs/guides/NATIVE_FAILURES_WATCH.md prints the very
+# strings below (test_native_watch_3540 pins that): the grep it documents is
+# the grep the runner counts. Exact, case-sensitive — a case-insensitive
+# "GIL" matches French words of the prompts, and a Python traceback says
+# "most recent call LAST" while only a faulthandler dump says "first".
+# A faulthandler dump lists EVERY thread (its thread headers each carry
+# "(most recent call first):" — 3 on the real #2080 positive-control dump,
+# measured): counting the header would count THREADS, not dumps. The dump
+# EVENT is its one-shot "Timeout (" line — exactly one per dump (same
+# measurement), and a Python traceback never carries it.
+NATIVE_PATTERNS: Dict[str, str] = {
+    "teardown_armed": "teardown watchdog armed",
+    "teardown_dumps": "Timeout (",
+    "pybind11_signature": "pybind11::handle::dec_ref()",
+    "fatal_abort": "Fatal Python error",
+    "jpype_terminate": "_JTerminate",
+}
+
+# A count that meets a family's trigger is reported with the issue that
+# named the trigger (ask 4). A report, never a gate: the cycle's exit
+# status is unchanged. teardown_armed has NO print issue — its trigger is
+# "armed followed by a dump" (the dump counts above), so arming alone is
+# the healthy path; "most recent call first" printing #2005/#2080 reflects
+# the threads that NAMED this signature (no common cause is asserted).
+NATIVE_PRINT_ISSUES: Dict[str, str] = {
+    "teardown_dumps": "#2080",
+    "pybind11_signature": "#2005",
+    "fatal_abort": "#2005",
+    "jpype_terminate": "#2894",
+}
+
+
+def native_watch(text: str) -> Dict[str, int]:
+    """#3540 ask 3 — count each family's signature in a batch log's text."""
+    return {name: text.count(pattern) for name, pattern in NATIVE_PATTERNS.items()}
+
+
+def native_watch_log(log: Path) -> Dict[str, Any]:
+    """The count over a pipeline log — or the ABSENCE named, never a 0."""
+    if not log.is_file():
+        return {"absent": True}
+    return native_watch(log.read_text(encoding="utf-8", errors="replace"))
+
+
+def report_native_watch(counts: Dict[str, Any]) -> None:
+    """#3540 ask 4 — print every count that meets a trigger, with its issue."""
+    if counts.get("absent"):
+        print("native-watch: no pipeline log — absence recorded, not a zero")
+        return
+    for name, issue in NATIVE_PRINT_ISSUES.items():
+        value = counts.get(name, 0)
+        if value:
+            print(f"native-watch: {name}={value} (see {issue})")
+
+
 def missing_zeroshot(cfg: Config, panel: Sequence[str]) -> List[str]:
     """Panel documents without a zero-shot answer: the judge would refuse
     them, after the pipeline was paid."""
@@ -455,6 +564,32 @@ def harvest(cfg: Config, panel: Sequence[str], started: float) -> Dict[str, List
                 shutil.copy2(source, target / source.name)
             report["copied"].append(doc)
     return report
+
+
+def length_stop_phases(states_dir: Path, docs: Sequence[str]) -> List[str]:
+    """Phase names whose harvested states count replies cut at the token cap
+    (#3658 ask 2) — ``length_stops > 0`` in a state's ``llm_usage``.
+
+    Reads the states this cycle just harvested (the copies, not the kb
+    originals), unions the names across documents, sorts them. Only names:
+    the counts stay in the state, where the reader who needs them looks. A
+    missing or unreadable state is skipped — the harvest already named
+    missing documents as its own stop.
+    """
+    phases = set()
+    for doc in docs:
+        try:
+            usage = json.loads(
+                (states_dir / f"state_full_{doc}.json").read_text(encoding="utf-8")
+            ).get("llm_usage")
+        except (OSError, ValueError, AttributeError):
+            continue
+        if not isinstance(usage, dict):
+            continue
+        for phase, bucket in usage.items():
+            if isinstance(bucket, dict) and bucket.get("length_stops"):
+                phases.add(str(phase))
+    return sorted(phases)
 
 
 def recorded_pipeline(cfg: Config) -> Optional[Dict[str, Any]]:
@@ -728,15 +863,22 @@ def run_cycle(
         rc = dispatch(step)
         seconds = round(now() - started)
         report = harvest(cfg, panel, started)
+        # #3540 ask 3 — the native-failure watch rides the pipeline record
+        # beside the verdict: each family's count read from the log, or the
+        # absence named. Ask 4: a count that meets a trigger is printed with
+        # its issue; the cycle's exit status never changes (a report).
+        native = native_watch_log(step.log)
         record = {
             **at_start,
             "head_after": head()["head"],
             "started": summary["started"],
             "rc": rc,
             "verdict": pipeline_verdict(step.log),
+            "native_watch": native,
             "seconds": seconds,
             "harvest": {key: len(value) for key, value in report.items()},
         }
+        report_native_watch(native)
         (cfg.cycle_dir / PIPELINE_RECORD).write_text(
             json.dumps(record, ensure_ascii=False, indent=1), encoding="utf-8"
         )
@@ -746,6 +888,9 @@ def run_cycle(
             **record,
             missing_documents=report["missing"],
             stale_documents=report["stale"],
+            # #3658 ask 2 — a PASS with replies cut at the token cap must be
+            # visible without opening the state.
+            length_stop_phases=length_stop_phases(cfg.states_dir, report["copied"]),
         )
         summary["credit_after_pipeline"] = credit()
         status.event(
@@ -793,6 +938,21 @@ def run_cycle(
         rc = dispatch(trace_step(cfg, judged))
         summary["trace"] = {"rc": rc, "families": [judge.name for judge in judged]}
         status.event("trace", **summary["trace"])
+        # #3543: the condition-2 reading is part of the cycle — a refusal
+        # (unproven provenance, reused directories, series break) stops the
+        # cycle stopped-loud, never a green finish over an unread counter.
+        rc = dispatch(condition2_step(cfg, judged))
+        summary["condition2"] = {
+            "rc": rc,
+            "families": [judge.name for judge in judged],
+        }
+        status.event("condition2", **summary["condition2"])
+        if rc != 0:
+            return finish(
+                f"condition2 refused the cycle (rc {rc}) — see "
+                f"{cfg.logs_dir / 'condition2.log'}",
+                EXIT_STOPPED,
+            )
     failed = [
         judge.name for judge, result in zip(cfg.judges, results) if not result["ok"]
     ]

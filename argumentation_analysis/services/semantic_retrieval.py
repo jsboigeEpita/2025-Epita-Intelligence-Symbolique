@@ -199,6 +199,149 @@ def _cosine(left: Sequence[float], right: Sequence[float]) -> float:
     return dot / norm if norm else 0.0
 
 
+#: Minimum cosine for a corpus chunk to be named a match (#3548 ask 4). The
+#: bar is MEASURED on the planted witness corpus (crc32 bag-of-words fake):
+#: the paraphrase chunk scores 0.5951 against the claim, the corpus with the
+#: paraphrase removed never exceeds 0.4281 (function-word overlap), and an
+#: off-topic document stays under 0.26 — 0.5 accepts the finding, rejects
+#: the mutated corpus AND the noise. A paid run re-reads it from the route's
+#: real model; the value rides in the answer so a run reports the bar it
+#: applied.
+CORPUS_MATCH_THRESHOLD = 0.5
+
+
+@dataclass(frozen=True)
+class CorpusEntry:
+    """One in-memory corpus chunk: its document (opaque id), its span, its vector.
+
+    Shape A of the design note — volatile, built for one run, dropped with
+    the process. The chunk's TEXT never enters an entry: the corpus is
+    decrypted in memory and stays there (rules 1, 5 and 7).
+    """
+
+    doc_id: str
+    start: int
+    end: int
+    vector: Tuple[float, ...]
+
+
+def build_corpus_kb(
+    definitions: Sequence[Dict[str, Any]],
+    route: EmbeddingRoute,
+    exclude_doc_id: str = "",
+) -> Tuple[List[CorpusEntry], str]:
+    """Build the corpus KB: chunk and embed every OTHER document (#3548 ask 3).
+
+    ``definitions`` is ``load_extract_definitions``'s in-memory output — a
+    list of ``{"id": …, "source_name": …, "full_text": …}`` items. The
+    analysed document is excluded by its own id: a query must never be
+    answered by the document it came from. Returns ``(entries, reason)``;
+    ``reason`` is ``""`` when at least one chunk entered the KB and
+    otherwise names the absence.
+    """
+    pending: List[Tuple[str, int, int, str]] = []
+    for item in definitions or []:
+        if not isinstance(item, dict):
+            continue
+        doc_id = str(item.get("id") or "").strip()
+        text = str(item.get("full_text") or item.get("text") or "").strip()
+        if not doc_id or not text or doc_id == exclude_doc_id:
+            continue
+        for chunk in chunk_spans(text):
+            pending.append((doc_id, chunk.start, chunk.end, chunk.text))
+    if not pending:
+        return [], "no corpus document yielded a chunk"
+    vectors = embed_texts([text for _, _, _, text in pending], route)
+    entries = [
+        CorpusEntry(doc_id=doc_id, start=start, end=end, vector=tuple(vector))
+        for (doc_id, start, end, _), vector in zip(pending, vectors)
+    ]
+    return entries, ""
+
+
+def query_corpus_for_claim(
+    claim: str,
+    kb: Sequence[CorpusEntry],
+    route: EmbeddingRoute,
+    threshold: float = CORPUS_MATCH_THRESHOLD,
+    top_k: int = DEFAULT_TOP_K,
+) -> Dict[str, Any]:
+    """Rank the corpus KB against the claim — cosine, v1's own solver (ask 5).
+
+    The answer lists the other documents' chunks above ``threshold`` as
+    ``{doc, start, end, score}`` (ask 4): offsets into texts the caller
+    already holds, never the texts themselves. The threshold rides in the
+    answer — a run reports the bar it applied.
+    """
+    if not kb:
+        return {
+            "matches": [],
+            "threshold": threshold,
+            "chunks": 0,
+            "ranked": 0,
+            "reason": "the corpus KB is empty",
+        }
+    query_vector = embed_texts([claim], route)[0]
+    scored = sorted(
+        (
+            (_cosine(entry.vector, query_vector), index)
+            for index, entry in enumerate(kb)
+        ),
+        key=lambda pair: (-pair[0], pair[1]),
+    )
+    top = scored[: max(0, top_k)]
+    matches = [
+        {
+            "doc": kb[index].doc_id,
+            "start": kb[index].start,
+            "end": kb[index].end,
+            "score": round(score, 4),
+        }
+        for score, index in top
+        if score >= threshold
+    ]
+    return {
+        "matches": matches,
+        "threshold": threshold,
+        "chunks": len(kb),
+        "ranked": len(scored),
+        "reason": "",
+    }
+
+
+def corpus_claim_from_state(state: Any) -> Tuple[str, str]:
+    """The claim the corpus is queried for (#3548 ask 2).
+
+    One the strategist's ``players`` attribute to a side (``interests`` —
+    what this player wants, in the strategist's own words); the FIRST
+    READING's thesis when no player recorded one. The historian's
+    ``context_note`` is NEVER a source — model knowledge about the world is
+    not a claim the corpus makes. Returns ``(claim, reason)``; ``reason`` is
+    ``""`` when a claim exists.
+    """
+    if state is None:
+        return "", "no state object — no claim to look up"
+    read = getattr(state, "strategic_read", None)
+    players = read.get("players") if isinstance(read, dict) else None
+    for player in players or []:
+        if not isinstance(player, dict):
+            continue
+        claim = str(player.get("interests") or "").strip()
+        if claim:
+            return claim, ""
+    from argumentation_analysis.agents.core.reading import defining_moves as _moves
+
+    for move in _moves(state):
+        if str(move.get("kind") or "") != "thesis":
+            continue
+        quote = str(move.get("quote") or "").strip()
+        reading = str(move.get("reading") or "").strip()
+        part = " — ".join(p for p in (quote, reading) if p)
+        if part:
+            return part, ""
+    return "", "no strategist claim and no thesis — nothing to look up"
+
+
 def retrieve_priority_spans(
     document_text: str,
     query: str,

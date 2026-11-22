@@ -1353,6 +1353,22 @@ def _write_fallacy_winner_reading_to_state(
     for i in fresh:
         added_by[i] = "vote_winner_reading"
 
+    # #3558 — the per-unit outcomes survive the rebuild and grow with the
+    # winners this reading walked: the winner reading IS the per-argument
+    # reading, targeted after the vote (#3105 vocabulary), so its answered
+    # walks conclude like any other — findings kept on the winner, or none.
+    # ``examined_ids`` already holds only answered walks (#3326), so every
+    # id here concludes; the counts come from this output's own findings,
+    # keyed by the source_arg_id the walk stamped.
+    outcomes = dict(record.get("per_unit_outcomes") or {})
+    for i in examined_ids:
+        outcomes[i] = 0
+    if isinstance(fallacies, list):
+        for f in fallacies:
+            sid = str(f.get("source_arg_id") or "") if isinstance(f, dict) else ""
+            if sid in outcomes:
+                outcomes[sid] += 1
+
     # #3511 (R1164 review §1) — the residue is RECOMPUTED over the merged
     # selection, never copied forward: ``record_analysis_coverage`` rebuilds
     # the entry from scratch, so an ``extra_fields`` holding ``added_by``
@@ -1373,6 +1389,7 @@ def _write_fallacy_winner_reading_to_state(
         extra_fields={
             **named_move_residue(state, selected, units),
             "added_by": added_by,
+            **({"per_unit_outcomes": outcomes} if outcomes else {}),
         },
     )
     state.add_trace_entry(
@@ -1395,8 +1412,13 @@ def _write_semantic_index_to_state(
 
     #3387 — the repointed phase answers with ``priority_spans`` (offsets into
     the analysed text, never its content). They are recorded on the state so
-    the budget selector reads them; the legacy ``results`` list is still
-    accepted when a caller produces one.
+    the budget selector reads them.
+
+    #3548 ask 7 — the corpus reader's record replaces the legacy ``results``
+    arm: ``corpus_matches`` entries are ``{doc, start, end, score}`` and the
+    state stores them as offsets-only refs (no ``query``, no ``snippet`` —
+    the two text fields the former producer-less arm used to write). Bad
+    entries are dropped by the state, never repaired.
     """
     if not output or not isinstance(output, dict):
         return
@@ -1407,18 +1429,17 @@ def _write_semantic_index_to_state(
         and hasattr(state, "record_semantic_priority_spans")
     ):
         state.record_semantic_priority_spans(spans)
-    results = output.get("results", [])
-    if not isinstance(results, list):
+    matches = output.get("corpus_matches")
+    if not isinstance(matches, list):
         return
-    query = str(ctx.get("input_data", ""))
-    for r in results:
-        if not isinstance(r, dict):
+    for m in matches:
+        if not isinstance(m, dict):
             continue
         state.add_semantic_index_ref(
-            query=query,
-            document_id=str(r.get("id", "unknown")),
-            score=float(r.get("score", 0.0)),
-            snippet=r.get("snippet"),
+            document_id=str(m.get("doc", "")),
+            start=m.get("start"),
+            end=m.get("end"),
+            score=float(m.get("score", 0.0)),
         )
 
 

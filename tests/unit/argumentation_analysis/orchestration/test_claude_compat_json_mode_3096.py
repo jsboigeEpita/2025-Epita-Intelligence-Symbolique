@@ -34,7 +34,7 @@ real base_url gets from containing ``api.anthropic.com``.
 import json
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 import pytest
 
@@ -341,6 +341,19 @@ class _FakeState:
         self.deanonymized = False
         self.errors: List[Dict[str, Any]] = []
         self.coverage: List[Any] = []
+        # #3538 — the extractor now threads the state into selected_text,
+        # whose record-or-fail-loud contract raises on a state without the
+        # recorder: the fixture mirrors the production surface.
+        self.reading_window_status: Dict[str, Dict[str, Any]] = {}
+
+    def record_reading_window(
+        self, site: str, selection: Any, extra: Optional[Dict[str, Any]] = None
+    ) -> None:
+        self.reading_window_status[site] = {
+            "status": getattr(selection, "status", str(selection)),
+            "offset": getattr(selection, "offset", 0),
+            "window": getattr(selection, "window", 0),
+        }
 
     def log_error(self, agent_name: str, message: str) -> str:
         entry = {

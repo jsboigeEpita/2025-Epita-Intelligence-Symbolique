@@ -11,6 +11,7 @@ Free: no key, no network, no corpus — votes planted by hand.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import sys
 from pathlib import Path
@@ -60,6 +61,24 @@ def _row(doc, *, core, severe, abstain=False, fragile=False):
     }
 
 
+def _pipeline_record(label, *, mount="a"):
+    """The real ``pipeline_run`` record the judge writes (#3639 review v4).
+
+    ``label`` names the RUN — its ``inputs_sha256`` and ``code_shas`` derive
+    from it; ``mount`` names WHERE that run was read from. Two mounts of one
+    label are one run under two directories (#3543 item 1): the identity is
+    inputs+code, the mounted directories are not part of it.
+    """
+    digest = hashlib.sha256(label.encode("utf-8")).hexdigest()
+    return {
+        "states_dir": f"/mounts/{mount}/states",
+        "signatures_dir": f"/mounts/{mount}/signatures",
+        "code_shas": [digest],
+        "input_fingerprint": {"doc_A": digest},
+        "inputs_sha256": digest,
+    }
+
+
 def _write_dir(
     path,
     rows,
@@ -71,6 +90,7 @@ def _write_dir(
     judge_family=None,
     judge_model=None,
     pipeline_run=None,
+    pipeline_mount="a",
 ):
     path.mkdir(parents=True, exist_ok=True)
     for row in rows:
@@ -87,8 +107,13 @@ def _write_dir(
         meta["judge_family"] = judge_family
         meta["judge_model"] = judge_model or "judge-model"
     if pipeline_run is not None:
-        # The field's name, as judge_panel.py records it (#3639 review v4).
-        meta["pipeline_run"] = {"run_id": pipeline_run}
+        # The field's name AND shape, as judge_panel.py records it (#3639
+        # review v4). A string expands to the real record (#3543 item 1);
+        # a dict is written as-is, so partial shapes stay witnesses.
+        if isinstance(pipeline_run, str):
+            meta["pipeline_run"] = _pipeline_record(pipeline_run, mount=pipeline_mount)
+        else:
+            meta["pipeline_run"] = pipeline_run
     (path / jp.META_FILENAME).write_text(json.dumps(meta), encoding="utf-8")
     return path
 
@@ -113,6 +138,51 @@ class TestDirection:
         assert condition2.state_direction("BOTH_ABSTAIN", S) == "outside"
         assert condition2.state_direction(S, "BOTH_ABSTAIN") == "outside"
         assert condition2.state_direction("UNPARSED", P) == "outside"
+
+
+class TestEqualOutsideStatesAreUnchanged:
+    """#3543 19b — equal states are ``unchanged`` first.
+
+    ``state_direction`` returned ``outside`` before testing equality, so a
+    document that stayed ``BOTH_ABSTAIN`` across two consensus (doc_A, five
+    Sonnet consensus in a row) was listed ``outside`` in every reading — a
+    document that did not move dressed as one that cannot be measured. Equal
+    states return ``unchanged`` wherever they sit; the verdicts do not move:
+    the direction is decided by the documents that changed inside the order.
+    """
+
+    def test_a_both_abstain_pair_reads_unchanged(self):
+        assert condition2.state_direction("BOTH_ABSTAIN", "BOTH_ABSTAIN") == "unchanged"
+
+    def test_an_unparsed_pair_reads_unchanged(self):
+        assert condition2.state_direction("UNPARSED", "UNPARSED") == "unchanged"
+
+    def test_a_stable_outside_document_leaves_the_outside_ledger(self, tmp_path):
+        prev = [
+            _row("doc_A", core=False, severe=False, abstain=True),
+            _row("doc_B", core=True, severe=False),
+        ]
+        cur = [
+            _row("doc_A", core=False, severe=False, abstain=True),
+            _row("doc_B", core=False, severe=False),
+        ]
+        reading = _direction(tmp_path, "stable_outside", cur, prev)
+        assert "doc_A" in reading["settled"]
+        assert "doc_A" not in reading["outside"]
+        assert reading["outside"] == []
+
+    def test_the_verdict_does_not_move(self, tmp_path):
+        prev = [
+            _row("doc_A", core=False, severe=False, abstain=True),
+            _row("doc_B", core=False, severe=False),
+        ]
+        cur = [
+            _row("doc_A", core=False, severe=False, abstain=True),
+            _row("doc_B", core=True, severe=False),
+        ]
+        reading = _direction(tmp_path, "verdict_held", cur, prev)
+        assert reading["toward"] == ["doc_B"]
+        assert reading["direction"] == "progress"
 
 
 class TestTruthTable:
@@ -600,6 +670,84 @@ class TestReusedDirectories:
         )
         assert condition2.read_counter_before(prev_cycle) == 4
         assert condition2.read_counter_before(tmp_path / "absent") is None
+
+
+class TestRefuseHolds:
+    """The runner's opt-in refusal of held readings (#3543 wiring, R1199
+    review): a hold is a diagnosis — the standalone replay of c2-c6 keeps
+    rc 0 — but a CYCLE must never finish green over a counter it could not
+    read officially. ``--refuse-holds`` turns a non-empty hold list into a
+    named exit code, so the runner's rc-watch stops the cycle; without the
+    flag the diagnostic behaviour is unchanged."""
+
+    def _held_pair(self, tmp_path):
+        cur_s = _write_dir(
+            tmp_path / "cs",
+            [_row("doc_A", core=True, severe=False)],
+            judge_family="anthropic",
+        )
+        prev_s = _write_dir(
+            tmp_path / "ps",
+            [_row("doc_A", core=False, severe=False)],
+            judge_family="anthropic",
+        )
+        cur_g = _write_dir(
+            tmp_path / "cg",
+            [_row("doc_A", core=True, severe=False)],
+            judge_family="google",
+        )
+        prev_g = _write_dir(
+            tmp_path / "pg",
+            [_row("doc_A", core=False, severe=False)],
+            judge_family="google",
+        )
+        return [
+            "--family",
+            f"s={cur_s}|{prev_s}",
+            "--family",
+            f"g={cur_g}|{prev_g}",
+        ]
+
+    def test_without_the_flag_a_held_reading_stays_diagnostic(self, tmp_path):
+        rc = condition2.main(self._held_pair(tmp_path))
+        assert rc == 0
+
+    def test_with_the_flag_a_held_reading_exits_the_named_code(self, tmp_path):
+        rc = condition2.main(self._held_pair(tmp_path) + ["--refuse-holds"])
+        assert rc == condition2.EXIT_HELD
+
+    def test_with_the_flag_a_proven_reading_stays_rc_zero(self, tmp_path):
+        argv = self._held_pair(tmp_path)
+        # The same pair, with the runs recorded: provenance holds, no hold.
+        for label, directory in (
+            ("run-cur", tmp_path / "cs"),
+            ("run-prev", tmp_path / "ps"),
+        ):
+            meta_path = directory / jp.META_FILENAME
+            meta = json.loads(meta_path.read_text(encoding="utf-8"))
+            meta["pipeline_run"] = _pipeline_record(label)
+            meta_path.write_text(json.dumps(meta), encoding="utf-8")
+        for label, directory in (
+            ("run-cur", tmp_path / "cg"),
+            ("run-prev", tmp_path / "pg"),
+        ):
+            meta_path = directory / jp.META_FILENAME
+            meta = json.loads(meta_path.read_text(encoding="utf-8"))
+            meta["pipeline_run"] = _pipeline_record(label, mount="b")
+            meta_path.write_text(json.dumps(meta), encoding="utf-8")
+        rc = condition2.main(argv + ["--refuse-holds"])
+        assert rc == 0
+
+    def test_with_the_flag_a_new_series_baseline_stays_rc_zero(self, tmp_path):
+        cur_s = _write_dir(
+            tmp_path / "cs",
+            [_row("doc_A", core=True, severe=False)],
+            judge_family="anthropic",
+        )
+        rc = condition2.main(
+            ["--family", f"s={cur_s}", "--new-series", "--refuse-holds"]
+        )
+        assert rc == 0
 
 
 class TestSeriesContract:
@@ -1133,14 +1281,91 @@ class TestPipelineRunBinding:
             for h in result["provenance"]["holds"]
         )
 
+    def test_a_record_without_inputs_or_code_proves_no_run(self, tmp_path):
+        # #3543 item 1 — the pre-#3639 stand-in shape ({"run_id": ...})
+        # carries neither inputs_sha256 nor code_shas: the record's NAME is
+        # not its identity, so the binding is unproven and the counter holds.
+        dirs = self._two_official_families(
+            tmp_path,
+            cur_record={"run_id": "run-cur"},
+            prev_record={"run_id": "run-prev"},
+        )
+        result = self._run(dirs, tmp_path)
+        assert result["verdict"] == "not_measurable"
+        assert result["counter_after"] == 3
+        assert any(
+            "pipeline run" in h and "unproven" in h
+            for h in result["provenance"]["holds"]
+        )
 
-class TestRunnerNotWiredYet:
-    """The dispatch (#3543) forbids wiring the counter into run_cycle before
-    the new-series contract is verified (c21 does not compare to c6–c20).
-    This increment is the standalone command + STABILITY.json; the runner
-    step belongs to a later increment, after that verification."""
+    def test_one_run_under_two_directories_is_a_cycle_read_against_itself(
+        self, tmp_path
+    ):
+        # #3543 item 1, witness 1 — the SAME run mounted under two
+        # directories: same inputs_sha256, same code_shas, different
+        # states_dir/signatures_dir. The old hold compared the whole
+        # per-family records, so the differing directories made the two
+        # roles look like two runs and the self-comparison was reported
+        # official. The identity binds on inputs+code.
+        dirs = {}
+        for name, family in (("s", "anthropic"), ("g", "google")):
+            cur = _write_dir(
+                tmp_path / f"{name}_cur",
+                [_row("doc_A", core=True, severe=False)],
+                judge_family=family,
+                pipeline_run="run-same",
+                pipeline_mount="a",
+            )
+            prev = _write_dir(
+                tmp_path / f"{name}_prev",
+                [_row("doc_A", core=False, severe=False)],
+                judge_family=family,
+                pipeline_run="run-same",
+                pipeline_mount="b",
+            )
+            dirs[name] = (cur, prev)
+        result = self._run(dirs, tmp_path)
+        assert result["verdict"] == "not_measurable"
+        assert result["counter_after"] == 3
+        assert any("same pipeline run" in h for h in result["provenance"]["holds"])
 
-    def test_the_plan_does_not_yet_include_condition2(self, tmp_path):
+    def test_one_run_under_two_family_sets_is_a_cycle_read_against_itself(self):
+        # #3543 item 1, witness 2 — the same run judged under two CLI label
+        # sets: the per-family dicts differ in KEYS alone, so the old
+        # whole-dict comparison saw no self-comparison. ``main`` applies one
+        # label set to both roles, so the shape is exercised where it can
+        # arise — the provenance the pair hold reads.
+        record = _pipeline_record("run-same")
+        current = {
+            "judge_families": {"s": "anthropic", "g": "google"},
+            "runs": {"binding": "proven", "per_family": {"s": ["m", "f", "1", "h"]}},
+            "pipeline_run": {
+                "binding": "one",
+                "per_family": {"s": record, "g": record},
+            },
+        }
+        previous = {
+            "judge_families": {"t": "kimi", "u": "qwen"},
+            "runs": {"binding": "proven", "per_family": {"t": ["m", "f", "1", "h"]}},
+            "pipeline_run": {
+                "binding": "one",
+                "per_family": {"t": record, "u": record},
+            },
+        }
+        holds = condition2._provenance_holds(current, previous)
+        assert any("same pipeline run" in h for h in holds)
+
+
+class TestRunnerWired:
+    """The wiring was deferred until the new-series contract held (c21 does
+    not compare to c6–c20): the run-identity binding and the mixed-presence
+    refusal landed in #3645, and the State comment of 2026-11-20 unblocked
+    the runner. The counter is now the cycle's own step — the full wiring
+    witnesses (both roles, the refusal, the reading's home) live in
+    ``tests/unit/scripts/panel/test_cycle_condition2_step_3543.py``; this
+    one pins the #3543 story's own file to it."""
+
+    def test_the_plan_now_includes_condition2(self, tmp_path):
         cfg = run_cycle.Config(
             tag="w3543",
             panel_file=tmp_path / "panel.json",
@@ -1151,7 +1376,7 @@ class TestRunnerNotWiredYet:
             compare_with_tag="w3542",
         )
         names = [step.name for step in run_cycle.plan(cfg)]
-        assert "condition2" not in names
+        assert "condition2" in names
 
 
 class TestMutations:

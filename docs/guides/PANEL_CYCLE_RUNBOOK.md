@@ -20,7 +20,7 @@ Privacy Discipline"). All of it sits under
 |---|---|---|
 | `panel_v1/panel.txt` | the panel: one document id per line | the coordinator, once (#3375); kept on the coordinator seat |
 | `panel_v1/zeroshot/` | the zero-shot arm: one answer per panel document | `scripts/dataset/run_zeroshot_arm.py --panel-file <panel>`, then a frozen copy |
-| `panel_cycles/<tag>/` | one cycle: `states/`, `signatures/`, `logs/`, `status.jsonl`, `pipeline.json`, `cycle.json`, `cycle_free.json`, `trace.jsonl` | `scripts/panel/run_cycle.py` |
+| `panel_cycles/<tag>/` | one cycle: `states/`, `signatures/`, `logs/`, `status.jsonl`, `pipeline.json`, `cycle.json`, `cycle_free.json`, `trace.jsonl`, `condition2.json` | `scripts/panel/run_cycle.py` |
 | `judge_panel_3375_<tag>_<judge>_p<i>/` | one judge pass: a row per document, `META.json`, `TABLE.md` | `scripts/dataset/judge_panel.py` |
 | `judge_panel_3375_<tag>_<judge>_cons<k>/` | the consensus of `k` passes, `STABILITY.md` against the previous cycle | `judge_panel.py --consensus` |
 
@@ -119,6 +119,11 @@ wrote down, not something the cycle can prove.
 
 ## 4. Read the cycle
 
+- The native-failure watch: `pipeline.json` carries `native_watch` — the
+  per-family signature counts read from `pipeline.log` (or the absence
+  named), and a count that meets a trigger is printed at the end of the
+  cycle with its issue number. Signatures, triggers and the grep of each
+  family: [NATIVE_FAILURES_WATCH.md](NATIVE_FAILURES_WATCH.md) (#3540).
 - `panel_cycles/<tag>/pipeline.json` — the commit the states were produced
   at. This is the commit a cycle's verdict is about.
 - `panel_cycles/<tag>/cycle.json` — the last invocation **that ran a paid
@@ -159,12 +164,33 @@ wrote down, not something the cycle can prove.
 - `judge_panel_3375_<tag>_<judge>_cons<k>/TABLE.md` — the verdict table of one
   family. `STABILITY.md` beside it compares the items kept with the previous
   cycle's.
+- `panel_cycles/<tag>/condition2.json` — the cycle's own reading of the
+  condition-2 counter (#3543): both roles' consensus directories compared,
+  the verdict per family, the counter chained from the previous cycle's
+  `condition2.json` (`--new-series` declares the first cycle of a series).
+  The runner writes it after the consensus steps, then two classes of exit
+  stop the cycle stopped-loud — never a green finish over an unread
+  counter:
+  - **rc 1 — a provenance refusal**: reused consensus directories, a series
+    break, a foreign counter, an unreadable META.
+  - **rc 3 — a held reading** (the runner passes `--refuse-holds`): the
+    provenance does not hold — a role's judge families not two distinct
+    recorded ones, an execution binding unproven or different, the judged
+    pipeline run unproven (no `pipeline_run` record — the c2-c21 shape) or
+    the same run in both roles. A hold is a diagnosis, not an error: run
+    standalone without the flag, the same reading exits 0.
+  One consequence, by construction: the first cycle compared with c21
+  (whose META carry no `pipeline_run` record) stops loud with rc 3 — that
+  stop is the expected signal that the pair cannot be read officially, not
+  a defect; the reading itself stays diagnostic in `condition2.json` and
+  the log's `hold:` lines.
 - An Anthropic judge's cost is in its pass tables (`judge_cost` per row); it
   is not on the OpenRouter key.
 
 The cycle's report (the coordinator's `DONE`) carries the verdict table per
 family and the count for condition 2 of the exhaustion rule: two consecutive
-cycles without the pipeline-versus-zero-shot verdict progressing.
+cycles without the pipeline-versus-zero-shot verdict progressing. The count
+reads from `condition2.json` (`counter_after`).
 
 Read the renders too. A table is a report about the output; the mandate is the
 output (`docs/guides/RENDER_REPRODUCIBILITY.md`).

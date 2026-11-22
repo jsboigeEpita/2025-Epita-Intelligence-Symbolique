@@ -41,6 +41,7 @@ gitignored state artifacts.
 from __future__ import annotations
 
 import logging
+import re
 from dataclasses import dataclass
 from functools import partial
 from typing import Any, Callable, Dict, List, Optional, Tuple
@@ -341,6 +342,80 @@ _STRICT_REPLY_SCHEMAS: Dict[str, Tuple[str, Dict[str, Any]]] = {
             "additionalProperties": False,
         },
     ),
+    "delp_program": (
+        "structured_arg_delp_program",
+        {
+            "type": "object",
+            "properties": {
+                "facts": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "predicate": {"type": "string"},
+                            "args": {
+                                "type": "array",
+                                "items": {"type": "string"},
+                            },
+                            "source": {
+                                "type": "array",
+                                "items": {"type": "string"},
+                            },
+                            "rationale": _rationale(),
+                        },
+                        "required": ["predicate", "args", "source", "rationale"],
+                        "additionalProperties": False,
+                    },
+                },
+                "strict_rules": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "head": {"type": "string"},
+                            "body": {
+                                "type": "array",
+                                "items": {"type": "string"},
+                            },
+                            "source": {
+                                "type": "array",
+                                "items": {"type": "string"},
+                            },
+                            "rationale": _rationale(),
+                        },
+                        "required": ["head", "body", "source", "rationale"],
+                        "additionalProperties": False,
+                    },
+                },
+                "defeasible_rules": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "head": {"type": "string"},
+                            "body": {
+                                "type": "array",
+                                "items": {"type": "string"},
+                            },
+                            "source": {
+                                "type": "array",
+                                "items": {"type": "string"},
+                            },
+                            "rationale": _rationale(),
+                        },
+                        "required": ["head", "body", "source", "rationale"],
+                        "additionalProperties": False,
+                    },
+                },
+                "queries": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                },
+            },
+            "required": ["facts", "strict_rules", "defeasible_rules", "queries"],
+            "additionalProperties": False,
+        },
+    ),
 }
 
 
@@ -488,6 +563,39 @@ async def _llm_extract_relations(
         shape = (
             '{"attacks": [{"source": "argN", "target": "argM", "weight": 0.8, '
             '"rationale": "one short sentence"}]}'
+        )
+    elif relation_kind == "delp_program":
+        # #3546 (asks 2-6): one producer derives the defeasible KB from the
+        # run's own units. Atoms are OPAQUE snake_case identifiers (privacy:
+        # the program is the surface #1702 scrubs — no source text rides in
+        # an atom). ``source`` cites the inventory ids each entry rests on.
+        task = (
+            "Build a DEFEASIBLE LOGIC PROGRAM (DeLP) from these arguments:\n"
+            "- FACTS: unconditional statements the text asserts (predicate "
+            "over lowercase constants).\n"
+            "- STRICT RULES: inferences that hold WITHOUT exception in the "
+            "text (head <- body).\n"
+            "- DEFEASIBLE RULES: inferences that hold USUALLY (head -< "
+            "body) — the text's 'usually', 'as a rule', 'in general'.\n"
+            "- QUERIES: the CONTESTED conclusion(s) — the literal(s) the "
+            "defeasible rules pull in opposite directions.\n"
+            "Predicates and constants: lowercase snake_case ASCII (letters, "
+            "digits, underscore), no spaces. Variables: Uppercase first "
+            "letter. Strong negation: '~' before the predicate. Cite in "
+            "`source` the id(s) of the argument(s) each entry rests on; "
+            "every id must be in the inventory. Report an entry ONLY when "
+            "the text genuinely supports it."
+        )
+        shape = (
+            '{"facts": [{"predicate": "city_funded", "args": ["annex"], '
+            '"source": ["argN"], "rationale": "one short sentence"}], '
+            '"strict_rules": [{"head": "city_funded(X)", "body": '
+            '["heritage_zone(X)"], "source": ["argN"], "rationale": '
+            '"one short sentence"}], '
+            '"defeasible_rules": [{"head": "gets_permit(X)", "body": '
+            '["city_funded(X)"], "source": ["argN"], "rationale": '
+            '"one short sentence"}], '
+            '"queries": ["gets_permit(annex)"]}'
         )
     else:
         raise ValueError(f"unknown relation_kind: {relation_kind!r}")
@@ -1258,6 +1366,160 @@ async def translate_to_dung_attacks(
     return TranslationResult(relations=[], cause=CAUSE_NO_GENUINE_RELATIONS)
 
 
+# --- #3546: the DeLP program producer (asks 2-6) ---
+
+#: A DeLP literal over opaque snake_case predicates and constants:
+#: ``~?predicate(term, ...)`` where a term is an Uppercase variable or a
+#: lowercase constant. Atoms are opaque identifiers — no source text rides
+#: in an atom (privacy: the program is a surface #1702 scrubs).
+_DELP_LITERAL_RE = re.compile(
+    r"^(~?)([a-z][a-z0-9_]*)\(\s*([A-Za-z0-9_]+(?:\s*,\s*[A-Za-z0-9_]+)*)\s*\)$"
+)
+_DELP_TERM_SPLIT_RE = re.compile(r"\s*,\s*")
+
+
+def _delp_literal_is_valid(literal: Any) -> bool:
+    """One DeLP literal, syntactically whole — never prose (#1215)."""
+    if not isinstance(literal, str) or not literal.strip():
+        return False
+    m = _DELP_LITERAL_RE.match(literal.strip())
+    if m is None:
+        return False
+    terms = _DELP_TERM_SPLIT_RE.split(m.group(3))
+    return all(t and (t[0].isupper() or t[0].islower()) for t in terms)
+
+
+def _delp_fact_line(entry: Any) -> Optional[str]:
+    """``{"predicate", "args"}`` → ``predicate(a, b).`` — None if malformed."""
+    if not isinstance(entry, dict):
+        return None
+    predicate = entry.get("predicate")
+    args = entry.get("args")
+    if not isinstance(predicate, str) or not isinstance(args, list) or not args:
+        return None
+    literal = f"{predicate}({', '.join(str(a) for a in args)})"
+    return f"{literal}." if _delp_literal_is_valid(literal) else None
+
+
+def _delp_rule_line(entry: Any, arrow: str) -> Optional[str]:
+    """``{"head", "body"}`` → ``head arrow body1, body2.`` — None if malformed."""
+    if not isinstance(entry, dict):
+        return None
+    head = entry.get("head")
+    body = entry.get("body")
+    if not isinstance(head, str) or not isinstance(body, list) or not body:
+        return None
+    if not _delp_literal_is_valid(head):
+        return None
+    body_lits = [b for b in body if isinstance(b, str)]
+    if len(body_lits) != len(body) or not all(
+        _delp_literal_is_valid(b) for b in body_lits
+    ):
+        return None
+    return f"{head.strip()} {arrow} {', '.join(b.strip() for b in body_lits)}."
+
+
+def _delp_sources_valid(entry: Any, arg_by_id: Dict[str, str]) -> bool:
+    """Every cited source id must be a real inventory member."""
+    if not isinstance(entry, dict):
+        return False
+    source = entry.get("source", [])
+    if not isinstance(source, list):
+        return False
+    return all(isinstance(s, str) and s in arg_by_id for s in source)
+
+
+def _validate_delp_program(data: Any, arg_by_id: Dict[str, str]) -> Dict[str, Any]:
+    """Filter the LLM's reply down to a whole, syntactically valid program.
+
+    Returns ``{"program_text": str, "queries": [str]}`` — empty dict when
+    nothing valid remains. Every line of ``program_text`` is a DeLP fact or
+    rule (``fact.`` / ``head <- body.`` / ``head -< body.``); every query is
+    a whole literal. An entry with a dangling source id is dropped, not
+    repaired (#1215: prose is never parsed as DeLP — and a fabricated
+    citation is not a program the run's units support).
+    """
+    if not isinstance(data, dict):
+        return {}
+    facts, strict, defeasible = [], [], []
+    for entry in data.get("facts", []) or []:
+        if not _delp_sources_valid(entry, arg_by_id):
+            continue
+        line = _delp_fact_line(entry)
+        if line:
+            facts.append(line)
+    for entry in data.get("strict_rules", []) or []:
+        if not _delp_sources_valid(entry, arg_by_id):
+            continue
+        line = _delp_rule_line(entry, "<-")
+        if line:
+            strict.append(line)
+    for entry in data.get("defeasible_rules", []) or []:
+        if not _delp_sources_valid(entry, arg_by_id):
+            continue
+        line = _delp_rule_line(entry, "-<")
+        if line:
+            defeasible.append(line)
+    queries = [
+        q.strip()
+        for q in data.get("queries", []) or []
+        if isinstance(q, str) and _delp_literal_is_valid(q)
+    ]
+    return {
+        "program_text": "\n".join(facts + strict + defeasible),
+        "queries": queries,
+        "defeasible_count": len(defeasible),
+    }
+
+
+async def translate_to_delp_program(
+    input_text: str, arguments: List[str]
+) -> TranslationResult:
+    """Derive a DeLP program (facts, strict rules, defeasible rules) + the
+    contested queries from the text + arguments (#3546, asks 2-6).
+
+    Returns a ``TranslationResult`` whose ``relations`` is
+    ``{"program_text": str, "queries": [str]}`` — the whole program, every
+    line syntactically valid DeLP, atoms opaque (no source text in an atom,
+    #1702). A program with no defeasible rule or no query cannot produce a
+    verdict, so it is not a program: ``CAUSE_NO_GENUINE_RELATIONS``.
+
+    #1215 stands: the DOCUMENT's prose is never handed to the DeLP parser —
+    only this validated, atom-opaque program is.
+    """
+    arg_by_id, _ = _build_inventory(arguments)
+    if not arg_by_id:
+        return TranslationResult(relations={}, cause=CAUSE_NO_GENUINE_RELATIONS)
+    try:
+        data = await _llm_extract_relations(input_text, arguments, "delp_program")
+    except TranslatorUnconfigured:
+        return TranslationResult(relations={}, cause=CAUSE_TRANSLATOR_UNCONFIGURED)
+    except Exception as e:  # network / parse / budget — never fatal to the run
+        logger.warning(
+            "DeLP program translator failed (%s) — staying absent.",
+            type(e).__name__,
+        )
+        return TranslationResult(
+            relations={}, cause=CAUSE_TRANSLATOR_FAILED, error=type(e).__name__
+        )
+    program = _validate_delp_program(data, arg_by_id)
+    _log_translation_yield(
+        "DeLP",
+        data,
+        ("facts", "strict_rules", "defeasible_rules"),
+        program.get("defeasible_count", 0),
+    )
+    if program.get("defeasible_count") and program.get("queries"):
+        logger.info(
+            "DeLP translator: derived a %d-line program with %d contested "
+            "query(ies) from text.",
+            len(program["program_text"].splitlines()),
+            len(program["queries"]),
+        )
+        return TranslationResult(relations=program, cause=CAUSE_EVALUATED)
+    return TranslationResult(relations={}, cause=CAUSE_NO_GENUINE_RELATIONS)
+
+
 __all__ = [
     "translate_to_bipolar_supports",
     "translate_to_aba_contraries",
@@ -1265,6 +1527,7 @@ __all__ = [
     "translate_to_setaf_attacks",
     "translate_to_weighted_attacks",
     "translate_to_dung_attacks",
+    "translate_to_delp_program",
     "TranslationResult",
     "TranslatorUnconfigured",
     "CAUSE_EVALUATED",
@@ -1282,4 +1545,5 @@ __all__ = [
     "_validate_setaf_attacks",
     "_validate_weighted_attacks",
     "_validate_dung_attacks",
+    "_validate_delp_program",
 ]

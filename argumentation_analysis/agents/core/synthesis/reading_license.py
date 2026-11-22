@@ -1432,23 +1432,48 @@ def _formal_contradiction_units(state: Any) -> "set[str]":
     return units
 
 
+def _decided_inference_records(inferences: Any) -> int:
+    """#3545 — how many ``inferences`` records carry a DECIDED verdict.
+
+    The conclusion-query wiring records one dict per marked unit with a
+    tri-state verdict (``entailed`` / ``not_entailed`` / ``no_verdict``,
+    #2447). A query the reasoner never answered is not a decision — neither
+    for the licence nor for anything else — and a non-dict item (legacy
+    payload; the list was always empty before #3545) is not a record. Only
+    the two decided names count.
+    """
+    if not isinstance(inferences, list):
+        return 0
+    return sum(
+        1
+        for item in inferences
+        if isinstance(item, dict)
+        and str(item.get("verdict") or "").strip() in {"entailed", "not_entailed"}
+    )
+
+
 def _fol_decisions(state: Any) -> Dict[str, int]:
     """What the FOL leg actually decided (#3123, R1105b instance).
 
     ``vacuous_consistent`` counts entries that returned ``consistent`` without
-    answering a single inference — a decided consistency that distinguished
-    nothing. ``decisive`` counts entries that answered queries or decided an
-    inconsistency; as long as one exists, citing formal strength is licensed
-    (the positive control).
+    deciding a single query — a decided consistency that distinguished
+    nothing. ``decisive`` counts entries that answered a query (a record with
+    verdict ``entailed``/``not_entailed``) or decided an inconsistency; as
+    long as one exists, citing formal strength is licensed (the positive
+    control). A ``no_verdict``-only entry stays vacuous: before the #3545
+    rework it counted as decisive and disarmed this very check (review
+    7062184686) — the synthesis could sell "cohérence formelle" as strength
+    on a leg that answered nothing.
     """
     vacuous = 0
     decisive = 0
     for result in getattr(state, "fol_analysis_results", []) or []:
         if not isinstance(result, dict):
             continue
-        if result.get("consistent") is True and not (result.get("inferences") or []):
+        decided = _decided_inference_records(result.get("inferences"))
+        if result.get("consistent") is True and not decided:
             vacuous += 1
-        elif result.get("inferences") or result.get("consistent") is False:
+        elif decided or result.get("consistent") is False:
             decisive += 1
     return {"vacuous_consistent": vacuous, "decisive": decisive}
 
