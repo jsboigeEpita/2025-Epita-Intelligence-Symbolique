@@ -126,7 +126,7 @@ PENDING_TRIAGE: dict[tuple[str, str], str] = {
     # registration + its handler tests removed together. Two functions
     # lost their last caller in the cut, both decided explicitly (R1063
     # review): compare_all_axes stays as the 0-caller harness owning the
-    # #2491 defect witnesses and the user-gated ATT-3 run (owner record
+    # #2491 defect witnesses and the ATT-3 run, planned post-v1 (owner record
     # #2929), and llm_neural_detect_async stays parked with a named
     # consumer — the Dung stage's second provenance (owner record #2928).
     # ("sat_handler", "sat_solving") — wired #1604 (arbitration): the named
