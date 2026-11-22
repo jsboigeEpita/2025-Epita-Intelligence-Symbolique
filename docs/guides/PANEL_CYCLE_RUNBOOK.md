@@ -119,6 +119,11 @@ wrote down, not something the cycle can prove.
 
 ## 4. Read the cycle
 
+- The native-failure watch: `pipeline.json` carries `native_watch` — the
+  per-family signature counts read from `pipeline.log` (or the absence
+  named), and a count that meets a trigger is printed at the end of the
+  cycle with its issue number. Signatures, triggers and the grep of each
+  family: [NATIVE_FAILURES_WATCH.md](NATIVE_FAILURES_WATCH.md) (#3540).
 - `panel_cycles/<tag>/pipeline.json` — the commit the states were produced
   at. This is the commit a cycle's verdict is about.
 - `panel_cycles/<tag>/cycle.json` — the last invocation **that ran a paid
