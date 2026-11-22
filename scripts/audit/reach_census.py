@@ -26,7 +26,12 @@ from argumentation_analysis.reporting.restitution.act3_conclusion_plugin import 
 # Fields and vocabulary are observational proxies, not proof of attribution.
 PROJECTS = {
     "1.4.1-JTMS": (
-        ("jtms_retraction_chain", "jtms_beliefs", "atms_contexts"),
+        (
+            "jtms_retraction_chain",
+            "jtms_beliefs",
+            "atms_contexts",
+            "jtms_counterfactual_withdrawals",
+        ),
         r"r[ée]tractation|\bjtms\b|\batms\b",
     ),
     "1_2_7_argumentation_dialogique": (("debate_transcripts",), r"d[ée]bat|dialogue"),
