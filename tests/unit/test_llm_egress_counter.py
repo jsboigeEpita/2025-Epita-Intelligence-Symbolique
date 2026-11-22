@@ -56,6 +56,16 @@ def _session_counter():
     return counter
 
 
+async def test_counter_sees_anthropic_host():
+    """The paid Anthropic endpoint must not fall into the unknown bucket."""
+    counter = _session_counter()
+    before = counter.total()
+    async with httpx.AsyncClient(transport=_mock_transport()) as client:
+        response = await client.post("https://api.anthropic.com/v1/chat/completions")
+    assert response.status_code == 200
+    assert counter.total() == before + 1
+
+
 async def test_counter_sees_raw_openai_sdk_request():
     """Chemin brut: 1 request via direct AsyncOpenAI → counter +1 (not 0, not 2)."""
     counter = _session_counter()
@@ -163,13 +173,12 @@ async def test_counter_classifies_asgi_testserver_nonllm():
     seen = [
         r
         for r in snap["requests"]
-        if r["host"] == "testserver" and r["test"].endswith(
-            "test_counter_classifies_asgi_testserver_nonllm"
-        )
+        if r["host"] == "testserver"
+        and r["test"].endswith("test_counter_classifies_asgi_testserver_nonllm")
     ]
-    assert seen and all(r["class"] == "nonllm" for r in seen), (
-        "testserver (ASGI TestClient) must classify as nonllm, not unknown"
-    )
+    assert seen and all(
+        r["class"] == "nonllm" for r in seen
+    ), "testserver (ASGI TestClient) must classify as nonllm, not unknown"
 
 
 async def test_counter_sees_httpx2_request():
