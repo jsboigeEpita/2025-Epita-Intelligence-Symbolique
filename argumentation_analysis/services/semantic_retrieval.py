@@ -28,6 +28,8 @@ alone.
 
 from __future__ import annotations
 
+from array import array
+
 import json
 import logging
 import math
@@ -238,7 +240,10 @@ class CorpusEntry:
     doc_id: str
     start: int
     end: int
-    vector: Tuple[float, ...]
+    #: Compact float32 storage (#3548 R1205): at panel scale (31k chunks,
+    #: 1536 dims) Python float tuples compute to about 1.5 GB held for the
+    #: whole process; ``array('f')`` holds the same vectors in about a tenth.
+    vector: "array[float]"
 
 
 def build_corpus_kb(
@@ -269,7 +274,7 @@ def build_corpus_kb(
         return [], "no corpus document yielded a chunk"
     vectors = embed_texts([text for _, _, _, text in pending], route)
     entries = [
-        CorpusEntry(doc_id=doc_id, start=start, end=end, vector=tuple(vector))
+        CorpusEntry(doc_id=doc_id, start=start, end=end, vector=array("f", vector))
         for (doc_id, start, end, _), vector in zip(pending, vectors)
     ]
     return entries, ""

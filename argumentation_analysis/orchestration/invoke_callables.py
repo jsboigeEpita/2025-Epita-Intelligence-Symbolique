@@ -5309,28 +5309,34 @@ def _semantic_query_from_state(state: Any) -> Tuple[str, str]:
     return "\n".join(parts), ""
 
 
-def _analysed_document_ids(state: Any) -> "set[str]":
+#: The CONTEXT key that carries the analysed document's opaque id from the
+#: batch runner to the phase (#3548 R1205). Never ``source_metadata``: the
+#: 407 recorded ``state_full_*.json`` carry no ``source_name`` there, and Act I
+#: renders every key of that block — an id there would enter the prompt.
+_ANALYSED_DOCUMENT_ID_CONTEXT_KEY = "analysed_document_id"
+
+#: The batch runner names an extract ``<base>_ext<N>``; the corpus KB keys the
+#: SOURCE by its base opaque id. Both forms must exclude, or the panel's
+#: multi-extract documents answer their own query.
+_ANALYSED_EXTRACT_SUFFIX = re.compile(r"_ext\d+$")
+
+
+def _analysed_document_ids(context: Any) -> "set[str]":
     """Every id under which the analysed document appears in the corpus (#3548).
 
-    The corpus is keyed by ``source_name``; the panel names a document by its
-    opaque id (``opaque_id(source_name)``, with an ``_ext<N>`` suffix per
-    extract). Exclusion by id therefore names BOTH forms, or the document
-    would answer its own query. Ids only — a name is never returned.
+    The id comes from the CONTEXT the batch runner hands the pipeline — the
+    one production path that actually carries it (measured on the recorded
+    states: ``source_metadata`` never does). The extract suffix reduces to the
+    source's base id, which is how the KB keys it. Ids only — a name is never
+    returned, and an absent id is the caller's named skip, not a fallback.
     """
     ids: "set[str]" = set()
-    if state is None:
+    if not isinstance(context, dict):
         return ids
-    metadata = getattr(state, "source_metadata", None)
-    if not isinstance(metadata, dict):
-        return ids
-    name = str(metadata.get("source_name") or "").strip()
-    if name:
-        try:
-            from argumentation_analysis.evaluation.opaque_id import opaque_id
-
-            ids.add(opaque_id(name))
-        except Exception:  # noqa: BLE001 — no salt: the opaque form is absent
-            pass
+    raw = str(context.get(_ANALYSED_DOCUMENT_ID_CONTEXT_KEY) or "").strip()
+    if raw:
+        ids.add(raw)
+        ids.add(_ANALYSED_EXTRACT_SUFFIX.sub("", raw))
     return ids
 
 
@@ -5355,11 +5361,21 @@ async def _corpus_second_reader(
     context does not outlive one document, so it cannot be the holder. The
     holder keeps the UNFILTERED KB; the analysed document is excluded by id
     AT QUERY TIME, so a cycle's second document is neither served the first
-    document's exclusion nor its own text. A missing passphrase, source or
-    claim names itself in ``status`` and makes no call.
+    document's exclusion nor its own text. A missing analysed id, passphrase,
+    source or claim names itself in ``status`` and makes no call.
     """
     from argumentation_analysis.services import semantic_retrieval as sr
 
+    exclude = _analysed_document_ids(context)
+    if not exclude:
+        return {
+            "status": "skipped: no_analysed_id",
+            "reason": (
+                "the analysed document's opaque id never reached the phase "
+                f"(no {_ANALYSED_DOCUMENT_ID_CONTEXT_KEY} in the context) — an "
+                "unexcluded KB would answer its own claim"
+            ),
+        }
     claim, claim_reason = sr.corpus_claim_from_state(state)
     if not claim:
         return {"status": "skipped: no_corpus_claim", "reason": claim_reason}
@@ -5406,11 +5422,10 @@ async def _corpus_second_reader(
             }
         _CORPUS_KB_HOLDER[key] = built
         kb = built
-    # Exclusion by id at QUERY TIME, for this document alone (both panel
-    # forms reduce to the base opaque id): the analysed document never
+    # Exclusion by id at QUERY TIME, for this document alone (the extract
+    # suffix reduces to the base opaque id): the analysed document never
     # answers its own query, and the cached KB serves every document of the
     # cycle with the same vectors.
-    exclude = _analysed_document_ids(state)
     kb = [e for e in kb if e.doc_id not in exclude]
     try:
         answer = await asyncio.to_thread(sr.query_corpus_for_claim, claim, kb, route)
