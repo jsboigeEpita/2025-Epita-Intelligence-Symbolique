@@ -350,6 +350,16 @@ class CounterArgumentAgent(BaseAgent):
         try:
             settings_class = service.get_prompt_execution_settings_class()
             settings = settings_class(service_id=service.service_id)
+            # #3658 item 36c — the counter call sent no cap (it stopped at the
+            # route's ingress default, measured R1206). The ONE shared ceiling
+            # rides the DECLARED settings field; a cap the site already set
+            # wins, and PHASE_MAX_TOKENS=0 omits it. Imported lazily: the
+            # helper lives in the orchestration layer, not this agent.
+            from argumentation_analysis.orchestration.invoke_callables import (
+                _with_phase_max_tokens,
+            )
+
+            settings = _with_phase_max_tokens(settings)
         except Exception:
             settings = None
 
