@@ -15654,6 +15654,15 @@ def _build_persona_callable(
             messages=[{"role": "user", "content": prompt}],
             **sampling,
         )
+        # #3658 item 36d — expose the call's OWN finish reason (and the cap it
+        # spent) so the first reading can NAME a length stop in its record:
+        # the signal is the envelope's finish_reason, never an inference from
+        # the token count. Read on the callable by build_first_reading.
+        try:
+            _call.last_finish_reason = response.choices[0].finish_reason  # type: ignore[attr-defined]
+        except Exception:  # pragma: no cover - defensive: an envelope without it
+            _call.last_finish_reason = None  # type: ignore[attr-defined]
+        _call.last_max_tokens = sampling.get("max_completion_tokens")  # type: ignore[attr-defined]
         return response.choices[0].message.content or ""
 
     logger.debug("%s persona: route resolved, model=%s", site, model_id)

@@ -401,6 +401,13 @@ class FirstReading:
     status: str = "no_llm"
     error: str = ""
     read_scope: Dict[str, Any] = field(default_factory=dict)
+    #: #3658 item 36d — the reading's own call stopped on ``length`` (it spent
+    #: its cap mid-answer). The complete objects written before the cut are
+    #: kept (the salvage reads the unclosed outer object), so the status stays
+    #: ``ok`` — a cut reply is model output, recorded, never raised — but the
+    #: record NAMES the cut so the panel can see what a capped reading kept.
+    degraded: bool = False
+    degraded_reason: str = ""
 
     def to_state(self) -> Dict[str, Any]:
         payload = {
@@ -420,7 +427,25 @@ class FirstReading:
         # reading look like an error and be dropped silently.
         if self.error:
             payload["error"] = self.error
+        if self.degraded:
+            payload["degraded"] = True
+            payload["degraded_reason"] = self.degraded_reason
         return payload
+
+
+def _cut_degraded_reason(cap: Optional[int] = None) -> str:
+    """The reason a length-stopped reading records (#3658 item 36d).
+
+    Names the length stop AND the cap the reading spent, so a reader can tell
+    an 8 192 stop from a 4 096 one without re-deriving it. The signal is the
+    reading's OWN call's finish reason, never an inference from the count.
+    """
+    cap_text = f" (cap {cap})" if cap else ""
+    return (
+        f"the reading's call stopped on finish_reason=length{cap_text}: the "
+        "answer was cut mid-object; the complete objects written before the "
+        "cut were kept, the rest of the answer was never produced"
+    )
 
 
 def move_kind(value: Any) -> str:
@@ -532,10 +557,23 @@ def _salvage_objects(
     counts only when it swallowed nothing readable), and a leaf span that
     fails is one lost move. Each readable object keeps the key it was found
     under (R1144), so the splice can route a slot back to its name.
+
+    #3658 item 36d — a CUT answer (the reading spent its cap mid-object) never
+    closes its outer ``{``, so the balanced scan above yields nothing and the
+    inside is never re-scanned: the thesis, the mechanism and every complete
+    move written before the cut were lost, and only ``pillars`` came back via
+    its own key. When the outer object never closes, re-scan its INTERIOR so
+    the complete objects written before the cut are recovered with their keys.
     """
+    spans = _balanced_object_spans(text)
+    if not spans:
+        interior = _unclosed_outer_interior(text)
+        if interior is not None:
+            inner, inner_bad = _salvage_objects(interior)
+            return inner, inner_bad
     objects: List[Tuple[Optional[str], Dict[str, Any]]] = []
     malformed = 0
-    for key, span in _balanced_object_spans(text):
+    for key, span in spans:
         try:
             obj = json.loads(span)
         except json.JSONDecodeError:
@@ -548,6 +586,44 @@ def _salvage_objects(
             else:
                 malformed += 1
     return objects, malformed
+
+
+def _unclosed_outer_interior(text: str) -> Optional[str]:
+    """The inside of an outer ``{`` that never closes, or ``None``.
+
+    #3658 item 36d — a reply cut at its cap stops mid-object: the first ``{``
+    opens and no matching ``}`` ever comes, so ``_balanced_object_spans``
+    yields no span at all. This returns the text AFTER that unclosed brace
+    (string-aware, so a ``{`` inside a quote does not count), letting the
+    salvage re-scan the complete objects written before the cut. ``None``
+    when every opened object closes (the ordinary malformed case, already
+    handled by the per-object path).
+    """
+    depth = 0
+    first_open = -1
+    in_string = False
+    escape = False
+    for i, ch in enumerate(text):
+        if escape:
+            escape = False
+            continue
+        if ch == "\\":
+            escape = True
+            continue
+        if ch == '"':
+            in_string = not in_string
+            continue
+        if in_string:
+            continue
+        if ch == "{":
+            if depth == 0 and first_open < 0:
+                first_open = i
+            depth += 1
+        elif ch == "}" and depth:
+            depth -= 1
+    if depth > 0 and first_open >= 0:
+        return text[first_open + 1 :]
+    return None
 
 
 def _array_span(text: str, key: str) -> Optional[Tuple[int, int]]:
@@ -598,16 +674,74 @@ def _array_span(text: str, key: str) -> Optional[Tuple[int, int]]:
     return None
 
 
+def _array_open_interior(text: str, key: str) -> Optional[str]:
+    """The inside of an array named ``key`` that opens but never closes (#3658
+    item 36d), or ``None`` when the array is absent or closed.
+
+    A reply cut inside ``pillars`` leaves ``"pillars": [ {…}, {…`` with no
+    closing ``]``: ``_array_span`` returns None, and the complete elements
+    written before the cut were lost. This returns the text after the opening
+    ``[`` so the salvage can read those complete elements. String-aware: a
+    ``[`` inside a quote does not count.
+    """
+    needle = f'"{key}"'
+    at = text.find(needle)
+    while at != -1:
+        i = at + len(needle)
+        while i < len(text) and text[i] in " \t\r\n":
+            i += 1
+        if i < len(text) and text[i] == ":":
+            i += 1
+            while i < len(text) and text[i] in " \t\r\n":
+                i += 1
+            if i < len(text) and text[i] == "[":
+                depth = 0
+                in_string = False
+                escape = False
+                for j in range(i, len(text)):
+                    ch = text[j]
+                    if escape:
+                        escape = False
+                        continue
+                    if ch == "\\":
+                        escape = True
+                        continue
+                    if ch == '"':
+                        in_string = not in_string
+                        continue
+                    if in_string:
+                        continue
+                    if ch == "[":
+                        depth += 1
+                    elif ch == "]":
+                        depth -= 1
+                        if depth == 0:
+                            return None  # closed: _array_span owns this case
+                # opened, never closed: the interior runs to the reply's end
+                return text[i + 1 :]
+        at = text.find(needle, at + len(needle))
+    return None
+
+
 def _salvage_array(text: str, key: str) -> Tuple[List[Any], int]:
     """Every readable element of the array named ``key``, and what was lost.
 
     Same principle as ``_salvage_objects``: one unreadable element costs that
     element, never the array.
+
+    #3658 item 36d — a reply cut INSIDE the array never closes it, so
+    ``_array_span`` returns None and every complete element written before the
+    cut was lost. When the array is open but unclosed, salvage its interior up
+    to the end of the reply: the complete elements before the cut are kept.
     """
     span = _array_span(text, key)
-    if span is None:
-        return [], 0
-    inner = text[span[0] + 1 : span[1] - 1]
+    inner: Optional[str]
+    if span is not None:
+        inner = text[span[0] + 1 : span[1] - 1]
+    else:
+        inner = _array_open_interior(text, key)
+        if inner is None:
+            return [], 0
     values: List[Any] = []
     malformed = 0
     for _name, element in _balanced_object_spans(inner):
@@ -778,6 +912,12 @@ async def build_first_reading(
         # the record — the note chooses what it shows, and says so.
         max_inventory = inventory_budget(len(excerpt))
         content = await llm_callable(build_first_reading_prompt(excerpt))
+        # #3658 item 36d — the cut signal is the reading's OWN call's finish
+        # reason, never an inference from the token count. The production
+        # persona callable records it from the SDK envelope; a plain callable
+        # (a test double) exposes it as ``last_finish_reason``.
+        finish_reason = getattr(llm_callable, "last_finish_reason", None)
+        cut_cap = getattr(llm_callable, "last_max_tokens", None)
         parsed, malformed = _parse_answer(content or "", max_pillars)
         raw_moves = parsed.get("moves")
         if not isinstance(raw_moves, list):
@@ -946,6 +1086,12 @@ async def build_first_reading(
         result.dropped_quotes = dropped
         result.malformed_moves = malformed
         result.status = "ok"
+        # #3658 item 36d — a cut reading that kept something is NOT a
+        # parse_error: a cut reply is model output, recorded, never raised. The
+        # record NAMES the cut so the panel can see what a capped reading kept.
+        if finish_reason == "length":
+            result.degraded = True
+            result.degraded_reason = _cut_degraded_reason(cap=cut_cap)
         logger.info(
             "FirstReading: %d move(s), %d dropped, %d malformed, whole_document=%s",
             len(result.moves),
