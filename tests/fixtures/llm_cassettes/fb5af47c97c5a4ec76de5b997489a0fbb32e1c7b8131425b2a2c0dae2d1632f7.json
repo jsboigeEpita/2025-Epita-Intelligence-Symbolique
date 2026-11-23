@@ -1,0 +1,40 @@
+{
+  "key": "fb5af47c97c5a4ec76de5b997489a0fbb32e1c7b8131425b2a2c0dae2d1632f7",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_Yr8nfg1o3QnfWkPz7vQbpaoI",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"73\",\"confidence\":\"high\",\"matches\":true,\"justification\":\"Les deux arguments traitent l’autorité ou l’expertise comme une validation suffisante : le premier infère la vérité du seul consensus des experts, et le second exclut l’avis des non-experts sans examiner leurs raisons. Cela relève d’un recours à une autorité jugée suprême, sans justification indépendante.\",\"move_author\":\"speaker\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EkNtMacf2ZzDAv8YdbgTcYXNHbUiG",
+        "created": 1794723636,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 2042,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 604,
+            "cached_tokens": 1435,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 104,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

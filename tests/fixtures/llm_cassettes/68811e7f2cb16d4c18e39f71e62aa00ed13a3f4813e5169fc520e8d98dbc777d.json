@@ -1,0 +1,40 @@
+{
+  "key": "68811e7f2cb16d4c18e39f71e62aa00ed13a3f4813e5169fc520e8d98dbc777d",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_pg7zin43pXdJPKmN3S1va1TN",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"887\",\"matches\":false,\"justification\":\"Le texte ne relève pas principalement de la tricherie au sens général : il présente plutôt un appel à l'autorité et une disqualification de l'opinion des non-experts, qui nécessitent l'exploration d'autres branches de la taxonomie.\",\"move_author\":\"speaker\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EkNu8mTvtvP2LqO14AmKZwi5wvggV",
+        "created": 1794723684,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 2328,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 890,
+            "cached_tokens": 1435,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 87,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

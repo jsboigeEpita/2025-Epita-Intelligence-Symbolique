@@ -1,0 +1,40 @@
+{
+  "key": "b3d510ad613a6c20e4f43d20571efc086e30440bc17c08bbe79492c8e138fba1",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_QG89ZSbhBDADo0DhQPyTIoH3",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"332\",\"matches\":false,\"justification\":\"Le texte ne cherche pas à énerver ou à déstabiliser émotionnellement l'adversaire ; il invoque plutôt l'autorité des experts et exclut les non-experts.\",\"move_author\":\"speaker\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EkNtUU0UTGm2MHlKajwMfDE5M7JTk",
+        "created": 1794723644,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 2108,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 670,
+            "cached_tokens": 1435,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 75,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,40 @@
+{
+  "key": "176abbcd5590ec11c4a492f3c2ba634c64b65833924bf4f0fc35f20e79f13e39",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_33iQAJ5eR9bucnwGKUf5HvAP",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"175\",\"matches\":false,\"justification\":\"L’énoncé rapporte simplement une affirmation du président; il ne fournit pas assez de contexte pour établir une manipulation de l’auditoire ou une technique rhétorique fallacieuse.\",\"move_author\":\"reported\",\"move_author_label\":\"le président\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EkNsdN6W4lZ1lrTk6MA0jQCB2wCoE",
+        "created": 1794723591,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 2319,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 881,
+            "cached_tokens": 1435,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 80,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

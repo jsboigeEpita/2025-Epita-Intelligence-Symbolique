@@ -1,0 +1,40 @@
+{
+  "key": "32de89fbb4350c9aa9c35dd190904e1db698fab5c5e8e48ae73be347536d50e9",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_YCqndR5RKUYRqXCm9r8HBVkd",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"91\",\"confidence\":\"high\",\"matches\":true,\"justification\":\"L’argument invoque des « experts » non identifiés (« Les experts sont unanimes ») comme preuve de vérité, sans permettre de vérifier leur identité ou leur légitimité. Le second argument exclut l’avis des non-experts sur la seule base de leur statut.\",\"move_author\":\"speaker\",\"document_statement\":\"\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EkNtDOuVp6PQLJoBOkgYyUaQPxL1L",
+        "created": 1794723627,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 1985,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 547,
+            "cached_tokens": 1435,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 101,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

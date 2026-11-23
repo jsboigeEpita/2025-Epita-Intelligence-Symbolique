@@ -1,0 +1,40 @@
+{
+  "key": "43ff8bf2fa73f8ccd9f98baec740a27368895b557c8ae0b397c9af558464eb3d",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_tfQ6Rp5nYOLvAnrjSAKvzlEN",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"83\",\"matches\":true,\"justification\":\"Le texte affirme que l'unanimité des experts suffit à établir la vérité, puis disqualifie l'avis de toute personne non experte. Il traite donc le contradicteur comme insignifiant face à l'autorité, au lieu d'examiner ses raisons; cela correspond à l'appel à l'humilité.\",\"confidence\":0.98,\"move_author\":\"speaker\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EkNtAaO3YQkhvEoKFz21OkGGhz1vj",
+        "created": 1794723624,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 1410,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 1407,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 105,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}
