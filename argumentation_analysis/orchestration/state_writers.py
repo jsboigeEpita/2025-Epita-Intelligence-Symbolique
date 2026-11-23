@@ -389,7 +389,41 @@ def _absence_ledger_axes() -> frozenset[str]:
     return frozenset(_ABSENT_DIMENSION_LABELS)
 
 
-def _record_phase_failed_status(state: Any, capability: str, error: str) -> None:
+def _record_phase_failed_reading(state: Any, error: str, error_kind: str = "") -> None:
+    """#3658 item 42 — a first reading cut by its phase budget names the cut.
+
+    Measured (free doc_J re-run, i1207): at cap 16 384 the first-reading phase
+    exceeded its 180 s budget; the executor built a non-empty PhaseResult error
+    naming the budget (#1608), but ``state.defining_moves`` kept its DEFAULT
+    record — ``status: "no_llm"``, ``error: ""`` — so the panel could not tell
+    "nobody read the document" from "the reading was attempted and cut".
+    ``first_reading_note`` then told every writer the false sentence « aucun
+    lecteur n'a lu le document ».
+
+    This is the first-reading leg of the #3087 failure father: the executor's
+    single sink calls it for a FAILED ``first_reading`` phase, whatever the
+    failure sense. The status discriminates the budget cut from any other
+    executor-level failure; ``error`` is the executor's own message (it names
+    the budget), never a parse of ``state.errors`` (#1019).
+    """
+    if isinstance(state, dict):
+        record = state.get("defining_moves")
+    else:
+        record = getattr(state, "defining_moves", None)
+    if not isinstance(record, dict):
+        return
+    payload = dict(record)
+    payload["status"] = "timeout" if error_kind == "timeout" else "phase_failed"
+    payload["error"] = str(error).strip() or "phase failed at executor level"
+    if isinstance(state, dict):
+        state["defining_moves"] = payload
+    elif hasattr(state, "defining_moves"):
+        state.defining_moves = payload
+
+
+def _record_phase_failed_status(
+    state: Any, capability: str, error: str, error_kind: str = ""
+) -> None:
     """#3087 — executor-level failure → the absence ledger (the missing writer).
 
     Measured on three paid one-document passes: ``belief_revision`` timed out
@@ -407,7 +441,15 @@ def _record_phase_failed_status(state: Any, capability: str, error: str) -> None
     ``True`` — the axis contributed nothing to the run. No-op for a capability
     outside the label map (the table decides, not this function) and on
     states that predate ``add_structured_arg_status`` (defensive).
+
+    #3658 item 42: ``first_reading`` is not a structured-arg axis but has the
+    same defect shape — its record kept the ``no_llm`` default — so the same
+    sink carries it, through ``_record_phase_failed_reading`` and the typed
+    ``error_kind``.
     """
+    if capability == "first_reading":
+        _record_phase_failed_reading(state, error, error_kind)
+        return
     if capability not in _absence_ledger_axes():
         return
     recorder = getattr(state, "add_structured_arg_status", None)

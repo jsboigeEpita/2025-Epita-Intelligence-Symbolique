@@ -136,6 +136,11 @@ class PhaseResult:
     # Optional enrichment failures remain non-terminal and keep their existing
     # completed-but-degraded workflow semantics (#1597/#1608).
     terminal: bool = False
+    # #3658 item 42 — the failure SENSE, TYPED, so a state record can name a
+    # timeout without parsing the message text (#3087's rule). ``""`` on every
+    # non-failure construction; ``"timeout"`` when the phase budget fired;
+    # ``"exception"`` for any other raise of the phase body.
+    error_kind: str = ""
 
 
 @dataclass
@@ -1132,6 +1137,14 @@ class WorkflowExecutor:
                     degraded=phase.optional,
                     attempts=attempts_used,
                     terminal=phase.capability == "fact_extraction",
+                    # #3658 item 42 — the failure sense, typed: the state's
+                    # first-reading record names a budget cut as such instead
+                    # of keeping its ``no_llm`` default.
+                    error_kind=(
+                        "timeout"
+                        if isinstance(e, asyncio.TimeoutError)
+                        else "exception"
+                    ),
                 ),
                 None,
             )
@@ -1291,7 +1304,10 @@ class WorkflowExecutor:
             # 3 were, three paid passes in a row.
             if state is not None:
                 _record_phase_failed_status(
-                    state, result.capability, str(result.error or "")
+                    state,
+                    result.capability,
+                    str(result.error or ""),
+                    error_kind=result.error_kind,
                 )
 
     async def _execute_loop(
