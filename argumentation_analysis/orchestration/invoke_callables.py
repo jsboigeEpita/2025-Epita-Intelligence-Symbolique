@@ -5309,6 +5309,165 @@ def _semantic_query_from_state(state: Any) -> Tuple[str, str]:
     return "\n".join(parts), ""
 
 
+#: The CONTEXT key that carries the analysed document's opaque id from the
+#: batch runner to the phase (#3548 R1205). Never ``source_metadata``: the
+#: 407 recorded ``state_full_*.json`` carry no ``source_name`` there, and Act I
+#: renders every key of that block — an id there would enter the prompt.
+_ANALYSED_DOCUMENT_ID_CONTEXT_KEY = "analysed_document_id"
+
+#: The batch runner names an extract ``<base>_ext<N>``; the corpus KB keys the
+#: SOURCE by its base opaque id. Both forms must exclude, or the panel's
+#: multi-extract documents answer their own query.
+_ANALYSED_EXTRACT_SUFFIX = re.compile(r"_ext\d+$")
+
+
+def _analysed_document_ids(context: Any) -> "set[str]":
+    """Every id under which the analysed document appears in the corpus (#3548).
+
+    The id comes from the CONTEXT the batch runner hands the pipeline — the
+    one production path that actually carries it (measured on the recorded
+    states: ``source_metadata`` never does). The extract suffix reduces to the
+    source's base id, which is how the KB keys it. Ids only — a name is never
+    returned, and an absent id is the caller's named skip, not a fallback.
+    """
+    ids: "set[str]" = set()
+    if not isinstance(context, dict):
+        return ids
+    raw = str(context.get(_ANALYSED_DOCUMENT_ID_CONTEXT_KEY) or "").strip()
+    if raw:
+        ids.add(raw)
+        ids.add(_ANALYSED_EXTRACT_SUFFIX.sub("", raw))
+    return ids
+
+
+# The UNFILTERED corpus KB, held for the process (#3548 wiring). The phase's
+# context is copied per document — WorkflowExecutor builds a fresh dict on
+# every run (workflow_dsl.py:457, ``ctx = dict(context or {})``) — so a
+# context-level holder would rebuild the KB (and re-embed the whole corpus)
+# for every document of a cycle. Keyed by the route and the definitions
+# file; the per-document exclusion is applied AT QUERY TIME, so the same
+# vectors serve every document. Shape A of the design note: volatile, never
+# persisted, dropped with the process.
+_CORPUS_KB_HOLDER: Dict[Tuple[str, str, str, str], List[Any]] = {}
+#: A failed KB build is remembered for the process, keyed like the KB (#3548
+#: item 35, R1206): a transport failure during the build (claudish answers 404
+#: on /v1/embeddings) is NOT retried for every document of the cycle — the
+#: status names it (``skipped: corpus_failed (cached)``). The value is the
+#: exception's ``Type: message`` so the cached skip stays self-describing.
+_CORPUS_KB_FAILED: Dict[Tuple[str, str, str, str], str] = {}
+
+
+async def _corpus_second_reader(
+    state: Any, context: Dict[str, Any], route: Any
+) -> Dict[str, Any]:
+    """The corpus as a second reader: the same claim, elsewhere (#3548 wiring).
+
+    Loads the encrypted definitions IN MEMORY (never persisted) and builds the
+    KB ONCE PER PROCESS into the module-level ``_CORPUS_KB_HOLDER`` — the
+    context does not outlive one document, so it cannot be the holder. The
+    holder keeps the UNFILTERED KB; the analysed document is excluded by id
+    AT QUERY TIME, so a cycle's second document is neither served the first
+    document's exclusion nor its own text. A missing analysed id, passphrase,
+    source or claim names itself in ``status`` and makes no call.
+    """
+    from argumentation_analysis.services import semantic_retrieval as sr
+
+    exclude = _analysed_document_ids(context)
+    if not exclude:
+        return {
+            "status": "skipped: no_analysed_id",
+            "reason": (
+                "the analysed document's opaque id never reached the phase "
+                f"(no {_ANALYSED_DOCUMENT_ID_CONTEXT_KEY} in the context) — an "
+                "unexcluded KB would answer its own claim"
+            ),
+        }
+    claim, claim_reason = sr.corpus_claim_from_state(state)
+    if not claim:
+        return {"status": "skipped: no_corpus_claim", "reason": claim_reason}
+    passphrase = (os.environ.get("TEXT_CONFIG_PASSPHRASE") or "").strip()
+    if not passphrase:
+        return {
+            "status": "skipped: no_corpus_key",
+            "reason": "TEXT_CONFIG_PASSPHRASE is unset — the corpus stays encrypted",
+        }
+    from argumentation_analysis.config.settings import settings as app_settings
+
+    definitions_path = str(app_settings.config_file_enc)
+    key = (route.base_url, route.model, route.source, definitions_path)
+    kb = _CORPUS_KB_HOLDER.get(key)
+    if kb is None and key in _CORPUS_KB_FAILED:
+        # Remembered build failure (#3548 item 35, R1206): the cycle does not
+        # re-pay the embedding POSTs for every document — name it and stop.
+        return {
+            "status": "skipped: corpus_failed (cached)",
+            "reason": _CORPUS_KB_FAILED[key],
+        }
+    if kb is None:
+        from argumentation_analysis.core.io_manager import load_extract_definitions
+        from argumentation_analysis.core.utils.crypto_utils import (
+            derive_encryption_key,
+        )
+
+        derived = derive_encryption_key(passphrase)
+        definitions = load_extract_definitions(
+            app_settings.config_file_enc,
+            derived.decode("utf-8") if isinstance(derived, bytes) else derived,
+        )
+        entries = []
+        for definition in definitions or []:
+            if not isinstance(definition, dict):
+                continue
+            try:
+                from argumentation_analysis.evaluation.opaque_id import opaque_id
+
+                doc_id = opaque_id(str(definition.get("source_name") or ""))
+            except Exception:  # noqa: BLE001 — unnamed definition: no id, no KB
+                continue
+            entry = dict(definition)
+            entry["id"] = doc_id
+            entries.append(entry)
+        try:
+            built, reason = sr.build_corpus_kb(entries, route)
+        except Exception as exc:  # noqa: BLE001 — named skip, never a silent success
+            # #3548 item 35 (R1206): the build rides the reader's failure
+            # contract. A transport failure here is remembered for the process
+            # and named; the document's OWN spans are still returned next to
+            # corpus_status (the reader runs first so the corpus never costs
+            # the spans their say — and a corpus failure must not either).
+            logger.warning("corpus reader: KB build failed: %s", exc)
+            _CORPUS_KB_FAILED[key] = f"{type(exc).__name__}: {exc}"
+            return {
+                "status": "skipped: corpus_failed",
+                "reason": f"{type(exc).__name__}: {exc}",
+            }
+        if not built:
+            return {
+                "status": "skipped: no_corpus",
+                "reason": reason or "no corpus document yielded a chunk",
+            }
+        _CORPUS_KB_HOLDER[key] = built
+        kb = built
+    # Exclusion by id at QUERY TIME, for this document alone (the extract
+    # suffix reduces to the base opaque id): the analysed document never
+    # answers its own query, and the cached KB serves every document of the
+    # cycle with the same vectors.
+    kb = [e for e in kb if e.doc_id not in exclude]
+    try:
+        answer = await asyncio.to_thread(sr.query_corpus_for_claim, claim, kb, route)
+    except Exception as exc:  # noqa: BLE001 — named skip, never a silent success
+        logger.warning("corpus reader: embedding failed: %s", exc)
+        return {
+            "status": "skipped: corpus_failed",
+            "reason": f"{type(exc).__name__}: {exc}",
+        }
+    return {
+        "corpus_matches": answer["matches"],
+        "corpus_threshold": answer["threshold"],
+        "corpus_chunks": answer["chunks"],
+    }
+
+
 async def _invoke_semantic_index(
     input_text: str, context: Dict[str, Any]
 ) -> Dict[str, Any]:
@@ -5352,6 +5511,26 @@ async def _invoke_semantic_index(
     if not query:
         return {"status": "skipped: no_reading_query", "reason": query_reason}
 
+    # #3548 wiring (item 35) — the corpus is a second reader: the same claim,
+    # elsewhere. Runs BEFORE the document's own spans so a skip of the latter
+    # never costs the corpus its say. A named absence (no key, no claim, no
+    # corpus) rides ``corpus_status``; a hit rides ``corpus_matches`` and the
+    # state writer stores the offsets-only refs (#3548 ask 7).
+    corpus = await _corpus_second_reader(context.get("_state_object"), context, route)
+    corpus_fields = {
+        "corpus_status": corpus.get("status", "ran"),
+        **({"corpus_reason": corpus["reason"]} if corpus.get("reason") else {}),
+        **(
+            {
+                "corpus_matches": corpus["corpus_matches"],
+                "corpus_threshold": corpus["corpus_threshold"],
+                "corpus_chunks": corpus["corpus_chunks"],
+            }
+            if "corpus_matches" in corpus
+            else {}
+        ),
+    }
+
     if not input_text or len(input_text.strip()) < 200:
         return {
             "status": "skipped: no_document_text",
@@ -5359,6 +5538,7 @@ async def _invoke_semantic_index(
                 "the analysed text is absent or too short to chunk "
                 f"({len(input_text or '')} chars)"
             ),
+            **corpus_fields,
         }
 
     try:
@@ -5372,6 +5552,7 @@ async def _invoke_semantic_index(
             "reason": f"{type(exc).__name__}: {exc}",
             "embedding_model": route.model,
             "route_source": route.source,
+            **corpus_fields,
         }
 
     if not retrieval["spans"]:
@@ -5381,6 +5562,7 @@ async def _invoke_semantic_index(
             or "no chunk of the text could be located",
             "route_source": route.source,
             "embedding_model": route.model,
+            **corpus_fields,
         }
 
     return {
@@ -5393,6 +5575,7 @@ async def _invoke_semantic_index(
         "query_chars": len(query),
         "route_source": route.source,
         "embedding_model": route.model,
+        **corpus_fields,
     }
 
 
@@ -15668,6 +15851,15 @@ def _build_persona_callable(
             messages=[{"role": "user", "content": prompt}],
             **sampling,
         )
+        # #3658 item 36d — expose the call's OWN finish reason (and the cap it
+        # spent) so the first reading can NAME a length stop in its record:
+        # the signal is the envelope's finish_reason, never an inference from
+        # the token count. Read on the callable by build_first_reading.
+        try:
+            _call.last_finish_reason = response.choices[0].finish_reason  # type: ignore[attr-defined]
+        except Exception:  # pragma: no cover - defensive: an envelope without it
+            _call.last_finish_reason = None  # type: ignore[attr-defined]
+        _call.last_max_tokens = sampling.get("max_completion_tokens")  # type: ignore[attr-defined]
         return response.choices[0].message.content or ""
 
     logger.debug("%s persona: route resolved, model=%s", site, model_id)
@@ -15745,6 +15937,11 @@ async def _invoke_first_reading(
     payload = result.to_state()
     if result.status in ("llm_error", "parse_error"):
         detail = f"first_reading {result.status}: {result.error or 'unspecified error'}"
+        # #3658 item 41c — the producer's cut reason survives the invoke's own
+        # detail: a length-stopped parse_error names the cut (the i1207 record
+        # read as a bare parse_error line, with the stop only in llm_usage).
+        if result.degraded and result.degraded_reason:
+            detail = f"{detail}; {result.degraded_reason}"
         payload["degraded"] = True
         payload["degraded_reason"] = detail
         log_error = getattr(state, "log_error", None)

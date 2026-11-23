@@ -10,7 +10,7 @@ Warns when secondary .env files carry a different OPENAI_API_KEY.
 import logging
 import os
 from pathlib import Path
-from typing import Dict, Optional, Union
+from typing import Dict, Optional, Set, Union
 
 from dotenv import dotenv_values
 
@@ -103,6 +103,18 @@ def set_by_caller(name: str) -> bool:
     )
 
 
+# The files an import-time auto-load already filled in this process (#3682),
+# keyed by ``_file_key``. Only ``fill_only=True`` loads read and write it: an
+# explicit construction is never counted and never stopped. A reload of this
+# module starts the count over, as it does ``_CALLER_ENVIRONMENT``.
+_IMPORT_TIME_FILLED: Set[str] = set()
+
+
+def _file_key(path: Union[str, Path]) -> str:
+    """Identify a ``.env`` file across the spellings of its path."""
+    return os.path.normcase(os.path.realpath(str(path)))
+
+
 def load_env_file(path: Union[str, Path], fill_only: bool = False) -> bool:
     """Load ``path`` into os.environ, except the variables the caller set.
 
@@ -115,10 +127,17 @@ def load_env_file(path: Union[str, Path], fill_only: bool = False) -> bool:
     auto-load triggered by an unrelated import can never stomp a value a caller
     imposed after ``_CALLER_ENVIRONMENT`` was captured. Names the process lacks
     are still filled, which is what importing ``core.environment`` for
-    "auto-activation" promises its consumers (#2130). Explicit constructions
-    keep the replacing policy (#1295).
+    "auto-activation" promises its consumers (#2130) — once per file per
+    process (#3682). A later import-time load of a file already filled writes
+    nothing: a declared name that is missing by then was removed on purpose,
+    and stays removed. An explicit ``EnvironmentManager()`` loads the file
+    again and is the way to get that name back. Explicit constructions keep
+    the replacing policy (#1295).
     """
     values = dotenv_values(dotenv_path=str(path))
+    once_key = _file_key(path) if fill_only else None
+    if once_key is not None and once_key in _IMPORT_TIME_FILLED:
+        return bool(values)
     for name, value in values.items():
         if value is None:
             continue
@@ -128,6 +147,8 @@ def load_env_file(path: Union[str, Path], fill_only: bool = False) -> bool:
             continue
         if not set_by_caller(name):
             os.environ[name] = value
+    if once_key is not None:
+        _IMPORT_TIME_FILLED.add(once_key)
     return bool(values)
 
 
@@ -157,8 +178,9 @@ class EnvironmentManager:
        project's .env). A checkout without its .env is a keyless run.
 
     ``fill_only=True`` is for the import-time auto-loads (#3116): they fill the
-    names the process lacks and never replace one it carries. An explicit
-    construction keeps the full policy above.
+    names the process lacks and never replace one it carries — and each file
+    is filled at most once per process (#3682). An explicit construction keeps
+    the full policy above, every time.
     """
 
     def __init__(self, *, fill_only: bool = False) -> None:
