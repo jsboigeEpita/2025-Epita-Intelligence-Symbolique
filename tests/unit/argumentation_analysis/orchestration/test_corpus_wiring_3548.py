@@ -49,14 +49,22 @@ _RECORDED_METADATA = {
 
 @pytest.fixture(autouse=True)
 def _fresh_module_holder():
-    """The module-level KB holder never leaks between tests. Defensive: on a
-    head without the holder (born-red measurement), nothing to clear."""
-    holder = getattr(ic, "_CORPUS_KB_HOLDER", None)
-    if holder is not None:
-        holder.clear()
+    """The module-level KB state never leaks between tests. Defensive: on a
+    head without a holder (born-red measurement), nothing to clear.
+
+    #3658 item 41(b): the FAILURE cache clears too — a KB-build error cached
+    for the process by #3669 would otherwise answer the next test's query
+    with a stale ``corpus_failed`` skip."""
+    holders = [
+        getattr(ic, name, None) for name in ("_CORPUS_KB_HOLDER", "_CORPUS_KB_FAILED")
+    ]
+    for holder in holders:
+        if holder is not None:
+            holder.clear()
     yield
-    if holder is not None:
-        holder.clear()
+    for holder in holders:
+        if holder is not None:
+            holder.clear()
 
 
 def _vector(text: str) -> List[float]:
@@ -266,3 +274,37 @@ def test_the_held_vectors_are_compact_float32(wired_phase):
     assert entries and reason == "", reason
     assert all(isinstance(entry.vector, array) for entry in entries)
     assert all(entry.vector.typecode == "f" for entry in entries)
+
+
+async def test_a_cached_build_failure_does_not_survive_into_the_next_test(
+    wired_phase,
+):
+    """#3658 item 41(b): #3669 remembers a failed KB build for the PROCESS; a
+    test that ends with that cache set must not hand the next one a stale
+    ``corpus_failed (cached)``. Order-independent on purpose: xdist spreads one
+    module's tests over several workers, so the fixture's teardown is stepped
+    by hand instead of waiting for a previous test to have run here."""
+    from argumentation_analysis.config.settings import settings as app_settings
+
+    route, _ = sr.resolve_embedding_route()
+    assert route is not None
+    key = (
+        route.base_url,
+        route.model,
+        route.source,
+        str(app_settings.config_file_enc),
+    )
+    fixture_fn = getattr(_fresh_module_holder, "__wrapped__", None)
+    assert fixture_fn is not None, (
+        "pytest no longer exposes the fixture's generator: retarget this "
+        "witness (pytest 9.1.1, the gate version, does)"
+    )
+    fixture = fixture_fn()
+    next(fixture)  # setup of "the previous test"
+    ic._CORPUS_KB_FAILED[key] = "TransportError: planted by the previous test"
+    with pytest.raises(StopIteration):
+        next(fixture)  # its teardown — the half that protects the next test
+    result = await ic._invoke_semantic_index(
+        DOC_P_TEXT, _phase_context(_state_for_doc_p(), "planted_p")
+    )
+    assert result.get("corpus_status") == "ran", result

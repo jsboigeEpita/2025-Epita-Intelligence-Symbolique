@@ -433,14 +433,24 @@ class FirstReading:
         return payload
 
 
-def _cut_degraded_reason(cap: Optional[int] = None) -> str:
-    """The reason a length-stopped reading records (#3658 item 36d).
+def _cut_degraded_reason(cap: Optional[int] = None, kept_nothing: bool = False) -> str:
+    """The reason a length-stopped reading records (#3658 items 36d and 41c).
 
     Names the length stop AND the cap the reading spent, so a reader can tell
     an 8 192 stop from a 4 096 one without re-deriving it. The signal is the
     reading's OWN call's finish reason, never an inference from the count.
+    ``kept_nothing`` (#3658 item 41c) is the other measured outcome: the cap
+    was spent before one complete object was written, so the salvage kept
+    NOTHING — the wording must not claim kept objects (doc_J i1207 read as a
+    bare ``parse_error`` with no mention of the cut).
     """
     cap_text = f" (cap {cap})" if cap else ""
+    if kept_nothing:
+        return (
+            f"the reading's call stopped on finish_reason=length{cap_text}: the "
+            "answer was cut mid-object and no complete object survived the cut "
+            "— nothing was kept"
+        )
     return (
         f"the reading's call stopped on finish_reason=length{cap_text}: the "
         "answer was cut mid-object; the complete objects written before the "
@@ -939,6 +949,15 @@ async def build_first_reading(
                 else "no 'moves' list in the answer"
             )
             result.malformed_moves = malformed
+            # #3658 item 41c — a cut that kept NOTHING still names the cut: the
+            # measured doc_J run (i1207) spent its whole cap before one
+            # readable object and the record said only "parse_error", so the
+            # panel could not tell an empty answer from a cut one.
+            if finish_reason == "length":
+                result.degraded = True
+                result.degraded_reason = _cut_degraded_reason(
+                    cap=cut_cap, kept_nothing=True
+                )
             return result
 
         moves: List[DefiningMove] = []

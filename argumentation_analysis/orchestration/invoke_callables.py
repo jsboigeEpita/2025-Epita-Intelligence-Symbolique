@@ -15923,6 +15923,11 @@ async def _invoke_first_reading(
     payload = result.to_state()
     if result.status in ("llm_error", "parse_error"):
         detail = f"first_reading {result.status}: {result.error or 'unspecified error'}"
+        # #3658 item 41c — the producer's cut reason survives the invoke's own
+        # detail: a length-stopped parse_error names the cut (the i1207 record
+        # read as a bare parse_error line, with the stop only in llm_usage).
+        if result.degraded and result.degraded_reason:
+            detail = f"{detail}; {result.degraded_reason}"
         payload["degraded"] = True
         payload["degraded_reason"] = detail
         log_error = getattr(state, "log_error", None)
