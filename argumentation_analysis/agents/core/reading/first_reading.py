@@ -1697,13 +1697,44 @@ def first_reading_note(state: Any) -> str:
     dropped = record.get("dropped_quotes") or 0
 
     if not moves:
+        detail = str(record.get("error") or "").strip()
         if status in ("", "no_llm"):
+            # #3658 item 42 — the « aucun lecteur » sentence is a claim about
+            # the document, so it is printed only when the record names no
+            # cause. A record that carries one (the producer ran and stopped)
+            # would otherwise tell the writer nobody tried.
+            if detail:
+                return (
+                    "LECTURE PREMIÈRE — non enregistrée : le lecteur n'a pas "
+                    f"abouti ({detail}). Ne présente aucune ligne comme une "
+                    "lecture d'ensemble."
+                )
             return (
                 "LECTURE PREMIÈRE — non enregistrée : aucun lecteur n'a lu le "
                 "document en entier. Ne présente aucune ligne comme une lecture "
                 "d'ensemble."
             )
         if status != "ok":
+            # #3658 item 42 — the measured defect: a phase killed by its
+            # budget kept the ``no_llm`` default, so this note said « aucun
+            # lecteur n'a lu le document » about a reading that had been
+            # attempted and cut. The executor now files ``timeout`` (or
+            # ``phase_failed``) with its own message — which names the
+            # budget (#1608) — and the note says it. A failed record that
+            # names nothing keeps the generic sentence: no invented cause
+            # (#1019).
+            if status == "timeout":
+                cause = f" ({detail})" if detail else ""
+                return (
+                    "LECTURE PREMIÈRE — interrompue sur son budget de temps"
+                    f"{cause}. Aucun geste n'a été enregistré ; ne présente "
+                    "aucune ligne comme une lecture d'ensemble."
+                )
+            if detail:
+                return (
+                    f"LECTURE PREMIÈRE — lecture en échec ({status}) : "
+                    f"{detail}. Aucun geste n'a été enregistré."
+                )
             return "LECTURE PREMIÈRE — lecture en échec, aucun geste enregistré."
         # R1142 — « lu en entier » follows the scope the producer RECORDED,
         # never a declaration: a bounded read states its window, so the
