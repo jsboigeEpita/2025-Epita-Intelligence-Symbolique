@@ -91,8 +91,10 @@ def test_fol_both_passes_share_the_cap(monkeypatch, determinism, cap, expected):
 
 
 def _descent_plugin():
+    # A real kernel, per the #2393 guard: the plugin only stores it, and both
+    # creators build their own kernel, so it is inert here. No unspecced double.
     return FallacyWorkflowPlugin(
-        master_kernel=MagicMock(),
+        master_kernel=Kernel(),
         llm_service=MagicMock(),
         taxonomy_data=[
             {
