@@ -164,7 +164,8 @@ a static selector.
 
 > Updated 2026-07-11 (po-2025, base `994baf93`). All NORTH-STAR mechanisms are
 > now **complete and pipeline-selectable**. The **only** remaining open gap is
-> the real-corpus run (ATT-3), gated on user go — honestly left OPEN.
+> the real-corpus run (ATT-3) — honestly left OPEN; since 2026-11-22 it is a
+> planned post-v1 run (user decision, §7d).
 
 ### 7a. Text→structured translators — 5/5 ✅ CLOSED
 
@@ -253,14 +254,17 @@ not carry.
 
 ### 7c. Unified harness + pipeline-selectable capability — harness ✅, capability RETIRED
 
-- `compare_all_axes` (`invoke_callables.py:7186`) — router + uniform aggregator over the 3 axes, zero re-implementation. ✅ #1438. After the capability's retirement it has 0 production callers; it stays as the harness owning the #2491 defect witnesses and the user-gated ATT-3 run (§7d) — owner record #2929.
+- `compare_all_axes` (`invoke_callables.py:14906`) — router + uniform aggregator over the 3 axes, zero re-implementation. ✅ #1438. After the capability's retirement it has 0 production callers; it stays as the harness owning the #2491 defect witnesses and the post-v1 ATT-3 run (§7d) — owner record #2929.
 - ~~`_invoke_multi_axis_compare` → capability `multi_axis_compare`, registered `multi_axis_compare_service`~~ — **RETIRED #1604** (Cleanup Gate, R1062 step 4): zero production demanders (no phase, no capability table, no router entry, not in the MCP advertised tools) and no downstream reader of the comparison differential — the retirement stands on demand alone. The retirement also left `llm_neural_detect_async` with 0 production callers: kept deliberately, parked with a named consumer (the Dung stage's second provenance) — owner record #2928.
 
 ### 7d. ⏳ STILL OPEN — real-corpus multi-axis run (ATT-3)
 
 The terminal data-feeding run over the real (encrypted) corpus is **not done**.
-Gated on user decision; execution ai-01-local (nominative artefacts,
-non-delegable). **Honestly left OPEN** — not coché.
+**User decision 2026-11-22: kept, planned for after v1.** The v1 bar is the
+10-document panel and the five-engine comparison (#3378); ATT-3 does not
+replace either, and it does not run before v1 is declared done. Execution
+ai-01-local (nominative artefacts, non-delegable). The harness it would use,
+`compare_all_axes`, stays (#2929). **Honestly left OPEN** — not coché.
 
 > All pointers above verified via `git grep` (verify-before-assert, mandate R563).
 > No invented capabilities; only merged code is cited as ✅.
