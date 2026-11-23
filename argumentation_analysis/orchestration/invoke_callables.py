@@ -5349,6 +5349,12 @@ def _analysed_document_ids(context: Any) -> "set[str]":
 # vectors serve every document. Shape A of the design note: volatile, never
 # persisted, dropped with the process.
 _CORPUS_KB_HOLDER: Dict[Tuple[str, str, str, str], List[Any]] = {}
+#: A failed KB build is remembered for the process, keyed like the KB (#3548
+#: item 35, R1206): a transport failure during the build (claudish answers 404
+#: on /v1/embeddings) is NOT retried for every document of the cycle — the
+#: status names it (``skipped: corpus_failed (cached)``). The value is the
+#: exception's ``Type: message`` so the cached skip stays self-describing.
+_CORPUS_KB_FAILED: Dict[Tuple[str, str, str, str], str] = {}
 
 
 async def _corpus_second_reader(
@@ -5390,6 +5396,13 @@ async def _corpus_second_reader(
     definitions_path = str(app_settings.config_file_enc)
     key = (route.base_url, route.model, route.source, definitions_path)
     kb = _CORPUS_KB_HOLDER.get(key)
+    if kb is None and key in _CORPUS_KB_FAILED:
+        # Remembered build failure (#3548 item 35, R1206): the cycle does not
+        # re-pay the embedding POSTs for every document — name it and stop.
+        return {
+            "status": "skipped: corpus_failed (cached)",
+            "reason": _CORPUS_KB_FAILED[key],
+        }
     if kb is None:
         from argumentation_analysis.core.io_manager import load_extract_definitions
         from argumentation_analysis.core.utils.crypto_utils import (
@@ -5414,7 +5427,20 @@ async def _corpus_second_reader(
             entry = dict(definition)
             entry["id"] = doc_id
             entries.append(entry)
-        built, reason = sr.build_corpus_kb(entries, route)
+        try:
+            built, reason = sr.build_corpus_kb(entries, route)
+        except Exception as exc:  # noqa: BLE001 — named skip, never a silent success
+            # #3548 item 35 (R1206): the build rides the reader's failure
+            # contract. A transport failure here is remembered for the process
+            # and named; the document's OWN spans are still returned next to
+            # corpus_status (the reader runs first so the corpus never costs
+            # the spans their say — and a corpus failure must not either).
+            logger.warning("corpus reader: KB build failed: %s", exc)
+            _CORPUS_KB_FAILED[key] = f"{type(exc).__name__}: {exc}"
+            return {
+                "status": "skipped: corpus_failed",
+                "reason": f"{type(exc).__name__}: {exc}",
+            }
         if not built:
             return {
                 "status": "skipped: no_corpus",
