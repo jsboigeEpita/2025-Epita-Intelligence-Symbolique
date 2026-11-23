@@ -703,12 +703,16 @@ class TestFirstReadingCompletionCap:
         # parse_error — the witness measures the KWARGS, not the answer)
         assert payload.get("status") == "parse_error"
 
-    async def test_other_personas_send_no_cap(self, monkeypatch):
+    async def test_other_personas_send_the_shared_phase_cap(self, monkeypatch):
+        """#3658 item 36b supersedes this file's original "no cap" contract:
+        a persona with no cap of its own now falls to the shared
+        ``PHASE_MAX_TOKENS`` ceiling — the measured doc_J pass had the
+        uncapped personas stop at the route's 4 096 ingress default."""
         captured: dict = {}
         ic = self._patch(monkeypatch, captured)
         llm, _ = ic._build_persona_callable("historian")
         await llm("prompt")
-        assert "max_completion_tokens" not in captured
+        assert captured.get("max_completion_tokens") == ic._PHASE_MAX_TOKENS
         assert "max_tokens" not in captured
 
 
