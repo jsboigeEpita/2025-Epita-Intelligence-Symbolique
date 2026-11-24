@@ -65,6 +65,7 @@ from argumentation_analysis.core.reading_window import (
     selected_text,
 )
 from argumentation_analysis.plugins.exploration_plugin import ExplorationPlugin
+from argumentation_analysis.orchestration.invoke_callables import _with_phase_max_tokens
 from argumentation_analysis.utils.taxonomy_local_overrides import purge_rows
 from argumentation_analysis.plugins.identification_models import (
     IdentifiedFallacy,
@@ -712,6 +713,9 @@ class FallacyWorkflowPlugin:
         slave_settings = OpenAIPromptExecutionSettings(
             function_choice_behavior=FunctionChoiceBehavior.Auto(auto_invoke=False)
         )
+        # #3658 item 36c — the shared ceiling rides the DECLARED SK field
+        # (measured on the real settings class by #3670), not extension data.
+        slave_settings = _with_phase_max_tokens(slave_settings)
         return slave_kernel, slave_settings
 
     def _mark_fallback(self, result_json: str) -> str:
@@ -762,7 +766,7 @@ class FallacyWorkflowPlugin:
         settings = OpenAIPromptExecutionSettings(
             function_choice_behavior=FunctionChoiceBehavior.NoneInvoke()
         )
-        return kernel, settings
+        return kernel, _with_phase_max_tokens(settings)
 
     def _build_root_presentation(self) -> str:
         """Build a formatted presentation of root categories + their children."""

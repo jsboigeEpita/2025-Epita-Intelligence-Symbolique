@@ -1,0 +1,40 @@
+{
+  "key": "86fc56da5a395473b7025c9e988a4f37bde4aa4c5aa8d073545d3c9b2eaf2229",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_UhCNqb9WJbkACT8AlPYbLd1m",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"599\",\"matches\":false,\"justification\":\"Le texte ne formule pas une loi générale à partir d'une poignée d'exemples. Il invoque plutôt l'unanimité alléguée des experts comme justification de la vérité, puis écarte l'avis des non-experts; cela relève d'un appel à l'autorité ou d'une exclusion de la contestation, pas de l'appel aux petits nombres.\",\"confidence\":\"0.99\",\"move_author\":\"speaker\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EkNty4ZnVHEfhTBF0VXYxnhfLha57",
+        "created": 1794723674,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 1405,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 1402,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 115,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

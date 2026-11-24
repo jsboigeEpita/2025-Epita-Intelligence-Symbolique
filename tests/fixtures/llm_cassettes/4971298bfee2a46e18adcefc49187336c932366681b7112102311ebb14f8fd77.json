@@ -1,0 +1,40 @@
+{
+  "key": "4971298bfee2a46e18adcefc49187336c932366681b7112102311ebb14f8fd77",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_1B6r4Mi452WFw919g4psjfQ0",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"846\",\"matches\":false,\"justification\":\"L’énoncé est grammaticalement clair et ne présente pas de double sens exploité. « Succès incontestable » est une évaluation assertée, mais l’ambiguïté n’est pas le mécanisme fallacieux identifié.\",\"move_author\":\"reported\",\"move_author_label\":\"Le président\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EkNsdaEx3IdPpbubaKGXKqNIQXr0w",
+        "created": 1794723591,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 2438,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 2435,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 90,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

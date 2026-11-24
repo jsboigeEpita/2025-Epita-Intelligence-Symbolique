@@ -12595,6 +12595,20 @@ async def _invoke_fol_reasoning(
                             _doc_text_fol[_lo:_hi] for _lo, _hi in _fol_spans
                         ]
                     det_params = _get_determinism_params()
+                    # #3658 item 36c — both FOL passes (shared signature and
+                    # per-argument formulas) called _guarded_chat_completion
+                    # with determinism only, so an uncapped answer stopped at
+                    # the route's ingress default (measured 3 stops on 7 calls,
+                    # R1206). The ONE shared ceiling rides both passes; a cap
+                    # the site already set wins, and 0 omits the key.
+                    if _PHASE_MAX_TOKENS and not (
+                        det_params.get("max_completion_tokens")
+                        or det_params.get("max_tokens")
+                    ):
+                        det_params = {
+                            **det_params,
+                            "max_completion_tokens": _PHASE_MAX_TOKENS,
+                        }
 
                     async def _fol_signature_one_reading(
                         _reading: str,

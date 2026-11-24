@@ -1,0 +1,33 @@
+{
+  "key": "4b56d08bceec140961ba587e5068730614856d1f46ba46e7bc5f3466556f5036",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "{\"fallacy_name\":\"Lapalissade\",\"taxonomy_pk\":\"31\",\"explanation\":\"Le texte énonce des évidences triviales (« Le soleil brille. Il fait beau. ») sans apporter de raisonnement substantiel.\",\"confidence\":0.82}",
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EkNs1AfaILU8oaU9AOsc5EyBR7sUp",
+        "created": 1794723553,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 23156,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 23153,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 204,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 142,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

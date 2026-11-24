@@ -1,0 +1,40 @@
+{
+  "key": "856d0db3f4b2bdd3e00a8023326a16fab55a774a0894fbc535f9a781505dbae6",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_vwpHQp9tp2wmMLUEZ0TdCBT1",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"2\",\"matches\":true,\"confidence\":\"high\",\"justification\":\"L’affirmation selon laquelle la politique économique est un « succès incontestable » est une généralisation catégorique, formulée sans aucune preuve, donnée ou exemple à l’appui.\",\"move_author\":\"reported\",\"move_author_label\":\"Le président\",\"document_statement\":\"« la politique economique est un succes incontestable »\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EkNsedYzZryNIxCalaDw0ql85DEWX",
+        "created": 1794723592,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 2500,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 1062,
+            "cached_tokens": 1435,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 98,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}
