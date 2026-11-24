@@ -389,7 +389,10 @@ def _slot_label(entry: Dict[str, Any]) -> str:
 #: ``unsat_theory_including_single_passage: s1,s2`` — the exception class
 #: and the entry ids are producer detail, never reader words. The
 #: completeness test walks the AST and fails when a ``payload["reason"] =``
-#: value has no clause here.
+#: value has no clause here. The two #3683 keys are written by the
+#: executor's failure sink (``state_writers``), not by this module: they
+#: name a check that never ran its translation at all, so their clause
+#: speaks of the PHASE, not of the reasoner.
 _REASON_CLAUSES: Dict[str, str] = {
     "no_first_reading_slots": (
         "aucun mouvement de première lecture n'avait été enregistré"
@@ -411,6 +414,11 @@ _REASON_CLAUSES: Dict[str, str] = {
     "the_reasoner_did_not_decide_a_batch_theory": (
         "le raisonneur n'a tranché aucune théorie du lot"
     ),
+    # #3683 — a check cut by its own phase budget is not "nothing to check":
+    # the phase was attempted and died at its budget, and the reader is told
+    # so. The exact clause the issue pins.
+    "phase_budget_exceeded": "la phase a dépassé son budget de temps",
+    "phase_failed": "la phase a échoué avant de produire un contrôle",
 }
 
 

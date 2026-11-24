@@ -157,8 +157,19 @@ PERSONA_READ_STATUS_KEYS: Dict[str, str] = {
 }
 # A read that RAN and failed. ``no_llm`` is an honest empty (a document with no
 # LLM read by design — doc_A), ``empty_input`` / ``no_reading`` / ``no_document``
-# are honest absences too: none is a failure.
-FAILED_PERSONA_STATUSES: Tuple[str, ...] = ("llm_error", "parse_error")
+# are honest absences too: none is a failure. ``timeout`` and ``phase_failed``
+# are the two statuses the EXECUTOR's failure sink writes when the phase died
+# at its own budget or on an executor-level exception (#3681 item 42 for the
+# first reading, #3683 for the other three personas): such a record carries
+# no ``degraded`` key, because the persona's invoke never ran, so the status
+# is the ONLY marker — measured on 12 recorded ``coverage_review`` records
+# cut at their 300 s budget, which this table called healthy.
+FAILED_PERSONA_STATUSES: Tuple[str, ...] = (
+    "llm_error",
+    "parse_error",
+    "timeout",
+    "phase_failed",
+)
 
 
 class JudgeUnparsed(RuntimeError):
