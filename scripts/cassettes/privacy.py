@@ -16,6 +16,19 @@ field listed raises and refuses to write.
 
 Why blocking rather than warning: a silent privacy leak onto a tracked
 surface (GitHub search index) is a release-blocker, not a lint warning.
+
+**Scope of the historical-year rule (#3679 item 40c).** That rule is a hint
+detector with no provenance: a corpus speech almost always carries a year of
+its own time, so an answer that carries one is read as possible corpus prose.
+A model answering from general knowledge, or restating a budget figure
+without its currency word, trips it just the same (record run 45351057154:
+3 refusals in 507 answers, none from a prompt that had seen the corpus — the
+band population never decrypts it). The rule therefore blocks whenever the
+recording run COULD read the corpus, and is reported — not blocking — only
+for a run that could not: a band record, whose step runs without the dataset
+passphrase (``record-llm-cassettes.yml``). ``export.py`` reads that fact from
+the record step itself. ``SCOPED_RULES`` is the whole decision; the other
+rules block everywhere.
 """
 
 from __future__ import annotations
@@ -88,20 +101,33 @@ METADATA_KEYS = frozenset(
 )
 
 
-def audit_value(value: Any, *, source: str = "<unknown>") -> list[str]:
-    """Return a list of privacy violation descriptions (empty == safe).
+# The rules, by name: what ``audit_findings`` returns a finding under.
+RULE_FORBIDDEN_KEY = "forbidden-key"
+RULE_SOURCE_NAME = "source-name"
+RULE_HISTORICAL_YEAR = "historical-year"
+RULES = frozenset({RULE_FORBIDDEN_KEY, RULE_SOURCE_NAME, RULE_HISTORICAL_YEAR})
 
-    Walks ``value`` recursively and checks for any forbidden key, source
-    name, or historical political date. Strict-mode is intentional: a
-    cassette that fails this audit cannot be committed.
-    """
-    violations: list[str] = []
+# The rules whose premise fails for a run that could not read the corpus, and
+# that the export then reports instead of refusing (module docstring). A year
+# may come from anywhere; a source name is a stronger hint, and none was ever
+# measured false — it blocks everywhere.
+SCOPED_RULES = frozenset({RULE_HISTORICAL_YEAR})
+
+
+def audit_findings(value: Any, *, source: str = "<unknown>") -> list[tuple[str, str]]:
+    """Every finding of ``value`` as ``(rule, description)``, in audit order."""
+    findings: list[tuple[str, str]] = []
 
     def walk(node: Any, path: str) -> None:
         if isinstance(node, dict):
             for k, v in node.items():
                 if k in FORBIDDEN_KEYS:
-                    violations.append(f"{source}: forbidden key {k!r} at {path}.{k}")
+                    findings.append(
+                        (
+                            RULE_FORBIDDEN_KEY,
+                            f"{source}: forbidden key {k!r} at {path}.{k}",
+                        )
+                    )
                 walk(v, f"{path}.{k}" if path else k)
         elif isinstance(node, list):
             for i, item in enumerate(node):
@@ -121,8 +147,12 @@ def audit_value(value: Any, *, source: str = "<unknown>") -> list[str]:
                 return
             name_hit = PERSON_RE.search(node)
             if name_hit:
-                violations.append(
-                    f"{source}: source-name hint {name_hit.group(0)!r} found at {path}"
+                findings.append(
+                    (
+                        RULE_SOURCE_NAME,
+                        f"{source}: source-name hint {name_hit.group(0)!r} "
+                        f"found at {path}",
+                    )
                 )
             for m in DATE_RE.finditer(node):
                 if _is_monetary_amount(node, m):
@@ -130,12 +160,25 @@ def audit_value(value: Any, *, source: str = "<unknown>") -> list[str]:
                 # 1933..2026 are the politically sensitive corpus years.
                 # Earlier (1920s debates etc.) would slip by design — broader
                 # range adds false positives on test fixtures.
-                violations.append(
-                    f"{source}: historical-year hint {m.group(1)} found at {path}"
+                findings.append(
+                    (
+                        RULE_HISTORICAL_YEAR,
+                        f"{source}: historical-year hint {m.group(1)} found at {path}",
+                    )
                 )
 
     walk(value, "")
-    return violations
+    return findings
+
+
+def audit_value(value: Any, *, source: str = "<unknown>") -> list[str]:
+    """Return a list of privacy violation descriptions (empty == safe).
+
+    Walks ``value`` recursively and checks for any forbidden key, source
+    name, or historical political date. Strict-mode is intentional: a
+    cassette that fails this audit cannot be committed.
+    """
+    return [description for _rule, description in audit_findings(value, source=source)]
 
 
 def assert_safe(value: Any, *, source: str) -> None:

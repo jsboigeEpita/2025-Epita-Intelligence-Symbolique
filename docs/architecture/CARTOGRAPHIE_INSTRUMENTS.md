@@ -183,6 +183,22 @@ déclare les retouches manuelles, **n'a aucun lecteur**. Mesuré sur le manifest
 cassette du chemin SK que le job ne peut pas enregistrer (#1603 constat A), déclarée. Rien
 dans la CI ne permet de dériver que ce delta vaut 1 plutôt que 198.
 
+⚠ **La règle « année » de l'audit d'export a une portée** (#3679 item 40c) : c'est un détecteur
+d'indice, sans provenance — une réponse qui porte une année est lue comme possible prose du corpus.
+Un modèle qui répond de son savoir général, ou qui redit un budget sans son mot de monnaie, la
+déclenche tout autant (run d'enregistrement `45351057154` : 3 refus sur 507 réponses, aucun depuis
+un prompt qui avait vu le corpus — la population de bande ne le déchiffre jamais). Elle **refuse**
+donc chaque fois que le run d'enregistrement **pouvait** lire le corpus (le défaut, la récolte
+générale, un export local), et elle n'est **rapportée, donc non bloquante, que pour un run qui ne
+pouvait pas** : un enregistrement de bande. Son étape tourne sans la passphrase du dataset —
+`band_record_argv.py --check-env` répond `0`, l'étape retire `TEXT_CONFIG_PASSPHRASE` et le dit à
+l'étape d'export — **seulement après avoir vu la variable disparaître** ; si elle survit, l'étape
+s'arrête avant de facturer et ne dit rien. L'export nomme alors les indices (`historical-year hints
+are reported, not refused`) et inscrit la portée dans le `MANIFEST.json`
+(`record_dataset_passphrase`, `year_hint_cassettes`). `export.py` n'a aucune option pour cela : il
+lit ce que l'étape d'enregistrement a rapporté, et reste strict dès qu'elle ne dit rien. Les deux
+autres règles (`source-name`, `forbidden-key`) restent bloquantes partout.
+
 ---
 
 ## Objectif : « comparer les modes d'orchestration entre eux »

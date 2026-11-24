@@ -12,6 +12,8 @@ record step runs on its own inputs refuses the 18/09 dispatch.
 from __future__ import annotations
 
 import os
+import shutil
+import subprocess
 import sys
 from pathlib import Path
 
@@ -27,7 +29,33 @@ BAND_YML = REPO / ".github" / "workflows" / "requires_api_band.yml"
 RECORD_YML = REPO / ".github" / "workflows" / "record-llm-cassettes.yml"
 
 RECIPE_CHECK = "scripts/cassettes/band_record_argv.py --check-env"
-CHECK_EXIT = "if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }"
+RECIPE_LINE = "conda run -n projet-is --no-capture-output python " + RECIPE_CHECK
+# The three answers of the check (#3679 item 40c): 0 a verified band record,
+# 1 a dispatch that would not select the band, 3 another lane.
+NOT_BAND_RECORD = 3
+GUARD = (
+    f"if ($LASTEXITCODE -ne 0 -and $LASTEXITCODE -ne {NOT_BAND_RECORD}) "
+    "{ exit $LASTEXITCODE }"
+)
+# The step says the word only once it has seen the passphrase gone: a record
+# that kept it stops before billing, and says nothing to the export step.
+SURVIVED_LINE = (
+    'if (Test-Path Env:TEXT_CONFIG_PASSPHRASE) { Write-Host "FAIL-LOUD: the dataset '
+    'passphrase survived the record step — nothing was billed."; exit 1 }'
+)
+# What the step does with a verified band record: it runs it without the
+# dataset passphrase, and tells the export step.
+WITHHOLD_BLOCK = [
+    "if ($LASTEXITCODE -eq 0) {",
+    "if (Test-Path Env:TEXT_CONFIG_PASSPHRASE) { Remove-Item Env:TEXT_CONFIG_PASSPHRASE }",
+    SURVIVED_LINE,
+    # ``$env:`` — a bare ``$GITHUB_OUTPUT`` names a PowerShell variable that
+    # does not exist, and the word goes nowhere (the shell witness below
+    # caught exactly that line).
+    'echo "dataset_passphrase=withheld" >> $env:GITHUB_OUTPUT',
+    "}",
+]
+EXPORT_STEP = "Export cassettes + blocking privacy audit"
 
 
 def _band() -> str:
@@ -302,10 +330,39 @@ def test_an_option_the_record_step_loses_reads_as_the_side_that_carries_less(
 
 
 def test_another_lane_is_not_a_band_record(monkeypatch, capsys):
-    """The general harvest selects another population by design."""
+    """The general harvest selects another population by design.
+
+    It has its own exit code (#3679 item 40c): the step reads 0 as « a
+    verified band record — run it without the dataset passphrase », and the
+    general harvest reads the corpus.
+    """
     _dispatch(monkeypatch, "not slow and not requires_api", "")
-    assert recipe.main(["--check-env"]) == 0
+    assert recipe.main(["--check-env"]) == NOT_BAND_RECORD
     assert "not a band record" in capsys.readouterr().out
+
+
+def test_the_check_tells_its_three_outcomes_apart(monkeypatch):
+    derived = _derived()
+    tokens = _tokens()
+    position = tokens.index("--deselect")
+    outcomes = {
+        "a verified band record": (derived.lane, derived.extra_args),
+        "a dispatch that would not select the band": (
+            derived.lane,
+            _rejoin(tokens[:position] + tokens[position + 2 :]),
+        ),
+        "another lane": ("not slow and not requires_api", ""),
+    }
+    codes = {}
+    for name, (lane, extra_args) in outcomes.items():
+        _dispatch(monkeypatch, lane, extra_args)
+        codes[name] = recipe.main(["--check-env"])
+    assert codes == {
+        "a verified band record": 0,
+        "a dispatch that would not select the band": 1,
+        "another lane": NOT_BAND_RECORD,
+    }
+    assert recipe.NOT_BAND_RECORD_EXIT == NOT_BAND_RECORD
 
 
 def test_the_check_sees_a_record_step_that_stopped_following_the_replay_call(
@@ -352,4 +409,145 @@ def test_the_record_step_runs_the_check_before_its_billable_command():
     assert check < billable, "the check must run before anything is billed"
     assert lines[check].startswith("conda run -n projet-is --no-capture-output python ")
     # A refused dispatch stops the step: its failure is the run's failure.
-    assert lines[check + 1] == CHECK_EXIT
+    # Anything unexpected stops it too; only another lane is let through
+    # (#3679 item 40c).
+    assert lines[check + 1] == GUARD
+
+
+# --- A band record runs without the dataset passphrase (#3679 item 40c) ------
+#
+# The band population never decrypts the corpus (0 call to the dataset loader
+# in a local replay of the exact record population), so a band record has no
+# use for the passphrase — and without it, no prompt of the run can carry
+# corpus prose. The export's historical-year rule is reported, not blocking,
+# for such a run only (scripts/cassettes/export.py). These hold the step to
+# that: it removes the passphrase exactly for a verified band record, and it
+# says so to the export step.
+
+
+def _executable_lines() -> list:
+    return [
+        line.strip()
+        for line in _record_step()["run"].splitlines()
+        if line.strip() and not line.strip().startswith("#")
+    ]
+
+
+def _from_the_check_to_the_end_of_the_block() -> list:
+    lines = _executable_lines()
+    (check,) = [
+        index for index, line in enumerate(lines) if line.endswith(RECIPE_CHECK)
+    ]
+    block = [lines[check]]
+    for line in lines[check + 1 :]:
+        block.append(line)
+        if line == "}":
+            return block
+    raise AssertionError("no closing brace after the check")
+
+
+def test_a_verified_band_record_loses_the_dataset_passphrase_before_it_bills():
+    """The lines between the check and the billable command, exactly."""
+    assert _from_the_check_to_the_end_of_the_block() == [
+        RECIPE_LINE,
+        GUARD,
+        *WITHHOLD_BLOCK,
+    ]
+
+
+def test_nothing_else_runs_between_the_withholding_and_the_billable_command():
+    lines = _executable_lines()
+    (billable,) = [index for index, line in enumerate(lines) if "pytest " in line]
+    block = _from_the_check_to_the_end_of_the_block()
+    assert lines[billable - len(block) : billable] == block
+
+
+def test_the_export_step_reads_what_the_record_step_reported():
+    steps = yaml.safe_load(_record())["jobs"]["record"]["steps"]
+    (step,) = [step for step in steps if step.get("name") == EXPORT_STEP]
+    assert step["env"]["RECORD_DATASET_PASSPHRASE"] == (
+        "${{ steps.record.outputs.dataset_passphrase || 'given' }}"
+    )
+
+
+@pytest.mark.skipif(shutil.which("pwsh") is None, reason="pwsh is not installed")
+@pytest.mark.parametrize(
+    ("answer", "exit_code", "passphrase", "reported", "removal", "present"),
+    [
+        (0, 0, "absent", True, "works", True),  # a verified band record
+        # no secret on the dispatch: nothing to remove, the record is without it
+        (0, 0, "absent", True, "works", False),
+        # the removal does not take: stop before billing, say nothing
+        (0, 1, "present", False, "ineffective", True),
+        (
+            1,
+            1,
+            "present",
+            False,
+            "works",
+            True,
+        ),  # a dispatch that would not select the band
+        (NOT_BAND_RECORD, 0, "present", False, "works", True),  # another lane
+        (
+            2,
+            2,
+            "present",
+            False,
+            "works",
+            True,
+        ),  # anything unexpected stops before billing
+    ],
+)
+def test_the_step_s_shell_withholds_exactly_for_a_verified_band_record(
+    tmp_path, answer, exit_code, passphrase, reported, removal, present
+):
+    """The lines of the workflow, run by the shell that will run them.
+
+    The recipe check stands in as a function that sets the exit code. The
+    script reports whether the passphrase survived the block — from a
+    ``finally``, since the block's own ``exit`` would skip a later line.
+    """
+    from scripts.cassettes import export as cassette_export
+
+    output = tmp_path / "github_output.txt"
+    script = tmp_path / "step.ps1"
+    script.write_text(
+        "\n".join(
+            [
+                "$ErrorActionPreference = 'stop'",
+                # GitHub runs a pwsh step with this preference: a non-terminating
+                # error (a missing Env: entry) would fail the step.
+                f"function conda {{ $global:LASTEXITCODE = {answer} }}",
+                # The secret, when the dispatch has one, before the step.
+                *(["$env:TEXT_CONFIG_PASSPHRASE = 'not-a-key'"] if present else []),
+                # A removal that does nothing: the word must not follow it.
+                *(["function Remove-Item { }"] if removal == "ineffective" else []),
+                f"$env:GITHUB_OUTPUT = '{output}'",
+                "try {",
+                *_from_the_check_to_the_end_of_the_block(),
+                "} finally {",
+                "if (Test-Path Env:TEXT_CONFIG_PASSPHRASE) { "
+                "Write-Output 'PASSPHRASE=present' } else { "
+                "Write-Output 'PASSPHRASE=absent' }",
+                "}",
+                "exit 0",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    run = subprocess.run(
+        ["pwsh", "-NoProfile", "-NonInteractive", "-File", str(script)],
+        capture_output=True,
+        text=True,
+        timeout=120,
+    )
+    assert run.returncode == exit_code, run.stdout + run.stderr
+    assert f"PASSPHRASE={passphrase}" in run.stdout, run.stdout + run.stderr
+    assert output.exists() is reported
+    assert ("FAIL-LOUD" in run.stdout) is (removal == "ineffective")
+    if reported:
+        assert (
+            output.read_text(encoding="utf-8").strip() == "dataset_passphrase=withheld"
+        )
+        assert cassette_export.WITHHELD == "withheld"

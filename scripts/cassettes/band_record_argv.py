@@ -23,6 +23,21 @@ with the two inputs in ``RECORD_LANE`` and ``RECORD_EXTRA_ARGS``. A dispatch
 that would not select the replay population stops there, before anything is
 billed. A run on another lane (the general harvest) is not a band record and
 is let through.
+
+The check answers in three ways, and the step reads each (#3679 item 40c):
+
+- ``0`` — a verified band record: it selects what the replay call selects.
+  The step then runs it WITHOUT the dataset passphrase. The band population
+  never decrypts the corpus, and without the passphrase no prompt of the run
+  can carry corpus prose — by construction, which is what lets the export
+  report its historical-year hints instead of refusing them
+  (``scripts/cassettes/privacy.py``).
+- ``1`` — the dispatch would not select the replay population: the step
+  stops, nothing is billed.
+- ``NOT_BAND_RECORD_EXIT`` — another lane (the general harvest): the step
+  goes on as before, WITH the passphrase, since its unit tests read the
+  dataset. A code of its own, so that the step cannot mistake that lane for a
+  verified band record.
 """
 
 from __future__ import annotations
@@ -44,6 +59,11 @@ RECORD_YML = ROOT / ".github" / "workflows" / "record-llm-cassettes.yml"
 # quoting of the shell.
 LANE_ENV = "RECORD_LANE"
 EXTRA_ARGS_ENV = "RECORD_EXTRA_ARGS"
+
+# The check's third answer, "not a band record" (module docstring). 0 and 1
+# are taken: 0 a verified band record, 1 a refusal (and a crash of the
+# interpreter); argparse stops on 2 before the comparison.
+NOT_BAND_RECORD_EXIT = 3
 
 PYTEST_CALL = "--no-capture-output pytest "
 MARKER_ASSIGN = '$marker = "'
@@ -328,13 +348,15 @@ def check_env(
     """The record step's own check: exit code and line(s) to print.
 
     Reads the two inputs the step received and compares what its command would
-    select with what the replay call selects.
+    select with what the replay call selects. The code is the step's branch:
+    ``0`` a verified band record, ``1`` a refusal,
+    ``NOT_BAND_RECORD_EXIT`` another lane (module docstring).
     """
     recipe = derive(band_yml_text, record_yml_text)
     lane = env.get(LANE_ENV, "")
     if _squash(lane) != _squash(recipe.marker):
         return (
-            0,
+            NOT_BAND_RECORD_EXIT,
             f"not a band record: lane {lane!r} is not the replay marker "
             f"{recipe.marker!r} — nothing to compare",
         )

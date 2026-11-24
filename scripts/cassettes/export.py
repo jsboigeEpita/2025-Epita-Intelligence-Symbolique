@@ -21,6 +21,14 @@ If `value` fails the privacy audit (see ``privacy.audit_value``), the
 script refuses to write that cassette and exits with code 2. A summary is
 printed at the end (cassettes exported, refused, total).
 
+One rule has a scope (#3679 item 40c, ``privacy.SCOPED_RULES``): the
+historical-year hint refuses as long as the recording run could read the
+corpus, which is the default. For a run that could not — a band record, whose
+step runs without the dataset passphrase — the hint is named in the log and
+listed in the manifest, and the cassette is exported. The script learns which
+case it is from what the record step reported (``dataset_was_withheld``);
+it has no option of its own for it.
+
 Why one-file-per-cassette: PR diffs become readable; partial fixes can be
 targeted; git blame stays useful. The DB format (SQLite) is opaque to the
 auditor — JSON files make the privacy check possible without parsing
@@ -34,6 +42,7 @@ import hashlib
 import json
 import os
 import sys
+from collections.abc import Mapping
 from pathlib import Path
 
 # Allow `python scripts/cassettes/export.py` invocation from the repo root.
@@ -41,7 +50,13 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
 import diskcache  # type: ignore[import-not-found]
 
-from scripts.cassettes.privacy import assert_safe, audit_value
+from scripts.cassettes.privacy import (
+    RULE_HISTORICAL_YEAR,
+    SCOPED_RULES,
+    assert_safe,
+    audit_findings,
+    audit_value,
+)
 
 # Packages whose versions feed the LLM cache keys (measured #2320: spacy-stack
 # virtue scores enter quality prompts; openai shapes the raw request path;
@@ -58,6 +73,24 @@ KEY_DEP_PACKAGES = (
 )
 
 MANIFEST_NAME = "MANIFEST.json"
+
+# What the record step of ``record-llm-cassettes.yml`` tells the export step
+# through the job's outputs: ``withheld`` when it ran the record WITHOUT the
+# dataset passphrase (#3679 item 40c — a verified band record; the runner's
+# only copy of the corpus is the encrypted file, so no prompt of the run can
+# carry corpus prose). The step says nothing else, and a record that stopped
+# before its check says nothing at all: both export under the full audit.
+WITHHELD_ENV = "RECORD_DATASET_PASSPHRASE"
+WITHHELD = "withheld"
+
+
+def dataset_was_withheld(environ: Mapping[str, str] | None = None) -> bool:
+    """Did the record step run the record without the dataset passphrase?
+
+    Only its exact word counts. Absent, empty, another spelling: no.
+    """
+    env = os.environ if environ is None else environ
+    return env.get(WITHHELD_ENV, "") == WITHHELD
 
 
 def env_signature() -> dict[str, str]:
@@ -159,6 +192,8 @@ def export_one(
     *,
     allow_unsafe: bool,
     violations_out: list[str] | None = None,
+    year_hints_blocking: bool = True,
+    hints_out: list[str] | None = None,
 ) -> str:
     """Write one cassette. Returns 'ok' | 'unsafe' | 'already' | 'degraded'.
 
@@ -175,6 +210,14 @@ def export_one(
     refused as ``unsafe``. Each finding names the rule, the matched hint and
     the JSON path — never the surrounding prose — so the caller can print it
     in a public CI log.
+
+    ``year_hints_blocking`` (#3679 item 40c): the rules of
+    ``privacy.SCOPED_RULES`` refuse as ``unsafe`` while it is True — the
+    default, and the case of every run that could read the corpus. When the
+    record step reported that it ran without the dataset passphrase, those
+    rules go to ``hints_out`` instead: the finding is kept, the cassette is
+    written. Every other rule refuses exactly as before, and a cassette that
+    carries both is refused.
     """
     out = fixtures_dir / f"{key}.json"
     if out.exists():
@@ -182,7 +225,15 @@ def export_one(
     if isinstance(value, dict) and "_fallback" in value:
         return "degraded"
     if not allow_unsafe:
-        violations = audit_value(value, source=f"cassette {key[:16]}")
+        violations = []
+        hints = []
+        for rule, description in audit_findings(value, source=f"cassette {key[:16]}"):
+            if year_hints_blocking or rule not in SCOPED_RULES:
+                violations.append(description)
+            else:
+                hints.append(description)
+        if hints_out is not None:
+            hints_out.extend(hints)
         if violations:
             if violations_out is not None:
                 violations_out.extend(violations)
@@ -211,12 +262,18 @@ def main(argv: list[str] | None = None) -> int:
             )
             return 0
 
+        # #3679 item 40c: the year rule is reported, not refused, only for a
+        # record the step ran without the dataset passphrase.
+        withheld = dataset_was_withheld()
         counts: dict[str, int] = {"ok": 0, "already": 0, "unsafe": 0, "degraded": 0}
         unsafe_keys: list[str] = []
         unsafe_findings: list[str] = []
         degraded_keys: list[str] = []
+        hint_keys: list[str] = []
+        hint_findings: list[str] = []
         for key in db.iterkeys():
             value = db[key]
+            hints_before = len(hint_findings)
             status = export_one(
                 db,
                 key,
@@ -224,12 +281,16 @@ def main(argv: list[str] | None = None) -> int:
                 args.fixtures_dir,
                 allow_unsafe=args.allow_unsafe,
                 violations_out=unsafe_findings,
+                year_hints_blocking=not withheld,
+                hints_out=hint_findings,
             )
             counts[status] = counts.get(status, 0) + 1
             if status == "unsafe":
                 unsafe_keys.append(key[:16])
             if status == "degraded":
                 degraded_keys.append(key[:16])
+            if len(hint_findings) > hints_before:
+                hint_keys.append(key[:16])
     finally:
         db.close()
 
@@ -238,6 +299,19 @@ def main(argv: list[str] | None = None) -> int:
     print(f"Total entries: {total}")
     print(f"Exported: {counts['ok']}")
     print(f"Already present: {counts['already']}")
+    if withheld:
+        # Said before the counts, so « Refused (privacy): 0 » is never read
+        # as the verdict of the full audit.
+        print(
+            "The record step ran this record without the dataset passphrase: "
+            f"{RULE_HISTORICAL_YEAR} hints are reported, not refused."
+        )
+        print(
+            "Year hints reported (the record ran without the dataset passphrase): "
+            f"{len(hint_findings)} on {len(hint_keys)} cassette(s)"
+        )
+        for finding in hint_findings:
+            print(f"  year hint (reported, not refused): {finding}", file=sys.stderr)
     print(f"Refused (privacy): {counts['unsafe']}")
     print(f"Refused (degraded value — unusable cassette): {counts['degraded']}")
     if degraded_keys:
@@ -279,6 +353,11 @@ def main(argv: list[str] | None = None) -> int:
             "keys_sha256": keys_digest(fixture_keys),
             "env_signature": env_signature(),
         }
+        if withheld:
+            # The reader of a committed set sees that the scoped rule was
+            # used, and on which cassettes (#3679 item 40c).
+            manifest["record_dataset_passphrase"] = WITHHELD
+            manifest["year_hint_cassettes"] = hint_keys
         manifest_path = args.fixtures_dir / MANIFEST_NAME
         manifest_path.write_text(
             json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8"
