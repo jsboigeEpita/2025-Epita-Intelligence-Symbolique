@@ -34,6 +34,10 @@ on:
         #    (#1603 constat A) — these tests record through the raw path
         #    (_guarded_chat_completion), which is exactly what the band
         #    replays.
+        #    #3679: `python scripts/cassettes/band_record_argv.py` prints
+        #    both values, read from the band workflow itself. The record
+        #    step compares what it received with that recipe and stops
+        #    before billing when the two differ.
         # 2. GENERAL HARVEST (default) — 'not slow and not requires_api' raw
         #    path consumers for cassette coverage beyond the band.
         default: 'not slow and not requires_api'
@@ -105,11 +109,28 @@ jobs:
         shell: pwsh
         timeout-minutes: ${{ fromJson(inputs.max_minutes) }}
         env:
+          # #3679: the recorder takes the route the live band takes (#3660) —
+          # the named Anthropic route, Haiku. The model id is part of every
+          # cache key, and the replay-band job of requires_api_band.yml
+          # resolves this same route with a dummy key. The OpenAI secret
+          # stays: tests that build their own OpenAI client read it.
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          ANTHROPIC_CHAT_MODEL_ID: claude-haiku-5-5
           TEXT_CONFIG_PASSPHRASE: ${{ secrets.TEXT_CONFIG_PASSPHRASE }}
           LLM_CACHE_MODE: record
           LLM_CACHE_DIR: ${{ inputs.record_db }}
+          # The two inputs of the dispatch, as this step received them: its
+          # population check reads them (#3679).
+          RECORD_LANE: ${{ inputs.lane }}
+          RECORD_EXTRA_ARGS: ${{ inputs.extra_args }}
         run: |
+          # #3679: a record of the band population must select exactly what
+          # the replay job replays (#2323). The recipe is read from the band
+          # workflow itself; a dispatch that differs stops here, before the
+          # billable command.
+          conda run -n projet-is --no-capture-output python scripts/cassettes/band_record_argv.py --check-env
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           # Deselected — env-shape mismatch of the RECORD lane (not LLM work):
           # test_create_llm_service_openai_authentic asserts isinstance
           # OpenAIChatCompletion, but record mode wraps the service in

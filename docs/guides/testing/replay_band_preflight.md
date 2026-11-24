@@ -16,6 +16,11 @@ and therefore hashes a different key for the same request. Measured (#3411): one
 hashes to `b7a81cc8…` on the seat (absent from the store) and `91192b98…` with the prefix
 stripped (present).
 
+Since #3679 the band is on another route: the named Anthropic route
+(`ANTHROPIC_CHAT_MODEL_ID=claude-haiku-5-5`), where the model id hashed is that one, verbatim.
+The OpenRouter case above still holds for a seat that declares it — and the two `ANTHROPIC_*`
+variables below are now the ones that select the band's route.
+
 ## The recipe (measured)
 
 ```bash
@@ -25,15 +30,26 @@ python scripts/cassettes/import.py tests/fixtures/llm_cassettes .cache/llm_repla
 # 2. Replay the band's population with the CI route — the two empty vars are the point:
 OPENROUTER_API_KEY="" OPENROUTER_BASE_URL="" \
 OPENAI_API_KEY=replay-band-no-live-anti-1019 \
+ANTHROPIC_API_KEY=replay-band-no-live-anti-1019 ANTHROPIC_CHAT_MODEL_ID=claude-haiku-5-5 \
 LLM_CACHE_MODE=replay LLM_CACHE_DIR=.cache/llm_replay_band \
 REPLAY_GATE=1 REPLAY_STATS_OUT=replay_stats.json \
   python -m pytest <the band's argv, marker -m "requires_api and not llm_light"> \
     -p scripts.cassettes.replay_stats_plugin -q
 ```
 
-Measured on `fix/penalty-register-order-3394`: 52 passed, `hit=1856` — the same count as the
-CI job — and `miss_replay=7`. Without the two empty vars the same run is 23 failed / 28
-passed, `hit=30`, `miss_replay=32`, which is not a measurement of the cassettes.
+**Write the dummy `ANTHROPIC_API_KEY` explicitly.** A seat's `.env` may hold a real
+`ANTHROPIC_API_KEY`; a variable set in the shell wins over it, because the `.env` load only
+fills what is absent (#3116). With the real key and the model id, the route the process
+resolves is a billable one. Replay mode still never calls on a miss (`LLMCacheMiss`), but
+nothing else should run under that pair. Never print the key to check which one is in play:
+`tests/unit/test_record_lane_route_parity_3679.py` reads the route from the two workflow
+files and holds the recorder and the replayer to one route.
+
+Measured on `fix/penalty-register-order-3394`, before #3679 moved the band to the Anthropic
+route: 52 passed, `hit=1856` — the same count as the CI job — and `miss_replay=7`. Without
+the two empty vars the same run is 23 failed / 28 passed, `hit=30`, `miss_replay=32`, which
+is not a measurement of the cassettes. The counts of the current cassettes are those of the
+CI job on the same commit.
 
 ## Reading the counters
 

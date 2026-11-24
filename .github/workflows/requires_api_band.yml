@@ -383,6 +383,13 @@ jobs:
       # fixture (which checks key PRESENCE) while leaving nothing real to
       # call. Any live attempt burns on 401 AND trips the egress guard.
       OPENAI_API_KEY: replay-band-no-live-anti-1019
+      # #3679: the route the cassettes are recorded on — the named Anthropic
+      # route, as the record step of record-llm-cassettes.yml and the live job
+      # above. The model id is part of every cache key: without this pair the
+      # replayer would hash another model and miss every cassette. Same
+      # dummy: nothing real to call.
+      ANTHROPIC_API_KEY: replay-band-no-live-anti-1019
+      ANTHROPIC_CHAT_MODEL_ID: claude-haiku-5-5
       TEXT_CONFIG_PASSPHRASE: ${{ secrets.TEXT_CONFIG_PASSPHRASE }}
     steps:
       - name: Checkout repository
