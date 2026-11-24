@@ -10,11 +10,21 @@ choices to aggregate (governance needs ≥2 to render a genuine verdict — BO-2
 LLM produces distinct extractions → distinct cache keys (also used by the BO-3
 #1473 replay-cache batch test).
 
+**A proposition that only enumerates is not argumentative (#3679 item 40d).**
+The fact-extraction phase returns zero arguments on a text that names possible
+uses without defending any; the #1909 gate then classifies the document as
+``non_argumentative`` and the remaining phases are skipped, so the demo cannot
+render the firsthand verdict its DoD asks for. prop_B was measured that way
+(record run 45351057154, Haiku route: 0 argument, 5 claims, 8 phases skipped)
+and now gives the reason of each of its three options. prop_A extracted 3
+arguments on the same route with the wording below and is kept as measured.
+prop_C to prop_E are not selected by the demo's test (``limit=2``) and were not
+measured on that route: they enumerate their options the way prop_B used to.
+
 IDs are opaque (prop_A..prop_E) for any GitHub-indexed surface.
 """
 
 from typing import Dict
-
 
 # (opaque_id, human_label_for_display_only, proposition_text)
 SYNTHETIC_PROPOSITIONS = (
@@ -33,9 +43,18 @@ SYNTHETIC_PROPOSITIONS = (
         "Neighborhood library — exceptional grant",
         "La bibliotheque de quartier beneficie d'une subvention exceptionnelle de "
         "3000 euros. Trois usages sont en concurrence. "
-        "Option A : elargir le fonds de livres jeunesse. "
-        "Option B : creer un espace numerique avec des ordinateurs en libre acces. "
-        "Option C : repartir la somme, moitie fonds livre, moitie espace numerique.",
+        # #3679 item 40d — each option carries its reason. Without one the
+        # text names three possible uses and defends none, so a faithful
+        # extraction returns zero arguments and the #1909 gate reads the
+        # document as non-argumentative (record run 45351057154: 0 argument,
+        # 5 claims, 8 of 10 phases skipped). A correct reading of a fixture
+        # that did not argue, hence a fixture change and not a prompt one.
+        "Option A : elargir le fonds de livres jeunesse, car le fonds actuel "
+        "vieillit et les plus jeunes lecteurs sont les plus nombreux. "
+        "Option B : creer un espace numerique avec des ordinateurs en libre "
+        "acces, pour reduire la fracture numerique du quartier. "
+        "Option C : repartir la somme, moitie fonds livre, moitie espace "
+        "numerique, afin de servir les deux publics sans en favoriser un.",
     ),
     (
         "prop_C",
