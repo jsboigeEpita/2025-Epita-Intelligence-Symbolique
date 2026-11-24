@@ -56,6 +56,10 @@ _STATUS_REASON_CASES = [
         "unsat_theory_without_a_decided_positioned_pair",
     ),
     ("inconsistent", "unsat_theory_including_single_passage: s2"),
+    # #3683 — the executor's failure sink writes these two, not the module:
+    # a check cut at its phase budget must not print its raw key.
+    ("unreachable", "phase_budget_exceeded"),
+    ("unreachable", "phase_failed"),
     ("checked", ""),
     ("undecided", ""),
 ]
