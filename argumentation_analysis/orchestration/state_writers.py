@@ -421,6 +421,87 @@ def _record_phase_failed_reading(state: Any, error: str, error_kind: str = "") -
         state.defining_moves = payload
 
 
+#: #3683 — the four persona / check records whose phase can die at executor
+#: level, mapped to the field that carries the executor's OWN message: the
+#: field each producer fills on ``llm_error`` / ``parse_error`` (the
+#: historian's and strategist's ``error``, the coverage review's ``reason``).
+#: ``cross_passage_consistency`` is absent: it keeps its own vocabulary and
+#: its cause is a closed reason key, not a message (see below).
+_PHASE_FAILED_CAUSE_FIELDS: Dict[str, str] = {
+    "historical_context": "error",
+    "strategic_read": "error",
+    "coverage_review": "reason",
+}
+
+
+def _read_record(state: Any, key: str) -> Optional[Dict[str, Any]]:
+    """The record of a state attribute, on an object or a mapping state."""
+    if isinstance(state, dict):
+        record = state.get(key)
+    else:
+        record = getattr(state, key, None)
+    return record if isinstance(record, dict) else None
+
+
+def _write_record(state: Any, key: str, payload: Dict[str, Any]) -> None:
+    if isinstance(state, dict):
+        state[key] = payload
+    elif hasattr(state, key):
+        setattr(state, key, payload)
+
+
+def _record_phase_failed_persona(
+    state: Any, capability: str, error: str, error_kind: str = ""
+) -> None:
+    """#3683 — a phase cut by its budget names the cut, on its own record.
+
+    Measured (issue #3683): 12 executor budget cuts in the 193 recorded
+    snapshots of one seat, ALL ``coverage_review`` at its 300 s budget, and
+    in all 12 the record still said ``status: "no_llm"``, ``reason: ""`` —
+    the panel filed a phase that was too slow, or a budget too narrow for
+    that document, under "no LLM, by design". The three other phases were
+    cut in 0 of the 193: for them the defect is possible, not observed.
+
+    Same father as #3087 and #3658 item 42: the executor's ONE failure sink
+    calls this for a FAILED phase, whatever the failure sense, because the
+    capability's own state writer runs only on COMPLETED phases. The status
+    discriminates the budget cut (``timeout``) from any other executor-level
+    failure (``phase_failed``) on the TYPED ``error_kind`` — never a text
+    match on the message (#1019). The cause field is the one the producer
+    itself fills on a failed read, and the rest of the record is preserved:
+    a cut erases nothing a downstream reader expects to find.
+    """
+    record = _read_record(state, capability)
+    if record is None:
+        return
+    payload = dict(record)
+    payload["status"] = "timeout" if error_kind == "timeout" else "phase_failed"
+    payload[_PHASE_FAILED_CAUSE_FIELDS[capability]] = (
+        str(error).strip() or "phase failed at executor level"
+    )
+    _write_record(state, capability, payload)
+
+
+def _record_phase_failed_cross_passage(state: Any, error_kind: str = "") -> None:
+    """#3683 — a cut consistency check names the cut in its own vocabulary.
+
+    The record keeps ``status: "unreachable"`` — the check decided nothing,
+    which is exactly what the note already says — and its ``reason`` becomes
+    a closed key the note's clause table (#3488) translates into reader
+    words. The executor's message stays in ``state.errors`` (#1608); it is
+    NOT copied here, because ``reason`` is a machine-readable key the
+    #3488 AST guard walks, and a free-form message would have no clause.
+    """
+    record = _read_record(state, "cross_passage_consistency")
+    if record is None:
+        return
+    payload = dict(record)
+    payload["reason"] = (
+        "phase_budget_exceeded" if error_kind == "timeout" else "phase_failed"
+    )
+    _write_record(state, "cross_passage_consistency", payload)
+
+
 def _record_phase_failed_status(
     state: Any, capability: str, error: str, error_kind: str = ""
 ) -> None:
@@ -446,9 +527,20 @@ def _record_phase_failed_status(
     same defect shape — its record kept the ``no_llm`` default — so the same
     sink carries it, through ``_record_phase_failed_reading`` and the typed
     ``error_kind``.
+
+    #3683: the four persona / check records join the same sink, each in its
+    own vocabulary (``_PHASE_FAILED_CAUSE_FIELDS`` for the three personas,
+    the cross-passage check's closed reason keys). A capability outside the
+    table still writes nothing: the table decides, never this function.
     """
     if capability == "first_reading":
         _record_phase_failed_reading(state, error, error_kind)
+        return
+    if capability in _PHASE_FAILED_CAUSE_FIELDS:
+        _record_phase_failed_persona(state, capability, error, error_kind)
+        return
+    if capability == "cross_passage_consistency":
+        _record_phase_failed_cross_passage(state, error_kind)
         return
     if capability not in _absence_ledger_axes():
         return
