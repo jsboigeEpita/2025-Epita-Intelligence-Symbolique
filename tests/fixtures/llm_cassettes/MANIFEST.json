@@ -4,7 +4,7 @@
   "record_sha": "360eed08a35e6f10fca1b90598cf7cf05d8edb70",
   "recorded_at": "",
   "cassette_count": 587,
-  "keys_sha256": "901066b477c76fe98d074d947f6c97587ff59b6447d8e110dcc7134ec748949f",
+  "keys_sha256": "ef224b42d8b759983cb95145daf03614686c85b6a8fe6654fccf2cb7db1115b6",
   "env_signature": {
     "spacy": "3.8.14",
     "thinc": "8.3.13",
@@ -16,5 +16,21 @@
   "record_dataset_passphrase": "withheld",
   "year_hint_cassettes": [
     "03df64a80697d97d"
+  ],
+  "sk_patches": [
+    {
+      "note": "rekey: SK completion-cap key #3685 (max_completion_tokens)",
+      "at": "2026-11-25T10:31:55Z",
+      "recorded_env": {
+        "spacy": "3.8.14",
+        "thinc": "8.3.13",
+        "srsly": "2.5.3",
+        "fr-core-news-sm": "3.8.0",
+        "openai": "3.3.0",
+        "numpy": "1.25.0"
+      },
+      "cassette_count": 587,
+      "keys_sha256": "ef224b42d8b759983cb95145daf03614686c85b6a8fe6654fccf2cb7db1115b6"
+    }
   ]
 }
