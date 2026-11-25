@@ -68,9 +68,13 @@ it the ids are printed — the opaque ids the other instruments of
 ``scripts/panel/`` print, never a document's name, title or text.
 
 Nothing is written outside a gitignored path; the report holds counts, key
-names and sha256 digests, never a passage of the corpus. Exit 0 = the harvest
-round-trips and every control holds; 1 = a mismatch, a hidden input or a
-control that did not fire; 2 = the instrument could not run as asked.
+names and sha256 digests, never a passage of the corpus. It opens with its
+provenance header (#2353): the resolved route, the checkout's HEAD sha and
+dirty flag, the exact command, the interpreter, the instrument's own sha256
+and the model-call count — a cited report that cannot say which code produced
+it can only be believed from another seat. Exit 0 = the harvest round-trips
+and every control holds; 1 = a mismatch, a hidden input or a control that did
+not fire; 2 = the instrument could not run as asked.
 """
 
 from __future__ import annotations
@@ -1027,6 +1031,69 @@ def _failures(entry: Mapping[str, Any]) -> List[str]:
     return reasons
 
 
+def _git(root: Path, *args: str) -> Optional[str]:
+    """One git query, ``None`` when git is absent or the query fails.
+
+    Attribution is not the measurement: a seat without git still measures, and
+    its report says the code identity is unknown instead of omitting it.
+    """
+    try:
+        done = subprocess.run(
+            ["git", "-C", str(root), *args],
+            capture_output=True,
+            text=True,
+            timeout=30,
+            check=False,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if done.returncode != 0:
+        return None
+    return done.stdout.strip()
+
+
+def provenance(
+    argv: List[str],
+    cycle_dir: Path,
+    renders_dir: Optional[Path],
+    panel_file: Optional[Path],
+    labels: bool,
+) -> Dict[str, Any]:
+    """The header #2353 requires — which code, which route, which command.
+
+    Nothing here is corpus-derived: paths, shas, an interpreter version and a
+    count. The report stays quotable on a GitHub-indexed surface.
+    """
+    root = Path(__file__).resolve().parents[2]
+    head = _git(root, "rev-parse", "HEAD")
+    status = _git(root, "status", "--porcelain")
+    try:
+        instrument = Path(__file__).resolve().relative_to(root).as_posix()
+    except ValueError:  # pragma: no cover — the instrument outside a checkout
+        instrument = str(Path(__file__).resolve())
+    return {
+        "command": ["python", instrument] + list(argv),
+        "code": {
+            "root": str(root),
+            "head": head,
+            "dirty": None if status is None else bool(status),
+            "instrument_sha256": hashlib.sha256(
+                Path(__file__).read_bytes()
+            ).hexdigest(),
+            "executable": sys.executable,
+        },
+        "route": {
+            "cycle_dir": str(cycle_dir.resolve()),
+            "renders_dir": None if renders_dir is None else str(renders_dir.resolve()),
+            "panel_file": None if panel_file is None else str(panel_file.resolve()),
+            "labels": "panel order" if labels else "opaque ids",
+        },
+        "python": sys.version.split()[0],
+        "llm_requests": 0,
+        "units": "characters, counts only, never text",
+    }
+
+
 def main(argv: Optional[List[str]] = None) -> int:
     parser = argparse.ArgumentParser(
         description=__doc__.split("\n\n", 1)[0],
@@ -1073,13 +1140,28 @@ def main(argv: Optional[List[str]] = None) -> int:
             "(no --renders-dir: no harvested fiche is compared)"
         )
 
+    header = provenance(
+        list(sys.argv[1:] if argv is None else argv),
+        args.cycle_dir,
+        args.renders_dir,
+        args.panel_file,
+        bool(labels),
+    )
     report: Dict[str, Any] = {
+        "provenance": header,
         "cycle_dir": str(args.cycle_dir),
         "renders_dir": None if args.renders_dir is None else str(args.renders_dir),
         "documents": {},
         "synthetic": synthetic_control(),
         "fresh_process": None,
     }
+    head = header["code"]["head"]
+    print(
+        f"code: {head[:12] if head else 'unknown (git gave no HEAD)'}"
+        f"{', uncommitted changes' if header['code']['dirty'] else ''}; "
+        f"python {header['python']}; model calls: {header['llm_requests']}"
+    )
+    print("command: " + " ".join(header["command"]))
     failed = not report["synthetic"]["ok"]
     if failed:
         print("synthetic control: FAILED — the comparison itself is not sound")

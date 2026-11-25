@@ -14,10 +14,12 @@ carry no ``slow`` marker on purpose, since the gate deselects ``slow``.
 
 from __future__ import annotations
 
+import hashlib
 import json
+import re
 import sys
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Tuple
 
 import pytest
 
@@ -728,6 +730,74 @@ def test_main_holds_on_a_synthetic_cycle(tmp_path: Path) -> None:
         assert fresh["stub_control"]["names_filled_without_the_stub"]
     else:
         assert "stub_control" not in fresh
+
+
+def test_the_report_opens_with_its_provenance_header(tmp_path: Path) -> None:
+    """#2353: a cited report says which code, which route, which command."""
+    cycle = _write_cycle(tmp_path, {"synth_one": _state()})
+    panel = tmp_path / "panel.txt"
+    panel.write_text("synth_one\n", encoding="utf-8")
+    out = tmp_path / "report.json"
+
+    argv = ["--cycle-dir", str(cycle), "--panel-file", str(panel), "--out", str(out)]
+    assert w.main(argv) == 0
+
+    report = json.loads(out.read_text(encoding="utf-8"))
+    assert list(report)[0] == "provenance"
+    header = report["provenance"]
+    # The command as it was typed, to be run again from the checkout's root.
+    assert header["command"] == [
+        "python",
+        "scripts/panel/act_replay_fidelity.py",
+        *argv,
+    ]
+    assert header["route"] == {
+        "cycle_dir": str(cycle.resolve()),
+        "renders_dir": None,
+        "panel_file": str(panel.resolve()),
+        "labels": "panel order",
+    }
+    assert header["llm_requests"] == 0
+    assert header["python"] == sys.version.split()[0]
+    code = header["code"]
+    assert (
+        code["instrument_sha256"]
+        == hashlib.sha256(Path(w.__file__).read_bytes()).hexdigest()
+    )
+    # A seat with git names the commit; the instrument never invents one.
+    assert code["head"] is None or re.fullmatch(r"[0-9a-f]{40}", code["head"])
+
+
+@pytest.mark.parametrize(
+    "status, dirty",
+    [("", False), (" M scripts/panel/act_replay_fidelity.py", True)],
+)
+def test_the_header_says_whether_the_tree_carries_uncommitted_changes(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, status: str, dirty: bool
+) -> None:
+    seen: List[Tuple[str, ...]] = []
+
+    def fake(root: Path, *args: str) -> str:
+        seen.append(args)
+        return "1" * 40 if args == ("rev-parse", "HEAD") else status
+
+    monkeypatch.setattr(w, "_git", fake)
+    header = w.provenance(
+        ["--cycle-dir", "cycle"], tmp_path / "cycle", None, None, False
+    )
+    assert ("status", "--porcelain") in seen
+    assert header["code"]["head"] == "1" * 40
+    assert header["code"]["dirty"] is dirty
+    assert header["route"]["labels"] == "opaque ids"
+
+
+def test_a_seat_where_git_is_missing_says_the_code_is_unknown(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(w, "_git", lambda root, *args: None)
+    header = w.provenance([], tmp_path, None, None, False)
+    assert header["code"]["head"] is None
+    assert header["code"]["dirty"] is None
 
 
 def test_a_digest_another_seat_would_compute_fails_the_cycle(
