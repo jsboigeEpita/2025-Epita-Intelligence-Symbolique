@@ -13,6 +13,15 @@ The wrapper must not change any key: it computes the original first and
 returns it untouched. Payload serialization failures are stashed as a
 ``<unserializable: ...>`` note — the driver then treats that miss as
 unrebuildable and names it, never silently.
+
+With ``REKEY_CAPTURE_NO_DOTENV=1`` the plugin also makes the seat's ``.env``
+files fill nothing — the CI condition (CI has no ``.env``). A seat's ``.env``
+reaches prompts, hence keys: measured on #3685 (2026-11-25), a capture that
+let the seat's ``.env`` through produced six phase prompts the recorded set
+does not carry, while the same population with the file neutralised had
+exactly one miss. The patch runs at plugin import, before pytest imports any
+conftest, so a project module that binds ``dotenv`` names at its own import
+still gets the no-ops. Off unless the variable is set.
 """
 
 from __future__ import annotations
@@ -23,6 +32,32 @@ import traceback
 from pathlib import Path
 
 _STASH: dict[str, dict] = {}
+
+_NO_DOTENV = "REKEY_CAPTURE_NO_DOTENV"
+
+
+def _neutralise_dotenv() -> None:
+    """Make the seat's ``.env`` files fill nothing (the CI condition)."""
+    try:
+        import dotenv
+        import dotenv.main
+
+        def _empty(*args, **kwargs):  # noqa: ANN002, ANN003
+            return {}
+
+        def _no_load(*args, **kwargs):  # noqa: ANN002, ANN003
+            return False
+
+        dotenv.dotenv_values = _empty
+        dotenv.load_dotenv = _no_load
+        dotenv.main.dotenv_values = _empty
+        dotenv.main.load_dotenv = _no_load
+    except Exception:  # noqa: BLE001 — a missing dotenv needs nothing
+        pass
+
+
+if os.environ.get(_NO_DOTENV) == "1":
+    _neutralise_dotenv()
 
 
 def _caller_stack() -> list[str]:

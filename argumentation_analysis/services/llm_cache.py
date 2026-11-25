@@ -818,6 +818,12 @@ def _serialize_settings(settings) -> dict:
         "presence_penalty",
         "frequency_penalty",
         "service_id",
+        # #3685 — the completion cap, in the spelling the two SK sites pass it
+        # (``max_completion_tokens``: the Sherlock enquiry agent, the logic
+        # assistant). It reaches the wire, but ``max_tokens`` above never saw
+        # it: two caps — or capped and uncapped — shared one cassette. Unset
+        # adds nothing (cassette keys unchanged); set, the key must differ.
+        "max_completion_tokens",
         # #3096 item 5 — unset adds nothing (cassette keys unchanged); set,
         # the key must differ: two efforts are two different requests.
         "reasoning_effort",
