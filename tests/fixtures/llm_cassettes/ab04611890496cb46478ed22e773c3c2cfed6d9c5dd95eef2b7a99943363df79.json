@@ -1,0 +1,36 @@
+{
+  "key": "ab04611890496cb46478ed22e773c3c2cfed6d9c5dd95eef2b7a99943363df79",
+  "value": {
+    "id": "msg_011ChNgj7s75c4G2xLbWAbZc",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\": 1.0, \"exhibit\": \"Position adverse identifiée : « Le climat a toujours changé, donc le réchauffement actuel ne constitue pas une preuve d'un changement climatique particulier ou sans précédent ». Verdict d'engagement : engagement_réel, c'est-à-dire que la réfutation s'attaque effectivement à cette thèse adverse (et non à un homme de paille) et ne se contente pas de l'évoquer.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565868,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 457,
+      "prompt_tokens": 421,
+      "total_tokens": 878,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

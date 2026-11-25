@@ -1,0 +1,36 @@
+{
+  "key": "d6b7bf34fb8c54cefb93cda8a9880a3139ec7657f6ee8bba776e32f67d875467",
+  "value": {
+    "id": "msg_011ChNgk6V35ysZxFHqzpHEj",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"distinct_points\": \"1. Les mesures de température globale montrent une hausse de 1,1 degré depuis l'ère préindustrielle. 2. Le changement climatique actuel est d'une vitesse sans précédent. 3. L'objection des sceptiques (le climat a toujours changé) omet cette vitesse sans précédent, donc elle ne suffit pas à écarter l'anomalie actuelle. 4. Les modèles prédictifs sont unanimes sur l'impact des activités humaines.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565883,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 711,
+      "prompt_tokens": 415,
+      "total_tokens": 1126,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "key": "5370c58ace81f6aeb1d085dadeec14e67643f0b924f25d89dd56f77a39f9f656",
+  "value": {
+    "id": "msg_011ChNgcYMp2anhX8ZtF1DAB",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_semantic_redundancy\": true, \"redundancy_verdict\": \"redondance_sémantique\", \"located_redundancy\": \"La phrase « La peine de mort a un effet dissuasif contre les crimes les plus graves, comme le meurtre de masse » est reprise quasi textuellement dans la deuxième phrase (« Elle sert de dissuasion contre les crimes les plus graves comme le meurtre de masse »). Même contenu, formulation légèrement différente, aucun apport nouveau.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565779,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 541,
+      "prompt_tokens": 680,
+      "total_tokens": 1221,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

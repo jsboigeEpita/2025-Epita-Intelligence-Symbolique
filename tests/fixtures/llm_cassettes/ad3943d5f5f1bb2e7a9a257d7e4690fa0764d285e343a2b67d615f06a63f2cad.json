@@ -1,0 +1,21 @@
+{
+  "key": "ad3943d5f5f1bb2e7a9a257d7e4690fa0764d285e343a2b67d615f06a63f2cad",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "```json\n{\n  \"propositions\": [\"logic_coherent\", \"proof_found\"],\n  \"modal_formulas\": [\"[](logic_coherent)\", \"<>(proof_found)\"]\n}\n```",
+      "metadata": {
+        "logprobs": null,
+        "id": "msg_011ChNgTiWFeWTqPMaKvZU6H",
+        "created": 1795565658,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 534,
+          "prompt_tokens_details": null,
+          "completion_tokens": 201,
+          "completion_tokens_details": null
+        }
+      }
+    }
+  ]
+}

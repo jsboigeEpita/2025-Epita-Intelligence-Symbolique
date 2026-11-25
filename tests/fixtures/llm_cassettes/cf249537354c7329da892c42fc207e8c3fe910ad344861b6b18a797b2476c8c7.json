@@ -1,0 +1,36 @@
+{
+  "key": "cf249537354c7329da892c42fc207e8c3fe910ad344861b6b18a797b2476c8c7",
+  "value": {
+    "id": "msg_011ChNgkW4cYHQFnKw7D6o7S",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "```json\n{\"score\": 0.5, \"exhibit\": \"Points distincts : (1) le changement climatique est une réalité scientifique incontestable ; (2) le réchauffement observé (+1,1 °C depuis l'ère préindustrielle) prouve que le changement climatique est réel ; (3) objection sceptique selon laquelle le climat a toujours varié (texte tronqué, non évaluable en totalité). Redondance localisée : les points 1 et 2 affirment en substance la même thèse (le changement climatique est réel), le point 2 apportant une preuve empirique qui fait progresser l'argument. Le verdict sémantique indique une proximité de fond, mais elle reste limitée à cette paire ; la redondance ne s'étend pas démontrablement au point 3.\"}\n```",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565888,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 678,
+      "prompt_tokens": 439,
+      "total_tokens": 1117,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

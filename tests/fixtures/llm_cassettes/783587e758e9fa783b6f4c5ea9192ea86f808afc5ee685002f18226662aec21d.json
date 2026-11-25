@@ -1,0 +1,36 @@
+{
+  "key": "783587e758e9fa783b6f4c5ea9192ea86f808afc5ee685002f18226662aec21d",
+  "value": {
+    "id": "msg_011ChNg3FX7viPdm4XYRCThk",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "```json\n{\"has_chain\": true, \"premises\": \"L'option C permet de servir les deux publics (fonds livre et espace numérique) sans en favoriser un.\", \"conclusion\": \"L'option C (répartir la somme moitié fonds livre, moitié espace numérique) est justifiée.\"}\n```",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565327,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 312,
+      "prompt_tokens": 495,
+      "total_tokens": 807,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "key": "0fae312d2254ca919bc64e912e8f855c1e75145368931861b9e1b4e90d46ec5d",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "```json\n{\n  \"start_marker\": \"Nous avons créé plus d'emplois\",\n  \"end_marker\": \"en quatre.\",\n  \"template_start\": null,\n  \"explanation\": \"La dénomination « Déclaration sur la création d'emplois » renvoie directement à la phrase « Nous avons créé plus d'emplois en deux ans que n'importe quelle administration en quatre ». Le marqueur de début, « Nous avons créé plus d'emplois », ouvre cette déclaration. Le marqueur de fin, « en quatre. », ferme la phrase à son point final, ce qui garantit un extrait complet et cohérent. La première phrase, « Le chômage a atteint son niveau le plus bas en 50 ans. », porte sur le niveau de chômage et non sur la création d'emplois en tant que déclaration. Je l'ai donc exclue. Si la dénomination devait couvrir le contexte économique général, on pourrait inclure cette phrase en prenant « Le chômage a atteint » comme marqueur de début. Les deux marqueurs sont des sous-chaînes exactes du texte source. template_start est laissé à null car aucun cadrage supplémentaire n'est nécessaire.\"\n}\n```",
+      "metadata": {
+        "logprobs": null,
+        "id": "msg_011ChNgMsSrMpyY1PT4nZTQv",
+        "created": 1795565581,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 389,
+          "prompt_tokens_details": null,
+          "completion_tokens": 733,
+          "completion_tokens_details": null
+        }
+      }
+    }
+  ]
+}

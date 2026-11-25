@@ -1,0 +1,36 @@
+{
+  "key": "8a2cde2e701f1003fea6c4ef3750a8dd8a9f18776e8a4087bdcfac3a6d14ca1d",
+  "value": {
+    "id": "msg_011ChNgBLUzaLMrF2iBsFsQE",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"arguments\": [{\"text\": \"Option A : un tournoi inter-villes avec buffet et prix (2000 €) est justifié par la hausse attendue de la visibilité du club et le recrutement de nouveaux membres.\", \"source_quote\": \"ce qui augmentera la visibilite du club et recrutera de nouveaux membres\"}, {\"text\": \"Option B : investir les 2000 € en matériel pédagogique (échiquiers neufs, horloges, supports de cours) se justifie par l'état usé des échiquiers actuels.\", \"source_quote\": \"car les echiquiers actuels sont uses\"}, {\"text\": \"Option C : un format hybride (1000 € pour un tournoi réduit, 1000 € pour le matériel pédagogique) est présenté comme un compromis équilibrant visibilité et pédagogie.\", \"source_quote\": \"equilibre entre visibilite et pedagogie\"}], \"claims\": [{\"text\": \"Le club d'échecs dispose d'un budget participatif de 2000 euros.\", \"source_quote\": \"Le club d'echecs dispose d'un budget participatif de 2000 euros.\"}, {\"text\": \"Trois options divergentes s'affrontent pour l'utilisation de ce budget.\", \"source_quote\": \"Trois options divergentes s'affrontent.\"}, {\"text\": \"Les échiquiers actuels du club sont usés.\", \"source_quote\": \"car les echiquiers actuels sont uses\"}, {\"text\": \"Un tournoi inter-villes avec buffet et prix augmentera la visibilité du club et recrutera de nouveaux membres.\", \"source_quote\": \"ce qui augmentera la visibilite du club et recrutera de nouveaux membres\"}, {\"text\": \"L'option hybride répartit les fonds à parts égales (1000 € chacun) entre un tournoi réduit et le matériel pédagogique.\", \"source_quote\": \"1000 euros pour un tournoi reduit et 1000 euros pour le materiel pedagogique\"}],\"summary\": \"Le texte est une description neutre d'un débat budgétaire au sein d'un club d'échecs, présentant trois options concurrentes sans prendre parti explicitement. Chaque option est accompagnée d'une justification : visibilité et recrutement pour A, besoin matériel pour B (échiquiers usés), compromis pour C. Les seules affirmations factuelles vérifiables sont le montant du budget et l'état d'usure du matériel ; l'effet attendu du tournoi sur la visibilité et le recrutement est une prévision non démontrée. Le texte ne rapporte pas explicitement les positions de porteurs identifiés, d'où l'absence d'attribution de move_author.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565441,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 1369,
+      "prompt_tokens": 1050,
+      "total_tokens": 2419,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

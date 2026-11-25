@@ -1,0 +1,36 @@
+{
+  "key": "b5c2402783897a57764055f73d46e249d4a22f925e4c6aa20f92aee63e62a62b",
+  "value": {
+    "id": "msg_011ChNgk9S99LCPfUyXmp15y",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_semantic_redundancy\": true, \"redundancy_verdict\": \"redondance_sémantique\", \"located_redundancy\": \"Le point 1 (le raisonnement sceptique omet la vitesse sans précédent du changement) est repris en substance à l'identique dans la phrase « Les sceptiques affirment que le climat a toujours changé, mais ils omettent la vitesse sans précédent du changement actuel », qui apparaît deux fois dans l'argument complet (en titre de réfutation et dans le corps du texte).\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565884,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 811,
+      "prompt_tokens": 713,
+      "total_tokens": 1524,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

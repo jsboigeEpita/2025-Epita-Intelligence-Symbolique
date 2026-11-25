@@ -1,0 +1,36 @@
+{
+  "key": "bf40cd64e796c640f0b5bfc8a11d5551fe403f98a7a2e7722f8c5e728c67acec",
+  "value": {
+    "id": "msg_011ChNg2Pz5nB34UXgDvMZh6",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "```json\n{\"has_clarity_obstacle\": true, \"obstacles\": \"Référence non résolvable : « Trois usages sont en concurrence » annonce trois options, mais seules deux (Option A et Option B) sont présentées. L'antécédent de « trois usages » est donc absent ou incomplet, ce qui empêche le lecteur de savoir à quoi renvoie la référence.\"}\n```",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565317,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 571,
+      "prompt_tokens": 547,
+      "total_tokens": 1118,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

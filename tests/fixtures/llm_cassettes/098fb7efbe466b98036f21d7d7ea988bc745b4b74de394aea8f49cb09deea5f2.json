@@ -1,0 +1,36 @@
+{
+  "key": "098fb7efbe466b98036f21d7d7ea988bc745b4b74de394aea8f49cb09deea5f2",
+  "value": {
+    "id": "msg_011ChNfwKzpTYMFSmN6Jnicw",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\": 0.5, \"exhibit\": \"Obstacle localisé : référence non résolvable. La phrase « Trois options divergentes s'affrontent » annonce trois options, mais seules deux sont présentées (Option A et Option B), et l'antécédent de « trois options » est absent. Verdict d'opacité : résolvable_contexte. L'obstacle est donc résolvable par le contexte et le sens reste globalement accessible, d'où un score de clarté partielle (0.5).\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565248,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 650,
+      "prompt_tokens": 417,
+      "total_tokens": 1067,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

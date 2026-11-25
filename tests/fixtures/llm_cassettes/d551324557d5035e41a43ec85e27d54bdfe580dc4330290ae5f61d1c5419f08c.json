@@ -1,0 +1,36 @@
+{
+  "key": "d551324557d5035e41a43ec85e27d54bdfe580dc4330290ae5f61d1c5419f08c",
+  "value": {
+    "id": "msg_011ChNfvaZ9Q7twETAofnEw6",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"arguments\": [{\"text\": \"Option A : organiser un tournoi inter-villes avec buffet et prix pour 2000 euros, présentée comme un moyen d'accroître la visibilité du club.\", \"source_quote\": \"Option A : organiser un tournoi inter-villes avec buffet et prix pour 2000 euros, augmentant la visibilite du club.\"}, {\"text\": \"Option B : investir l'intégralité des 2000 euros en matériel pédagogique et échiquiers neufs.\", \"source_quote\": \"Option B : investir les 2000 euros en materiel pedagogique et echiquiers neufs.\"}, {\"text\": \"Option C : un format hybride répartissant le budget entre un tournoi réduit (1000 euros) et du matériel (1000 euros).\", \"source_quote\": \"Option C : un format hybride, 1000 euros tournoi reduit et 1000 euros materiel.\"}], \"claims\": [{\"text\": \"Le club d'échecs dispose d'un budget participatif annuel de 2000 euros.\", \"source_quote\": \"Le club d'echecs dispose d'un budget participatif annuel de 2000 euros.\"}, {\"text\": \"Le tournoi inter-villes avec buffet et prix augmenterait la visibilité du club.\", \"source_quote\": \"augmentant la visibilite du club.\"}, {\"text\": \"Trois options divergentes sont en concurrence pour l'usage de ce budget.\", \"source_quote\": \"Trois options divergentes s'affrontent.\"}], \"summary\": \"Le texte est une description brève et neutre de trois options concurrentes pour l'emploi d'un budget participatif annuel de 2000 euros d'un club d'échecs : un tournoi inter-villes (visibilité), un investissement en matériel, ou un format hybride partageant le budget. Il ne défend pas explicitement de position et n'attribue pas les options à des acteurs précis ; seul l'argument de visibilité associé à l'option A est explicite. Les trois options sont présentées comme des propositions, sans argumentation développée ni données à l'appui.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565239,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 999,
+      "prompt_tokens": 983,
+      "total_tokens": 1982,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

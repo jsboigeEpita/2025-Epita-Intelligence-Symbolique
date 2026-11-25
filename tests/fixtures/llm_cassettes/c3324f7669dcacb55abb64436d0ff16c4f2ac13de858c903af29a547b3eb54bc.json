@@ -1,0 +1,36 @@
+{
+  "key": "c3324f7669dcacb55abb64436d0ff16c4f2ac13de858c903af29a547b3eb54bc",
+  "value": {
+    "id": "msg_011ChNfqddZEspbnJwQEFfiv",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_thesis\": true, \"thesis\": \"La politique économique est un succès incontestable.\", \"digressions\": \"\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565169,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 159,
+      "prompt_tokens": 283,
+      "total_tokens": 442,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

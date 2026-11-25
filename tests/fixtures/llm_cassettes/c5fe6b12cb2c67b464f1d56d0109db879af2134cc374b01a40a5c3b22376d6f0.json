@@ -1,0 +1,36 @@
+{
+  "key": "c5fe6b12cb2c67b464f1d56d0109db879af2134cc374b01a40a5c3b22376d6f0",
+  "value": {
+    "id": "msg_011ChNfVwDRaNSBgrCyo6to9",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_chain\": true, \"premises\": \"Personne n'a proposé de supprimer les retraites, il s'agit seulement de les réformer autrement (ou : personne n'a proposé de supprimer les retraites, seulement de les réformer différemment).\", \"conclusion\": \"Le gouvernement attaque un homme de paille.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795564903,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 482,
+      "prompt_tokens": 588,
+      "total_tokens": 1070,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

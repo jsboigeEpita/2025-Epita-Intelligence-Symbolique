@@ -1,0 +1,36 @@
+{
+  "key": "ece25a87031c2e76edb2a4358eedcf89c1d80f9fed2014516cdefcb316003a0f",
+  "value": {
+    "id": "msg_011ChNgbUXbHuovbtAuiKJyL",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"engages_real_claim\": true, \"engagement_verdict\": \"engagement_réel\", \"reasoning\": \"La réfutation reprend la position adverse telle quelle (le système peut se tromper) et répond directement à son fondement en soutenant que les tests ADN réduisent ce risque, ce qui constitue un lien logique pertinent même si la réponse reste partielle.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565765,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 415,
+      "prompt_tokens": 563,
+      "total_tokens": 978,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "key": "70be78ed5b457c845fb0634fcbc4bcc80874d17fee588fc50609bdf35d209287",
+  "value": {
+    "id": "msg_011ChNfWWcMJCER9TLGMwAmk",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\": 0.5, \"exhibit\": \"Points distincts visibles : (1) l'appel émotionnel « pensez à vos enfants » détourne le débat des questions techniques de financement ; (2) l'homme de paille, puisque personne n'a proposé de supprimer les retraites, seulement de les réformer (texte tronqué après « réformer d »). Les deux points visibles portent sur des idées différentes (procédé émotionnel vs déformation de la position adverse), sans reprise en substance entre eux. Le verdict « redondance_sémantique » ne peut pas être localisé avec certitude : le point 2 est incomplet et aucune redondance précise n'est démontrée dans les éléments fournis. Score 0.5 retenu par incertitude, faute de pouvoir vérifier la reprise signalée.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795564912,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 777,
+      "prompt_tokens": 431,
+      "total_tokens": 1208,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

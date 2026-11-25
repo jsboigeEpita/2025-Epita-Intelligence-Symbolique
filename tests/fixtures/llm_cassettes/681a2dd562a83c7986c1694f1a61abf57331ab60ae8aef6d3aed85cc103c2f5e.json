@@ -1,0 +1,36 @@
+{
+  "key": "681a2dd562a83c7986c1694f1a61abf57331ab60ae8aef6d3aed85cc103c2f5e",
+  "value": {
+    "id": "msg_011ChNgdWC73bomHDHo4uAju",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_semantic_redundancy\": true, \"redundancy_verdict\": \"reformulation_utile\", \"located_redundancy\": \"La phrase « Les opposants argumentent que le systeme judiciaire peut se tromper » apparaît deux fois, à l'identique : une fois en en-tête (point 1) et une fois dans le corps de l'argument, où elle sert d'amorce à la réfutation par l'ADN (point 3), qui apporte un contenu nouveau.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565796,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 1246,
+      "prompt_tokens": 674,
+      "total_tokens": 1920,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

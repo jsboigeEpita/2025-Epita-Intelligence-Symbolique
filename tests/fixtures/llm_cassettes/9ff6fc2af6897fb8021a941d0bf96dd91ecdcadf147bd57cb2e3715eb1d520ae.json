@@ -1,0 +1,36 @@
+{
+  "key": "9ff6fc2af6897fb8021a941d0bf96dd91ecdcadf147bd57cb2e3715eb1d520ae",
+  "value": {
+    "id": "msg_011ChNgXRaPW78611Mwsm3KZ",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_semantic_redundancy\": true, \"redundancy_verdict\": \"reformulation_utile\", \"located_redundancy\": \"Points 2 et 3 : le point 3 (les études montrent que la vaccination a éradiqué la variole) reprend le point 2 (les études portent sur des effets démontrés sur des maladies précises) en l'illustrant par un cas concret. Le recoupement de fond est réel, mais le point 3 apporte un exemple précis.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565712,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 930,
+      "prompt_tokens": 673,
+      "total_tokens": 1603,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

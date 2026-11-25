@@ -1,0 +1,36 @@
+{
+  "key": "acc054845a7d7faf6564145fa326c324611faf6ad35dae0a9f4c41bdd6576459",
+  "value": {
+    "id": "msg_011ChNgdiUHrjL5eJjkzz9dj",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\": 1.0, \"exhibit\": \"Deux points distincts sont identifiés : (1) les progrès de l'analyse ADN réduisent le risque d'erreur judiciaire, ce qui répond à l'objection sur la faillibilité du système judiciaire ; (2) la peine, implicitement capitale, sert de dissuasion. Ces deux idées ne se recoupent pas en substance : l'une porte sur la fiabilité de la décision, l'autre sur l'effet dissuasif de la sanction. Aucune reprise n'est localisée dans les points visibles. Le verdict fourni, « redondance_sémantique », n'est pas étayé par ces points. Le texte est en outre tronqué au point 2, donc une redondance éventuelle dans la suite ne peut pas être exclue.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565796,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 715,
+      "prompt_tokens": 441,
+      "total_tokens": 1156,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

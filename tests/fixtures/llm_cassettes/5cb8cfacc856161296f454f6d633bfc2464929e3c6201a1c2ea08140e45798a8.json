@@ -1,0 +1,36 @@
+{
+  "key": "5cb8cfacc856161296f454f6d633bfc2464929e3c6201a1c2ea08140e45798a8",
+  "value": {
+    "id": "msg_011ChNgjMgJvABAFYcC2Dw2y",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "```json\n{\"score\": 1.0, \"exhibit\": \"Position adverse identifiée : le climat a toujours changé, donc le changement climatique actuel ne justifie pas de le considérer comme une crise d'origine humaine (position sceptique minimisant la crise climatique). Verdict d'engagement : engagement_réel, la réfutation s'attaque effectivement à cette thèse adverse. Structure démontrée : position adverse identifiée + engagement réel sur la thèse adverse, ce qui correspond à une réfutation constructive pleinement démontrée.\"}\n```",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565871,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 361,
+      "prompt_tokens": 437,
+      "total_tokens": 798,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

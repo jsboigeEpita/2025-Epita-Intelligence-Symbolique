@@ -1,0 +1,36 @@
+{
+  "key": "845682d11e6419e311c7e33bd2f73e9e4205b4eb98260fd347a18fc4d2c6e0df",
+  "value": {
+    "id": "msg_011ChNgkTY4a8eU5jwD5A9Ej",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "```json\n{\"score\": 0.5, \"exhibit\": \"Points distincts : (1) le raisonnement sceptique (« le climat a toujours changé ») omet la vitesse sans précédent du changement actuel, ce qui le réfute ; (2) les mesures de température globale montrent une hausse de 1,1 °C depuis l'ère préindustrielle (point tronqué dans l'entrée). Redondance localisée : les deux points s'appuient sur la même idée de changement climatique actuel, décrit d'abord par sa vitesse puis par son ampleur, ce qui produit un chevauchement sémantique signalé par le verdict « redondance_sémantique ». Ce chevauchement reste partiel : le point 2 apporte une donnée quantitative distincte qui étaye le point 1. Le texte complet n'étant pas fourni, l'évaluation porte uniquement sur les points listés.\"}\n```",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565888,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 682,
+      "prompt_tokens": 442,
+      "total_tokens": 1124,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

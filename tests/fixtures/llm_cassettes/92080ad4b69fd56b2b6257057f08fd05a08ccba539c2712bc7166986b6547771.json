@@ -1,0 +1,36 @@
+{
+  "key": "92080ad4b69fd56b2b6257057f08fd05a08ccba539c2712bc7166986b6547771",
+  "value": {
+    "id": "msg_011ChNfWQdSQEpJvveNsM45k",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "```json\n{\"score\": 1.0, \"exhibit\": \"Étape 1 : deux points distincts sont identifiés. Point 1 : l'exemple européen (tous les pays l'ont fait), utilisé pour justifier la réforme des retraites, relève d'un argument d'autorité et ignore les différences structurelles entre systèmes de retraite. Point 2 : une mise en garde, dont le texte est tronqué (« selon laquell… »), donc son contenu ne peut être évalué entièrement. Étape 2 : le verdict indique « points_distincts ». Aucune reprise en substance n'est visible dans les éléments fournis. Le score reflète uniquement les points disponibles ; la redondance du point 2 ne peut être exclue faute de texte complet.\"}\n```",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795564909,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 515,
+      "prompt_tokens": 434,
+      "total_tokens": 949,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

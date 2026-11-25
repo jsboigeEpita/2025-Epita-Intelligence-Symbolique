@@ -1,0 +1,36 @@
+{
+  "key": "89709637729cbf03e270f61d36a1272e27f0ec023f750fb13ab61cdd19d290ba",
+  "value": {
+    "id": "msg_011ChNgXVEtVNEJmxJZ4KEQH",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_semantic_redundancy\": true, \"redundancy_verdict\": \"redondance_sémantique\", \"located_redundancy\": \"Points 1 et 2 : le point 2 (« cette omission affaiblit la position de ces personnes ») reformule la même idée que le point 1, dont il n'est qu'une conséquence évaluative déjà contenue dans la même phrase. La phrase « ignorent les décennies de recherche clinique » est en outre répétée à l'identique dans l'argument complet.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565712,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 733,
+      "prompt_tokens": 729,
+      "total_tokens": 1462,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

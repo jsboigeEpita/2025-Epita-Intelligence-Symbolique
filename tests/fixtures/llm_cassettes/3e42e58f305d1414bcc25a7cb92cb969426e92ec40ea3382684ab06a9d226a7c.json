@@ -1,0 +1,36 @@
+{
+  "key": "3e42e58f305d1414bcc25a7cb92cb969426e92ec40ea3382684ab06a9d226a7c",
+  "value": {
+    "id": "msg_011ChNgVeBbp6N8vDsAohu8L",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_thesis\": true, \"thesis\": \"Un taux de vaccination élevé protège aussi les personnes qui ne peuvent pas être vaccinées, grâce à l'immunité collective.\", \"digressions\": \"« L'argument selon lequel les produits pharmaceutiques cachent les effets secondaires est une théorie du complot sans fondement. » Cette phrase traite de la question des effets secondaires cachés par l'industrie pharmaceutique, sujet distinct de l'immunité collective, et ne soutient pas la thèse.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565685,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 392,
+      "prompt_tokens": 453,
+      "total_tokens": 845,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

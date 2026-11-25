@@ -1,0 +1,36 @@
+{
+  "key": "58cf7c47786ac3dfe90dcba28799810bf8c5048273122d656440e2313bf7598c",
+  "value": {
+    "id": "msg_011ChNgiky1cE3cDvkpbZNx1",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\": 0.5, \"exhibit\": \"Thèse : le changement climatique actuel se distingue du passé par sa vitesse sans précédent, ce que le raisonnement sceptique omet en affirmant que le climat (formulation tronquée dans l'entrée). Digression localisée : la dernière phrase, « Les modèles prédictifs sont unanimes sur l'impact des activités humaines. », porte sur la cause du changement et non sur sa vitesse. Une seule digression mineure ; l'ensemble reste centré sur la thèse.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565863,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 343,
+      "prompt_tokens": 472,
+      "total_tokens": 815,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

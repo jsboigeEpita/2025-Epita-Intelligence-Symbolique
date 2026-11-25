@@ -1,0 +1,36 @@
+{
+  "key": "3928b68e77f2fd620c5284684d3dcafb3a5cc29d169f618f4fa9fe59a76f76a1",
+  "value": {
+    "id": "msg_011ChNg4hExHrsQ86UZQPiYP",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\": 1.0, \"exhibit\": \"Les points 1 (vieillissement du fonds jeunesse) et 2 (les plus jeunes lecteurs sont les plus nombreux) sont distincts : le premier porte sur l'état du fonds existant, le second sur la taille du public visé. Le point 3 (créer un espace numérique avec ordinateurs) est une idée nouvelle, sans reprise des deux précédents. Aucune redondance en substance n'est visible dans les points fournis. Le point 3 est tronqué dans l'entrée, ce qui limite l'évaluation de sa formulation complète.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565347,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 390,
+      "prompt_tokens": 448,
+      "total_tokens": 838,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

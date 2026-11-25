@@ -1,0 +1,36 @@
+{
+  "key": "e6746fd6b6895e84c035fbc7c9f895e9109d53c9a90499c1f2e49a96098437f4",
+  "value": {
+    "id": "msg_011ChNfW4DMSVjjpys4mivux",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"distinct_points\": \"1. L'exemple européen (tous les pays l'ont faite) utilisé pour justifier la réforme des retraites relève d'un argument d'autorité, qui ne tient pas compte des différences structurelles entre les systèmes de retraite. 2. La mise en garde selon laquelle le système s'effondrera dans cinq ans sans action immédiate est un appel à la peur.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795564905,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 655,
+      "prompt_tokens": 453,
+      "total_tokens": 1108,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "key": "edb27aa80311b0687457b7a339d74a6273c52a6c94b292191a2fe23abb1023f1",
+  "value": {
+    "id": "msg_011ChNfcxs5y4iSc9rNsLaxa",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "```json\n{\"has_opposing_claim\": false, \"opposing_claim\": \"\", \"main_thesis\": \"Il fait beau.\"}\n```",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795564997,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 203,
+      "prompt_tokens": 329,
+      "total_tokens": 532,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "key": "0e1ebf30f41e277f30c6924f9cace8e5477caec544232df65e90aa3fb19dc133",
+  "value": {
+    "id": "msg_011ChNgjdgjLirvzZgHn76Sb",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_semantic_redundancy\": true, \"redundancy_verdict\": \"redondance_sémantique\", \"located_redundancy\": \"« Le changement climatique est une réalité scientifique incontestable » (point 1) est énoncé deux fois, sous deux formulations quasi identiques, sans apport nouveau. Le point 2 (hausse de 1,1 degré depuis l'ère préindustrielle) apporte en revanche une donnée distincte.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565875,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 386,
+      "prompt_tokens": 622,
+      "total_tokens": 1008,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

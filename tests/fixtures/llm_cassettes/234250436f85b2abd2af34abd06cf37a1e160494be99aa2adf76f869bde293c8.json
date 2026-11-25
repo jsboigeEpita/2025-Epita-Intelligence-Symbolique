@@ -1,0 +1,36 @@
+{
+  "key": "234250436f85b2abd2af34abd06cf37a1e160494be99aa2adf76f869bde293c8",
+  "value": {
+    "id": "msg_011ChNgb8Y4dq5MRpWQ1MnHJ",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\": 1.0, \"exhibit\": \"Thèse : « La peine de mort est une sanction nécessaire dans certains cas extrêmes. » Aucune digression identifiée ; toutes les propositions de l'argumentation servent directement la thèse (verdict de l'étape 2 : toutes_pertinentes).\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565759,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 238,
+      "prompt_tokens": 376,
+      "total_tokens": 614,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "key": "1425e01fbfab72d70f7fba7f8673dd7a921951244e1f45408c9ea650fb0a4815",
+  "value": {
+    "id": "msg_011ChNg45wfu6RuwQzERmA7X",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\": 1.0, \"exhibit\": \"Chaîne reconstruite : prémisses = « Le fonds actuel vieillit ; les plus jeunes lecteurs sont les plus nombreux » ; conclusion = « Il faut élargir le fonds de livres jeunesse (Option A) ». Verdict de structure : progression_logique. La conclusion découle des prémisses : le vieillissement du fonds et le poids numérique des jeunes lecteurs justifient d'élargir le fonds jeunesse.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565340,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 624,
+      "prompt_tokens": 425,
+      "total_tokens": 1049,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

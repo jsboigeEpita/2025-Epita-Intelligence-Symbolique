@@ -1,0 +1,36 @@
+{
+  "key": "f7deda8c801e0eef1d29c1d9d4fbabddcf2d792910195fcfe9a5124f25b9bd85",
+  "value": {
+    "id": "msg_011ChNfW2NE7bTXTKow4EZ7j",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"chain_holds\": true, \"structure_verdict\": \"progression_logique\", \"reasoning\": \"La prémisse établit que la projection de déficit repose sur une hypothèse de croissance optimiste (1,8 % par an), ce qui affaiblit directement la fiabilité du chiffre de 2,3 % du PIB d'ici 2030 qui en dérive.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795564903,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 290,
+      "prompt_tokens": 787,
+      "total_tokens": 1077,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

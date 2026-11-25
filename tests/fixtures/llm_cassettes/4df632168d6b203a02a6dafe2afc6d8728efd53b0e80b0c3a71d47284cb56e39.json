@@ -1,0 +1,36 @@
+{
+  "key": "4df632168d6b203a02a6dafe2afc6d8728efd53b0e80b0c3a71d47284cb56e39",
+  "value": {
+    "id": "msg_011ChNgCMfDAXF7KEVuxqNvT",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "```json\n{\"score\": 0.5, \"exhibit\": \"Thèse : investir les 2000 € en matériel pédagogique (échiquiers neufs, horloges, supports de cours), justifiée par l'état usé des échiquiers actuels. Digressions localisées : l'option A (tournoi inter-villes avec buffet et prix pour 2000 €, présenté comme levier de visibilité et de recrutement) et l'option C (format hybride à 1000 €) s'écartent de l'objectif matériel pédagogique. L'argumentation reste globalement centrée sur la thèse, avec des digressions circonscrites.\"}\n```",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565451,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 411,
+      "prompt_tokens": 484,
+      "total_tokens": 895,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

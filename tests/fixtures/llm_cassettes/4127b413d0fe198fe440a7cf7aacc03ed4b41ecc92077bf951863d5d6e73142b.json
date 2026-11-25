@@ -1,0 +1,36 @@
+{
+  "key": "4127b413d0fe198fe440a7cf7aacc03ed4b41ecc92077bf951863d5d6e73142b",
+  "value": {
+    "id": "msg_011ChNfVkncbsyC3oY5q2S5u",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"chain_holds\": false, \"structure_verdict\": \"saut_logique\", \"reasoning\": \"Le fait que tous les pays européens ont déjà réformé leurs retraites ne établit pas que la réforme est nécessaire en France : il manque une prémisse de pont sur la similarité des situations et des systèmes, et l'argument repose sur une autorité numérique sans justification propre.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795564900,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 326,
+      "prompt_tokens": 648,
+      "total_tokens": 974,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

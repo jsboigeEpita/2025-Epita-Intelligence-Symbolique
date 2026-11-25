@@ -1,0 +1,36 @@
+{
+  "key": "fd9f5dea2a0fd859a98812efe89d53b551ca4ed66fd7eb4fdc02e0b8762a4e8f",
+  "value": {
+    "id": "msg_011ChNgjWDmScurPLvpQkhoP",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_chain\": true, \"premises\": \"Les modèles prédictifs sont unanimes sur l'impact des activités humaines ; les sceptiques omettent la vitesse sans précédent du changement climatique actuel ; ceux qui minimisent la crise climatique utilisent souvent des données sélectives.\", \"conclusion\": \"Les activités humaines sont la cause principale du changement climatique actuel, et la crise climatique est réelle (thèse de l'auteur, implicite dans le texte).\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565874,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 556,
+      "prompt_tokens": 490,
+      "total_tokens": 1046,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

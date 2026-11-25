@@ -1,0 +1,36 @@
+{
+  "key": "ac83445f356035b5d7a407d6ba9912ae7044e331ea867553ea9336edfda83d40",
+  "value": {
+    "id": "msg_011ChNfUfeWVHzf9Qi75SmGr",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\": 0.5, \"exhibit\": \"Obstacle localisé : le terme « sophisme naturaliste », jargon de théorie de l'argumentation, n'est pas défini dans le texte. Verdict d'opacité : résolvable_contexte. Le sens reste globalement accessible grâce au contexte argumentatif, d'où une clarté partielle (0.5).\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795564885,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 449,
+      "prompt_tokens": 400,
+      "total_tokens": 849,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "key": "3dcf9fe4becfa76d30e06a3f5877d7552142776b1fc0263c7b3c72381fbf90ff",
+  "value": {
+    "id": "msg_011ChNfWnLQUMAKeK1hY2pa4",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_thesis\": true, \"thesis\": \"La menace d'un effondrement du système dans cinq ans, si l'on n'agit pas maintenant, relève de l'appel à la peur.\", \"digressions\": \"\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795564914,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 351,
+      "prompt_tokens": 360,
+      "total_tokens": 711,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

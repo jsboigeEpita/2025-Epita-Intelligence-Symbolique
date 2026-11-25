@@ -1,0 +1,36 @@
+{
+  "key": "66574c52a0ae2b8ef5c6ec2d075c0cc4ca54e02b20c9055f36af3361117466ce",
+  "value": {
+    "id": "msg_011ChNfUZ4P784kYqArv58xo",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"obstacle_genuinely_opaque\": false, \"clarity_verdict\": \"résolvable_contexte\", \"reasoning\": \"Le texte donne lui-même le sens du terme : le gouvernement présente travailler plus longtemps comme « dans l'ordre des choses », ce qui permet de comprendre que le sophisme naturaliste consiste à justifier une mesure en la présentant comme naturelle ou inévitable.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795564883,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 298,
+      "prompt_tokens": 706,
+      "total_tokens": 1004,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

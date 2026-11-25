@@ -1,0 +1,36 @@
+{
+  "key": "85b9070aed11ca936bd0b82186723b79af11c642e4eff10164c1b74b72539588",
+  "value": {
+    "id": "msg_011ChNgD3ijHPXEMgXmJVJYw",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\": 0.0, \"exhibit\": \"Chaîne reconstruite : prémisse « Les échiquiers actuels sont usés. » ; conclusion « Investir les 2000 € en matériel pédagogique (échiquiers neufs, horloges, supports de cours) se justifie. ». Verdict de structure : saut_logique. Le constat d'usure ne justifie que le remplacement des échiquiers, pas l'achat d'horloges ni de supports de cours, ni le montant de 2000 €. La conclusion ne découle pas des prémisses.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565460,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 370,
+      "prompt_tokens": 423,
+      "total_tokens": 793,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

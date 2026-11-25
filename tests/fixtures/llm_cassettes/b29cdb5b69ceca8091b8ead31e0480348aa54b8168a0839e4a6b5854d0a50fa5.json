@@ -1,0 +1,36 @@
+{
+  "key": "b29cdb5b69ceca8091b8ead31e0480348aa54b8168a0839e4a6b5854d0a50fa5",
+  "value": {
+    "id": "msg_011ChNgjzYquMipcRq1s3Neo",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_semantic_redundancy\": true, \"redundancy_verdict\": \"redondance_sémantique\", \"located_redundancy\": \"Le point 1 (ceux qui minimisent la crise s'appuient sur des données sélectives) est repris quasiment mot pour mot dans le corps de l'argument : « Ceux qui minimisent la crise climatique utilisent souvent des données sélectives pour soutenir leur position ». Même contenu, sans apport nouveau.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565882,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 867,
+      "prompt_tokens": 687,
+      "total_tokens": 1554,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

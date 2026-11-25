@@ -1,0 +1,36 @@
+{
+  "key": "8ad9beb94759aaa3d3fe42102fae0d7180f9477435c541a9df5154b356791a4e",
+  "value": {
+    "id": "msg_011ChNfVbRHpAyq4jNvJiwi8",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "```json\n{\"engages_real_claim\": true, \"engagement_verdict\": \"engagement_réel\", \"reasoning\": \"La critique porte directement sur la projection identifiée (déficit de 2,3 % du PIB en 2030) en contestant ses hypothèses de croissance de 1,8 % par an, sans déformer la position adverse.\"}\n```",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795564898,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 303,
+      "prompt_tokens": 676,
+      "total_tokens": 979,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

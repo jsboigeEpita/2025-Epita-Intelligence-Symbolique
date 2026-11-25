@@ -1,0 +1,36 @@
+{
+  "key": "1fd2c6046dcfda0dda1e2e964cb4989b97938ebb2f3f8a23a0db3bd00ea4eb26",
+  "value": {
+    "id": "msg_011ChNgjdHfYGKEMwrBamNxL",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "```json\n{\"score\": 0.0, \"exhibit\": \"Chaîne reconstruite : prémisses = (1) les mesures de température globale montrent une hausse de 1,1 degré depuis l'ère préindustrielle ; (2) le raisonnement sceptique omet la vitesse du changement. Conclusion = la thèse sceptique selon laquelle le changement climatique actuel relève d'une simple variation naturelle est réfutée. Verdict de structure : saut_logique. La conclusion ne découle pas des prémisses : la hausse observée ne suffit pas à exclure une variation naturelle, et l'omission de la vitesse n'est pas reliée par une inférence explicite à la réfutation. Score 0.0 (saut logique net).\"}\n```",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565876,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 507,
+      "prompt_tokens": 465,
+      "total_tokens": 972,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

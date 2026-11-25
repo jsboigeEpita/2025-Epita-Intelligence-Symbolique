@@ -1,0 +1,36 @@
+{
+  "key": "2861ca6ea9a5f289f4b93070342d9118dcb406589f6279b28dbbddd074a8a166",
+  "value": {
+    "id": "msg_011ChNfVMNhj8y88LWYc1N4g",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"engages_real_claim\": true, \"engagement_verdict\": \"engagement_réel\", \"reasoning\": \"La réfutation nie directement que l'opposition ait proposé de supprimer les retraites, ce qui cible la prétention implicite que l'attaque du gouvernement suppose, même si le passage est répété et que les remarques sur le déficit et l'appel émotionnel ne sont pas liées à ce point.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795564896,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 733,
+      "prompt_tokens": 691,
+      "total_tokens": 1424,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "key": "081fa83a4863a167d5188c4756884e54a72e655aea2ff21a3393289144173811",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "```json\n{\n  \"formulas\": [\n    \"il_pleut => rue_est_mouillee\",\n    \"il_pleut\"\n  ]\n}\n```",
+      "metadata": {
+        "logprobs": null,
+        "id": "msg_011ChNgU6aYfdRjvkJCrf92y",
+        "created": 1795565663,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 630,
+          "prompt_tokens_details": null,
+          "completion_tokens": 50,
+          "completion_tokens_details": null
+        }
+      }
+    }
+  ]
+}

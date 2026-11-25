@@ -1,0 +1,36 @@
+{
+  "key": "6c81afed635f1442bc14b5cb5235d435beaf60c23c874d01bbc5a4e2b64e9ca8",
+  "value": {
+    "id": "msg_011ChNgbMB5m8TuDRpZZAnYF",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "```json\n{\"has_opposing_claim\": true, \"opposing_claim\": \"Le système judiciaire peut se tromper et exécuter un innocent.\", \"main_thesis\": \"La peine de mort est une sanction nécessaire dans certains cas extrêmes et a un effet dissuasif contre les crimes les plus graves, comme le meurtre de masse.\"}\n```",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565762,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 342,
+      "prompt_tokens": 499,
+      "total_tokens": 841,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

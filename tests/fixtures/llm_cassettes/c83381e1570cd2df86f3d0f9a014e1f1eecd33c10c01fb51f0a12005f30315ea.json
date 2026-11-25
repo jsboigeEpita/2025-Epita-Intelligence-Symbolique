@@ -1,0 +1,36 @@
+{
+  "key": "c83381e1570cd2df86f3d0f9a014e1f1eecd33c10c01fb51f0a12005f30315ea",
+  "value": {
+    "id": "msg_011ChNgn6KBMd1srTa3mwcjJ",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_semantic_redundancy\": true, \"redundancy_verdict\": \"redondance_sémantique\", \"located_redundancy\": \"La conclusion (points 1 et 2 : la transition est nécessaire et économiquement avantageuse à long terme) est énoncée dans la phrase d'ouverture puis répétée quasi à l'identique en fin d'argument, sans apport nouveau.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565911,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 979,
+      "prompt_tokens": 646,
+      "total_tokens": 1625,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

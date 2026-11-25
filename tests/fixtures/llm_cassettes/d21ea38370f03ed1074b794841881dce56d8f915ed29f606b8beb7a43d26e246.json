@@ -1,0 +1,36 @@
+{
+  "key": "d21ea38370f03ed1074b794841881dce56d8f915ed29f606b8beb7a43d26e246",
+  "value": {
+    "id": "msg_011ChNgW4uu63EgasRSB6Wig",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"engages_real_claim\": false, \"engagement_verdict\": \"non_sequitur\", \"reasoning\": \"Les preuves citées (éradication de la variole, recul de la polio) établissent l'efficacité des vaccins et non leur innocuité, donc elles ne répondent pas à l'affirmation qu'ils sont dangereux, et la conclusion se contente d'accuser les opposants d'ignorer la recherche sans traiter les données de sécurité.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565693,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 847,
+      "prompt_tokens": 586,
+      "total_tokens": 1433,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

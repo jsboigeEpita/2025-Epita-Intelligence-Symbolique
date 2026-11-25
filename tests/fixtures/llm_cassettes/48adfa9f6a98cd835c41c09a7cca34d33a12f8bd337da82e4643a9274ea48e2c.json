@@ -1,0 +1,36 @@
+{
+  "key": "48adfa9f6a98cd835c41c09a7cca34d33a12f8bd337da82e4643a9274ea48e2c",
+  "value": {
+    "id": "msg_011ChNgCg31SWNBBx2PTaT3z",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_chain\": true, \"premises\": \"Les échiquiers actuels sont usés.\", \"conclusion\": \"Il faut investir les 2000 euros en matériel pédagogique (échiquiers neufs, horloges et supports de cours).\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565456,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 575,
+      "prompt_tokens": 514,
+      "total_tokens": 1089,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

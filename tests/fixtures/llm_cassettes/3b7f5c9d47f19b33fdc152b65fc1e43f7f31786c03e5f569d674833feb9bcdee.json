@@ -1,0 +1,36 @@
+{
+  "key": "3b7f5c9d47f19b33fdc152b65fc1e43f7f31786c03e5f569d674833feb9bcdee",
+  "value": {
+    "id": "msg_011ChNgVucJDM25kXN7bauJA",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\": 1.0, \"exhibit\": \"Thèse : « Les vaccins sont indispensables pour la santé publique. » Aucune digression identifiée (liste vide) ; le verdict de l'étape 2 indique que toutes les propositions servent la thèse.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565688,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 152,
+      "prompt_tokens": 368,
+      "total_tokens": 520,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

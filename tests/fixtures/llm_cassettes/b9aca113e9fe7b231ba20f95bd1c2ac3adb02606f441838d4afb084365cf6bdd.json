@@ -1,0 +1,36 @@
+{
+  "key": "b9aca113e9fe7b231ba20f95bd1c2ac3adb02606f441838d4afb084365cf6bdd",
+  "value": {
+    "id": "msg_011ChNfVc3VezVUYBLAWfXAB",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_chain\": true, \"premises\": \"Personne n'a proposé de supprimer les retraites, seulement de les réformer différemment (l'opposition attaque un homme de paille) ; l'argument « pensez à vos enfants » est un appel à l'émotion qui détourne le débat des questions techniques de financement.\", \"conclusion\": \"L'argumentation de l'opposition est fallacieuse et détourne le débat, qui doit donc porter sur les questions techniques de financement.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795564899,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 692,
+      "prompt_tokens": 497,
+      "total_tokens": 1189,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

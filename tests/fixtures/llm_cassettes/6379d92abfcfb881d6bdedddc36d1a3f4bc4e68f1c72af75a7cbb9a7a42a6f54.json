@@ -1,0 +1,36 @@
+{
+  "key": "6379d92abfcfb881d6bdedddc36d1a3f4bc4e68f1c72af75a7cbb9a7a42a6f54",
+  "value": {
+    "id": "msg_011ChNgWAh9yxZVH2r2vQ7H4",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"engages_real_claim\": false, \"engagement_verdict\": \"non_sequitur\", \"reasoning\": \"La réfutation qualifie la thèse de complot sans fondement puis enchaîne sur l'immunité collective, qui ne répond pas à l'affirmation que les laboratoires dissimulent les effets secondaires.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565692,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 341,
+      "prompt_tokens": 599,
+      "total_tokens": 940,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

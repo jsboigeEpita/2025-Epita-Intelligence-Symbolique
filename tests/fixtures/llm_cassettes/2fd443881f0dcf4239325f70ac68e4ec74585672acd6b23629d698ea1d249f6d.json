@@ -3,29 +3,17 @@
   "value": [
     {
       "role": "assistant",
-      "content": "{\n  \"formulas\": [\n    \"forall X: (Homme(X) => Mortel(X))\",\n    \"Homme(socrate)\"\n  ],\n  \"predicates\": {\n    \"Homme\": \"est un homme\",\n    \"Mortel\": \"est mortel\"\n  },\n  \"variables\": {\n    \"X\": \"thing\"\n  },\n  \"reasoning\": \"La première phrase affirme que tout homme est mortel : pour tout X, si X est un homme, alors X est mortel. La seconde phrase affirme que Socrate est un homme.\"\n}",
+      "content": "```json\n{\n    \"formulas\": [\n        \"forall X: (Humain(X) => Mortel(X))\",\n        \"Humain(socrate)\"\n    ],\n    \"predicates\": {\n        \"Humain\": \"est humain\",\n        \"Mortel\": \"est mortel\"\n    },\n    \"variables\": {\n        \"X\": \"individu\"\n    },\n    \"reasoning\": \"La première phrase, « Todos los humanos sont mortales » (espagnol et français mélangés), est une affirmation universelle : pour tout individu X, si X est humain, alors X est mortel. Elle est donc traduite par forall X: (Humain(X) => Mortel(X)). La seconde phrase, « Sócrates es un humano », est un fait concernant une constante nommée Socrate. Elle devient Humain(socrate). Le nom propre est écrit sans accent, conformément à la convention ASCII de TweetyProject, et le prédicat Humain est choisi à partir de « humano » (au lieu de Homme) pour rester fidèle au texte.\"\n}\n```",
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EkNxHaNrT3fdOFYocKA3SfDGoHe7f",
-        "created": 1794723879,
+        "id": "msg_011ChNgB5dmsVLiUCsVpm5Jr",
+        "created": 1795565435,
         "system_fingerprint": null,
         "usage": {
-          "prompt_tokens": 287,
-          "prompt_tokens_details": {
-            "audio_tokens": 0,
-            "cache_write_tokens": 0,
-            "cached_tokens": 0,
-            "image_tokens": null,
-            "text_tokens": null
-          },
-          "completion_tokens": 182,
-          "completion_tokens_details": {
-            "accepted_prediction_tokens": 0,
-            "audio_tokens": 0,
-            "reasoning_tokens": 53,
-            "rejected_prediction_tokens": 0,
-            "text_tokens": null
-          }
+          "prompt_tokens": 459,
+          "prompt_tokens_details": null,
+          "completion_tokens": 724,
+          "completion_tokens_details": null
         }
       }
     }

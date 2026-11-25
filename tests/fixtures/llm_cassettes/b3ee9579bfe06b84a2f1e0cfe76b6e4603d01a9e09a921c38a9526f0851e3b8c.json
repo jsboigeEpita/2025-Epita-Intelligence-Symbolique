@@ -1,0 +1,36 @@
+{
+  "key": "b3ee9579bfe06b84a2f1e0cfe76b6e4603d01a9e09a921c38a9526f0851e3b8c",
+  "value": {
+    "id": "msg_011ChNgczd7npg3pSKn8pLYX",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "```json\n{\"has_semantic_redundancy\": true, \"redundancy_verdict\": \"redondance_sémantique\", \"located_redundancy\": \"Le point 1 (irréversibilité de la peine de mort rendant toute erreur judiciaire fatale) apparaît deux fois dans l'argument : dans la phrase de concession initiale et dans la phrase introduite par « Cependant, il faut reconnaître que… ». Il s'agit de la même idée reformulée, sans apport nouveau.\"}\n```",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565785,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 423,
+      "prompt_tokens": 684,
+      "total_tokens": 1107,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "key": "0219247dddff4fe3320a1d81776f22840ce027891a8f97f3703f464df7d17447",
+  "value": {
+    "id": "msg_011ChNfWXk4XYdJq9hNhJJK8",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"distinct_points\": \"1. Le gouvernement attaque un homme de paille : personne n'a proposé de supprimer les retraites, seulement de les réformer autrement.\\n2. La projection du déficit (2,3 % du PIB d'ici 2030) présentée par le ministre des finances repose sur des hypothèses de croissance optimistes (1,8 % par an).\\n3. L'argument « pensez à vos enfants » est un appel à l'émotion qui détourne le débat des questions techniques de financement.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795564911,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 553,
+      "prompt_tokens": 515,
+      "total_tokens": 1068,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

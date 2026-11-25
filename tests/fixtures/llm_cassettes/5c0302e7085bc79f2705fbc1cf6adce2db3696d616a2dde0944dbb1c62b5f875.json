@@ -1,0 +1,36 @@
+{
+  "key": "5c0302e7085bc79f2705fbc1cf6adce2db3696d616a2dde0944dbb1c62b5f875",
+  "value": {
+    "id": "msg_011ChNfUTW1wzDQMFKz8s8Ap",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_thesis\": true, \"thesis\": \"L'argument du Premier ministre selon lequel la réforme des retraites est nécessaire parce que tous les pays européens l'ont déjà faite est un argument d'autorité invalide, car il ne tient pas compte des différences structurelles entre les systèmes de retraite.\", \"digressions\": \"La phrase « si nous n'agissons pas maintenant, le système s'effondrera dans cinq ans » et son qualificatif d'appel à la peur ne portent pas sur l'exemple européen. Il s'agit d'une critique distincte, qui ne soutient pas la thèse principale. La citation entre crochets répète la première phrase de la critique et n'ajoute aucun argument.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795564884,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 788,
+      "prompt_tokens": 485,
+      "total_tokens": 1273,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "key": "43b19283ad146d44ff9ce13200a5548f6ffdba81129b5d6f0b9ce0242da6d88b",
+  "value": {
+    "id": "msg_011ChNgmAnGvFWVCWQWQMDFN",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_opposing_claim\": true, \"opposing_claim\": \"La crise climatique est minimisée, donc la transition énergétique n'est pas nécessaire\", \"main_thesis\": \"La transition énergétique est nécessaire et économiquement avantageuse à long terme\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565896,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 420,
+      "prompt_tokens": 474,
+      "total_tokens": 894,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "key": "7fd9a189cf18ddae80213b200b298251f484b447b321defd3136bd4263b3b8ff",
+  "value": {
+    "id": "msg_011ChNgdDuKtBEJNb9bgJDwF",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\": 1.0, \"exhibit\": \"Points distincts : (1) certains criminels sont irrécupérables et constituent un danger permanent, ce qui justifie la peine capitale ; (2) l'objection de l'erreur judiciaire est atténuée par l'ADN. Ces deux points portent sur des idées différentes (dangerosité et justification de la peine vs fiabilité de la preuve), sans reprise en substance visible. Aucune redondance localisée n'est observable dans le texte fourni. Limite : le point 2 est tronqué, et le verdict 'redondance_sémantique' n'est pas étayé par les points présentés. Un score définitif nécessiterait l'argument complet.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565789,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 634,
+      "prompt_tokens": 436,
+      "total_tokens": 1070,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

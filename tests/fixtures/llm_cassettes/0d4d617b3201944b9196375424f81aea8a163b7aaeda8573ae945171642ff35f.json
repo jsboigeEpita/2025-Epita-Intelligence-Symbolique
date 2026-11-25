@@ -1,0 +1,36 @@
+{
+  "key": "0d4d617b3201944b9196375424f81aea8a163b7aaeda8573ae945171642ff35f",
+  "value": {
+    "id": "msg_011ChNgdyEYw6NLPNNUMsxja",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"chain_holds\": true, \"structure_verdict\": \"progression_logique\", \"reasoning\": \"Si le coût des appels et procédures dépasse souvent celui de l'emprisonnement à vie, l'argument financier en faveur de la peine de mort perd sa base, donc la conclusion découle directement de la prémisse, sans saut logique (la généralisation « souvent » reste une réserve mineure).\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565798,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 416,
+      "prompt_tokens": 658,
+      "total_tokens": 1074,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "key": "f0e7d56ab22a94c04d080ba3ed6b88970d066092e5571c959769dfd563ca6ed7",
+  "value": {
+    "id": "msg_011ChNfW5CPMcDjzMNXxbJQz",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"distinct_points\": \"1. La réforme des retraites est nécessaire (thèse défendue par le Premier ministre).\\n2. Justification : tous les pays européens ont déjà fait cette réforme, ce qui la rendrait nécessaire (argument d'autorité).\\n3. Critique : cet argument ne tient pas compte des différences structurelles entre les systèmes de retraite européens.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795564905,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 480,
+      "prompt_tokens": 420,
+      "total_tokens": 900,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

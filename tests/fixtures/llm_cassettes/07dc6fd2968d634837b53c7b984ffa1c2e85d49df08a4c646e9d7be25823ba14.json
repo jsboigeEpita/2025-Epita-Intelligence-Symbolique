@@ -1,0 +1,36 @@
+{
+  "key": "07dc6fd2968d634837b53c7b984ffa1c2e85d49df08a4c646e9d7be25823ba14",
+  "value": {
+    "id": "msg_011ChNgjHakuvDadr2KkMTQz",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_chain\": true, \"premises\": \"Les mesures de température globale montrent une augmentation de 1,1 °C depuis l'ère préindustrielle ; les sceptiques affirment que le climat a toujours changé, mais omettent la vitesse sans précédent du changement actuel.\", \"conclusion\": \"Le changement climatique est une réalité scientifique incontestable.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565870,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 414,
+      "prompt_tokens": 493,
+      "total_tokens": 907,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

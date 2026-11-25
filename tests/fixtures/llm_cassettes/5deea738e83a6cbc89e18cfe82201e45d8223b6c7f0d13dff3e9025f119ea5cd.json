@@ -1,0 +1,36 @@
+{
+  "key": "5deea738e83a6cbc89e18cfe82201e45d8223b6c7f0d13dff3e9025f119ea5cd",
+  "value": {
+    "id": "msg_011ChNgmNF6ejWDubnW6QSjJ",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "```json\n{\"has_opposing_claim\": true, \"opposing_claim\": \"La crise climatique ne serait pas aussi grave qu'on le dit.\", \"main_thesis\": \"La crise climatique est réelle et causée par les activités humaines, et la transition énergétique est non seulement nécessaire mais aussi économiquement avantageuse à long terme.\"}\n```",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565899,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 427,
+      "prompt_tokens": 488,
+      "total_tokens": 915,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

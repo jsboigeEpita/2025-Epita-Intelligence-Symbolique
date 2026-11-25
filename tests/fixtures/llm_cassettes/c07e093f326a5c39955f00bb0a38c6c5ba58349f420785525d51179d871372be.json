@@ -1,0 +1,36 @@
+{
+  "key": "c07e093f326a5c39955f00bb0a38c6c5ba58349f420785525d51179d871372be",
+  "value": {
+    "id": "msg_011ChNgCtcJbMnkCTkc4F4Kr",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "```json\n{\"chain_holds\": false, \"structure_verdict\": \"saut_logique\", \"reasoning\": \"La prémisse (échiquiers usés) justifie tout au plus le remplacement des échiquiers, mais ne justifie ni l'achat d'horloges et de supports de cours ni le montant précis de 2000 €, et le texte présente l'option C sans lien inférentiel avec la conclusion.\"}\n```",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565458,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 447,
+      "prompt_tokens": 687,
+      "total_tokens": 1134,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

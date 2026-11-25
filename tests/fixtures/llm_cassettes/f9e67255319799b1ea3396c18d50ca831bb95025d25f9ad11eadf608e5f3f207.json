@@ -1,0 +1,36 @@
+{
+  "key": "f9e67255319799b1ea3396c18d50ca831bb95025d25f9ad11eadf608e5f3f207",
+  "value": {
+    "id": "msg_011ChNfwy42UbDpEHZjnJ3to",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\": 0.5, \"exhibit\": \"Deux points distincts : (1) Option B, 2000 € entièrement consacrés au matériel pédagogique et aux échiquiers neufs ; (2) Option C, format hybride avec 1000 € pour un tournoi réduit et 1000 € pour le matériel. Redondance localisée : le poste « matériel » apparaît dans les deux options, avec une correspondance sémantique partielle, mais chaque option repose sur une répartition budgétaire différente et apporte une alternative nouvelle. Il n'y a pas de martèlement de la même idée.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565257,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 655,
+      "prompt_tokens": 437,
+      "total_tokens": 1092,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

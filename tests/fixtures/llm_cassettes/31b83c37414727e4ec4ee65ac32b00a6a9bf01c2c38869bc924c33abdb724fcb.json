@@ -1,0 +1,36 @@
+{
+  "key": "31b83c37414727e4ec4ee65ac32b00a6a9bf01c2c38869bc924c33abdb724fcb",
+  "value": {
+    "id": "msg_011ChNftMUns8sY6uqULQK3t",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "```json\n{\n  \"sorts\": {\n    \"Person\": [\"vous\"],\n    \"Proposition\": [\"consensus\"]\n  },\n  \"predicates\": {\n    \"Expert\": [\"Person\"],\n    \"Unanimous\": [\"Proposition\"],\n    \"True\": [\"Proposition\"],\n    \"CountsOpinion\": [\"Person\"]\n  },\n  \"constants\": {\n    \"vous\": \"the addressee, used generically as 'you' (the person being told their opinion does not count)\",\n    \"consensus\": \"the claim on which the experts are unanimous, which Argument 1 concludes is true\"\n  }\n}\n```",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565208,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 731,
+      "prompt_tokens": 316,
+      "total_tokens": 1047,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

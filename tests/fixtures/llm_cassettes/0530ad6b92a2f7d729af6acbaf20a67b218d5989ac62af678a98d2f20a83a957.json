@@ -1,0 +1,36 @@
+{
+  "key": "0530ad6b92a2f7d729af6acbaf20a67b218d5989ac62af678a98d2f20a83a957",
+  "value": {
+    "id": "msg_011ChNgWcyx38bNedWHnVuju",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"chain_holds\": false, \"structure_verdict\": \"saut_logique\", \"reasoning\": \"Les prémisses établissent seulement l'efficacité de la vaccination contre deux maladies (variole, polio), ce qui ne démontre ni que tous les vaccins sont indispensables ni que cela vaut pour la santé publique en général, faute de comparaison avec des alternatives.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565700,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 739,
+      "prompt_tokens": 671,
+      "total_tokens": 1410,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

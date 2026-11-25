@@ -1,0 +1,36 @@
+{
+  "key": "353d89bc1807c6d60c9985d9e34f54d9f80ff05298b5cc024233107fed205e59",
+  "value": {
+    "id": "msg_011ChNgCNjCW58daaWCnPTNd",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "```json\n{\"score\": 0.5, \"exhibit\": \"Thèse : l'option C, un format hybride (1000 € pour un tournoi réduit et 1000 € pour le matériel pédagogique), constitue un compromis équilibré entre visibilité et [suite tronquée dans l'énoncé]. Digressions localisées : (1) un passage sur l'option B (investir les 2000 € dans du matériel pédagogique neuf, les échiquiers actuels étant usés), qui s'écarte de la thèse portant sur C ; (2) une seconde phrase qui répète la description de l'option C. L'argument reste globalement centré sur C, les digressions étant limitées et localisées.\"}\n```",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565451,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 416,
+      "prompt_tokens": 489,
+      "total_tokens": 905,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

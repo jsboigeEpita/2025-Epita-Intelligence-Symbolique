@@ -1,0 +1,36 @@
+{
+  "key": "a91ce8baa9f9551fefeddd4776f1d88117ea06f61b6479d780ee727d0097e645",
+  "value": {
+    "id": "msg_011ChNgj459XmzVCgxZEt4AQ",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "```json\n{\"has_opposing_claim\": true, \"opposing_claim\": \"La crise climatique est minimisée : la position de ceux qui minimisent la crise climatique, qui repose selon l'auteur sur des données sélectives\", \"main_thesis\": \"La transition énergétique est non seulement nécessaire, mais aussi économiquement avantageuse à long terme\"}\n```",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565867,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 455,
+      "prompt_tokens": 498,
+      "total_tokens": 953,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

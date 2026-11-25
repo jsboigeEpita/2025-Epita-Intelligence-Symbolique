@@ -1,0 +1,36 @@
+{
+  "key": "cddd1b3de355f566d36a067c9494605e72ea183b347ceb25845e7279409372ca",
+  "value": {
+    "id": "msg_011ChNfUUrNhipoNX1XfhQkU",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_thesis\": true, \"thesis\": \"La réforme des retraites est nécessaire.\", \"digressions\": \"La dernière phrase, « C'est un argument d'autorité qui ne tient pas compte des différences structurelles entre les systèmes. », est une critique externe de l'argument et non une proposition qui soutient la thèse. Les annotations entre parenthèses et entre crochets (« argument d'autorité, tel que le qualifie le texte » et « [quote: ...] ») sont des commentaires méta, non des éléments de l'argumentation.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795564884,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 702,
+      "prompt_tokens": 452,
+      "total_tokens": 1154,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

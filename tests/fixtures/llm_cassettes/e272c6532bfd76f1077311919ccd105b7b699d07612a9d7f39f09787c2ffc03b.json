@@ -1,0 +1,36 @@
+{
+  "key": "e272c6532bfd76f1077311919ccd105b7b699d07612a9d7f39f09787c2ffc03b",
+  "value": {
+    "id": "msg_011ChNg3hCxFci2jWm7XDmUm",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\": 1.0, \"exhibit\": \"Chaîne reconstruite : prémisse « Réduire la fracture numérique du quartier » (justification donnée pour l'option B) → conclusion « Créer un espace numérique avec des ordinateurs en libre accès (option B) ». Le lien est un rapport moyen-fin explicite : l'espace numérique en libre accès est présenté comme le moyen de réduire la fracture numérique. Verdict de structure : progression_logique.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565334,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 582,
+      "prompt_tokens": 420,
+      "total_tokens": 1002,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

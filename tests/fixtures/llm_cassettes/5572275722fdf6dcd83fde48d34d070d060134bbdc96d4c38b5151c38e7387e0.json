@@ -1,0 +1,36 @@
+{
+  "key": "5572275722fdf6dcd83fde48d34d070d060134bbdc96d4c38b5151c38e7387e0",
+  "value": {
+    "id": "msg_011ChNfxR6wB6A2nLoMsyos5",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "```json\n{\"distinct_points\": \"1) Option A : organiser un tournoi inter-villes avec buffet et prix pour 2000 euros, présenté comme un moyen d'accroître la visibilité du club. 2) Option B : investir les 2000 euros en matériel pédagogique et en échiquiers neufs. Note : le texte annonce « trois options » mais n'en présente que deux, et la citation de l'Option A est une reformulation du même point, comptée une seule fois.\"}\n```",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565262,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 428,
+      "prompt_tokens": 428,
+      "total_tokens": 856,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

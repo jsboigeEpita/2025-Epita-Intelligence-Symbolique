@@ -1,0 +1,36 @@
+{
+  "key": "5877d2b7104b142774d048b224049d9b557cc7d1f20a8a73b831f494cdb17360",
+  "value": {
+    "id": "msg_011ChNfW7r8q18zhHafsMafw",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "```json\n{\"chain_holds\": false, \"structure_verdict\": \"saut_logique\", \"reasoning\": \"La prémisse indique seulement que personne n'a proposé de supprimer les retraites, ce qui ne permet pas de conclure que le gouvernement attaque un homme de paille, sauf à ajouter la prémisse non énoncée que le gouvernement combat précisément une position d'abrogation.\"}\n```",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795564905,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 434,
+      "prompt_tokens": 778,
+      "total_tokens": 1212,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

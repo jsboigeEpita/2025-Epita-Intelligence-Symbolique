@@ -1,0 +1,36 @@
+{
+  "key": "f9aacd7af604aac7564c41f21ad598e3c1056684f4b68bb219c5b46dc1389d0a",
+  "value": {
+    "id": "msg_011ChNgcnKhQTjJdcEbBR9wW",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"chain_holds\": true, \"structure_verdict\": \"progression_logique\", \"reasoning\": \"La réfutation de l'objection (risque d'erreur judiciaire) est directement traitée par l'argument ADN, et la dissuasion fournit la justification principale, donc la conclusion découle des prémisses, même si l'affirmation « réduit considérablement » et l'efficacité dissuasive restent empiriquement discutables.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565783,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 589,
+      "prompt_tokens": 699,
+      "total_tokens": 1288,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

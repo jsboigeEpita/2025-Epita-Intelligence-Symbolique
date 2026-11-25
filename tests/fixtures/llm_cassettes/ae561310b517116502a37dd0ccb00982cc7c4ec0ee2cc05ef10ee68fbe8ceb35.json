@@ -1,0 +1,36 @@
+{
+  "key": "ae561310b517116502a37dd0ccb00982cc7c4ec0ee2cc05ef10ee68fbe8ceb35",
+  "value": {
+    "id": "msg_011ChNgia1wU8WCZGUYcEJYN",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_digression\": true, \"relevance_verdict\": \"digression_localisée\", \"located_digression\": \"Les modèles prédictifs sont unanimes sur l'impact des activités humaines.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565861,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 482,
+      "prompt_tokens": 693,
+      "total_tokens": 1175,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "key": "a3f3af68548a954bf74113680f51d5aed655b4b4f57f212641919e0c576fbf6d",
+  "value": {
+    "id": "msg_011ChNgCXSaQK8pWptu5FGn4",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_opposing_claim\": false, \"opposing_claim\": \"\", \"main_thesis\": \"L'option C (format hybride : 1000 € pour un tournoi réduit et 1000 € pour le matériel pédagogique) est un compromis équilibré entre visibilité et pédagogie.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565453,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 402,
+      "prompt_tokens": 525,
+      "total_tokens": 927,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

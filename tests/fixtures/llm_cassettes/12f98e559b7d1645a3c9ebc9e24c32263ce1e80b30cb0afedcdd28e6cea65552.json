@@ -1,0 +1,36 @@
+{
+  "key": "12f98e559b7d1645a3c9ebc9e24c32263ce1e80b30cb0afedcdd28e6cea65552",
+  "value": {
+    "id": "msg_011ChNgjrB4aLtmvahyNPL35",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"distinct_points\": \"1. Ceux qui minimisent la crise climatique s'appuient sur des données sélectives, ce qui fragilise leur position. 2. Les modèles prédictifs sont unanimes sur l'impact des activités humaines. 3. La transition énergétique est nécessaire. 4. La transition énergétique est économiquement avantageuse à long terme.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565878,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 439,
+      "prompt_tokens": 414,
+      "total_tokens": 853,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

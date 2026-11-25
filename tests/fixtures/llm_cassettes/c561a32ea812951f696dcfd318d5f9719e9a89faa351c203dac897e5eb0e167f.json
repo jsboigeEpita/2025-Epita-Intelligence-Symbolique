@@ -1,0 +1,36 @@
+{
+  "key": "c561a32ea812951f696dcfd318d5f9719e9a89faa351c203dac897e5eb0e167f",
+  "value": {
+    "id": "msg_011ChNfV1ufT1uwpom3sRk8j",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_digression\": true, \"relevance_verdict\": \"digression_localisée\", \"located_digression\": \"Les syndicats accusent le gouvernement d'utiliser un sophisme naturaliste (travailler plus longtemps serait « dans l'ordre des choses ») ; L'opposition dénonce un homme de paille : personne n'a proposé de supprimer les retraites, seulement de les réformer différemment.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795564891,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 715,
+      "prompt_tokens": 762,
+      "total_tokens": 1477,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

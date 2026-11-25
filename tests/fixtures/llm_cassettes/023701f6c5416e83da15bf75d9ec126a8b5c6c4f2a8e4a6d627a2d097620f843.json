@@ -1,0 +1,36 @@
+{
+  "key": "023701f6c5416e83da15bf75d9ec126a8b5c6c4f2a8e4a6d627a2d097620f843",
+  "value": {
+    "id": "msg_011ChNfdnyYFoahRxkiUmu7H",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\": 1.0, \"exhibit\": \"Deux points distincts : (1) le constat factuel que le soleil brille (présence du soleil) et (2) l'évaluation que le temps est beau. Le second point porte un jugement sur le temps qu'il fait, et n'est pas une reprise du premier. Aucune redondance en substance n'est relevée.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565009,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 240,
+      "prompt_tokens": 385,
+      "total_tokens": 625,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "key": "ac6b1745caddb86e590612e7082f26215bab29877c8c3fff56ce8db50177aadd",
+  "value": {
+    "id": "msg_011ChNgbkXGfQYcCfqtrtf3W",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "```json\n{\"has_opposing_claim\": true, \"opposing_claim\": \"Le système judiciaire peut se tromper, ce qui entraînerait la condamnation d'innocents à mort.\", \"main_thesis\": \"La peine capitale est justifiée, car certains criminels sont irrécupérables et représentent un danger permanent pour la société.\"}\n```",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565769,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 493,
+      "prompt_tokens": 515,
+      "total_tokens": 1008,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

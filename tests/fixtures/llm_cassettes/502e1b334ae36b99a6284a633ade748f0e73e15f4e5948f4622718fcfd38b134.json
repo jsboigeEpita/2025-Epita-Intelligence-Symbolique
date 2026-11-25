@@ -1,0 +1,36 @@
+{
+  "key": "502e1b334ae36b99a6284a633ade748f0e73e15f4e5948f4622718fcfd38b134",
+  "value": {
+    "id": "msg_011ChNgc5cjKfsjdpmMRDz2T",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\": 1.0, \"exhibit\": \"Position adverse identifiée : le système judiciaire peut se tromper, ce qui entraînerait la condamnation d'innocents à mort. Verdict d'engagement (étape 2) : engagement_réel, c'est-à-dire que la réfutation s'attaque effectivement à cette thèse adverse et ne se contente pas de la mentionner. Le texte de la réfutation elle-même n'est pas fourni ici ; le score repose uniquement sur le verdict d'engagement de l'étape 2.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565773,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 465,
+      "prompt_tokens": 408,
+      "total_tokens": 873,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

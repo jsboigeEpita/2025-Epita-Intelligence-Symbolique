@@ -3,29 +3,17 @@
   "value": [
     {
       "role": "assistant",
-      "content": "{\n  \"formulas\": [\n    \"Test(test_memoire_numero_1)\",\n    \"forall X: (Test(X) => Important(X))\"\n  ],\n  \"predicates\": {\n    \"Test\": \"est un test\",\n    \"Important\": \"est important\"\n  },\n  \"variables\": {\n    \"X\": \"test\"\n  },\n  \"reasoning\": \"Le texte identifie un test particulier, représenté par la constante test_memoire_numero_1. La phrase « Tous les tests sont importants » se traduit par une implication universelle : pour tout X, si X est un test, alors X est important.\"\n}",
+      "content": "```json\n{\n    \"formulas\": [\n        \"forall X: (Test(X) => Important(X))\",\n        \"Test(test1)\"\n    ],\n    \"predicates\": {\n        \"Test\": \"est un test\",\n        \"Important\": \"est important\"\n    },\n    \"variables\": {\n        \"X\": \"un objet quelconque\"\n    },\n    \"reasoning\": \"La phrase « Tous les tests sont importants » se traduit par une quantification universelle : pour tout X, si X est un test, alors X est important, d'où forall X: (Test(X) => Important(X)). La première phrase « Test mémoire numéro 1 » est un intitulé qui désigne un test particulier ; on la modélise par la constante test1 et le fait Test(test1). Le texte ne dit pas explicitement que ce test est important, donc on ne peut pas en déduire Important(test1) : cette conclusion reste hors de la base de connaissances.\"\n}\n```",
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EkNwkGpcr9jMbs3ltNm0NGKLSOVNL",
-        "created": 1794723846,
+        "id": "msg_011ChNg8c2JLVFd2ARSKaegY",
+        "created": 1795565401,
         "system_fingerprint": null,
         "usage": {
-          "prompt_tokens": 285,
-          "prompt_tokens_details": {
-            "audio_tokens": 0,
-            "cache_write_tokens": 0,
-            "cached_tokens": 0,
-            "image_tokens": null,
-            "text_tokens": null
-          },
-          "completion_tokens": 248,
-          "completion_tokens_details": {
-            "accepted_prediction_tokens": 0,
-            "audio_tokens": 0,
-            "reasoning_tokens": 104,
-            "rejected_prediction_tokens": 0,
-            "text_tokens": null
-          }
+          "prompt_tokens": 459,
+          "prompt_tokens_details": null,
+          "completion_tokens": 649,
+          "completion_tokens_details": null
         }
       }
     }

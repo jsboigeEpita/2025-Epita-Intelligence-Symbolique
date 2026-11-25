@@ -1,0 +1,36 @@
+{
+  "key": "4bb179b448c08652cbfe65d010c8be8a41a632437362a1d9272e2cfd68e1831b",
+  "value": {
+    "id": "msg_011ChNfWiP2KWQ5VaWkyLzaB",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "```json\n{\"has_semantic_redundancy\": true, \"redundancy_verdict\": \"redondance_sémantique\", \"located_redundancy\": \"La formulation « personne n'a proposé de supprimer les retraites, seulement de les réformer (autrement/différemment) » (homme de paille) apparaît deux fois, quasi textuellement, dans l'argument : en ouverture, puis à nouveau après la projection du déficit. La seconde occurrence n'apporte aucun élément nouveau.\"}\n```",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795564916,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 866,
+      "prompt_tokens": 785,
+      "total_tokens": 1651,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "key": "48c161f8b374c2944e432913c7c0ea7ac3dfaf84b7f04422cfc6fcce9c3487b2",
+  "value": {
+    "id": "msg_011ChNgXjNwy1rZyaGMnASvR",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\": 0.5, \"exhibit\": \"Points distincts : (1) les vaccins sont indispensables à la santé publique ; (2) leur valeur repose sur des études scientifiques montrant des effets démontrés sur des maladies précises ; (3) les études montrent que la vaccination a éradiqué (point tronqué). Redondance localisée : les points 2 et 3 reprennent tous deux l'appui sur des études scientifiques, le point 3 étant une illustration concrète du point 2. Cette reprise précise le propos sans répéter l'idée de fond, d'où un verdict de reformulation utile et un score intermédiaire.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565714,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 447,
+      "prompt_tokens": 433,
+      "total_tokens": 880,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

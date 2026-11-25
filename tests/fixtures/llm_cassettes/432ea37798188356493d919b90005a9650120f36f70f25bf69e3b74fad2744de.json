@@ -1,0 +1,36 @@
+{
+  "key": "432ea37798188356493d919b90005a9650120f36f70f25bf69e3b74fad2744de",
+  "value": {
+    "id": "msg_011ChNgkKtgw5V1H9QA4xGMn",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_semantic_redundancy\": true, \"redundancy_verdict\": \"redondance_sémantique\", \"located_redundancy\": \"« Le consensus des modèles prédictifs sur le rôle des activités humaines appuie la thèse de l'auteur » (point 1, phrase d'ouverture) et « Les modèles prédictifs sont unanimes sur l'impact des activités humaines » (phrase citée, reprise plus loin) : même affirmation sur le consensus, formulée deux fois sans apport nouveau.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565886,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 727,
+      "prompt_tokens": 693,
+      "total_tokens": 1420,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

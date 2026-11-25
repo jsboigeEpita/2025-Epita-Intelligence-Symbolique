@@ -1,0 +1,36 @@
+{
+  "key": "ea17bd98013d1a4372cc473095b182649c8cf5696b4485a31ba214b9f8ea9fcf",
+  "value": {
+    "id": "msg_011ChNg33iT74xQe3xJM773j",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_thesis\": true, \"thesis\": \"Il faut élargir le fonds de livres jeunesse (Option A), car le fonds actuel vieillit et les plus jeunes lecteurs sont les plus nombreux.\", \"digressions\": \"Option B : créer un espace numérique avec des ordinateurs en libre accès pour réduire la fracture numérique du quartier. Cette proposition alternative ne sert pas la thèse. La mention « Trois usages sont en concurrence » annonce une troisième option qui n'est jamais présentée.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565326,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 766,
+      "prompt_tokens": 488,
+      "total_tokens": 1254,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

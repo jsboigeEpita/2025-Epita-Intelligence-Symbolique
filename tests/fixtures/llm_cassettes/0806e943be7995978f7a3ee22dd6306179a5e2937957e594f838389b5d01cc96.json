@@ -1,0 +1,36 @@
+{
+  "key": "0806e943be7995978f7a3ee22dd6306179a5e2937957e594f838389b5d01cc96",
+  "value": {
+    "id": "msg_011ChNgbtSGY2hP1XydTyVK7",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"distinct_points\": \"1. La peine de mort est une sanction nécessaire dans certains cas extrêmes. 2. La peine de mort a un effet dissuasif contre les crimes les plus graves, comme le meurtre de masse.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565770,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 340,
+      "prompt_tokens": 348,
+      "total_tokens": 688,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

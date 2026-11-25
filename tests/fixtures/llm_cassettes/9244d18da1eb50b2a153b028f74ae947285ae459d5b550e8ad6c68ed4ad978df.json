@@ -1,0 +1,36 @@
+{
+  "key": "9244d18da1eb50b2a153b028f74ae947285ae459d5b550e8ad6c68ed4ad978df",
+  "value": {
+    "id": "msg_011ChNgWN2YNaGEGVBiF5def",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "```json\n{\"engages_real_claim\": true, \"engagement_verdict\": \"engagement_réel\", \"reasoning\": \"La réfutation cible directement la thèse réelle de dissimulation des effets secondaires et celle de la dangerosité des vaccins, sans la déformer, même si elle les rejette par affirmation (« théorie du complot sans fondement », « ignorent les décennies de recherche ») sans fournir de preuve, et que l'argument sur l'immunité collective ne répond pas à la thèse de dissimulation.\"}\n```",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565696,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 609,
+      "prompt_tokens": 620,
+      "total_tokens": 1229,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

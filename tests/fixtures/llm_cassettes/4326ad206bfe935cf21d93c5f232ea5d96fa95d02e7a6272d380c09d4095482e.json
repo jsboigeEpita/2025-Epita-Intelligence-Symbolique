@@ -1,0 +1,36 @@
+{
+  "key": "4326ad206bfe935cf21d93c5f232ea5d96fa95d02e7a6272d380c09d4095482e",
+  "value": {
+    "id": "msg_011ChNgWn7sLc1jTyhySbqZo",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"distinct_points\": \"1. Un taux de vaccination élevé protège aussi les personnes qui ne peuvent pas être vaccinées, grâce à l'immunité collective (affirmé deux fois, sous forme de citation et de phrase reformulée : un seul point).\\n2. L'argument selon lequel les produits pharmaceutiques cachent les effets secondaires est une théorie du complot sans fondement.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565701,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 361,
+      "prompt_tokens": 421,
+      "total_tokens": 782,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "key": "8e60f7a0fd534c90a088ad5dc41f07201cf96cbe3ba189a86042df79852d058d",
+  "value": {
+    "id": "msg_011ChNgjU62YmKDCmVMg3fy7",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\": 1.0, \"exhibit\": \"Position adverse identifiée : la thèse selon laquelle la crise climatique serait minimisée, position de ceux qui la minimisent et qui reposerait, selon l'auteur, sur des données sélectives. Verdict d'engagement : engagement réel avec cette thèse adverse, ce qui satisfait le critère de réfutation constructive pleinement démontrée.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565873,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 411,
+      "prompt_tokens": 420,
+      "total_tokens": 831,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

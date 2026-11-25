@@ -1,0 +1,36 @@
+{
+  "key": "d5d0f61285ab80c87a5ac05b00f31b82abe048a7b2243d64667b585eafcbeaec",
+  "value": {
+    "id": "msg_011ChNfwp9VnBNsKFRfqMwW3",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\": 0.5, \"exhibit\": \"Points distincts visibles : (1) Option A, tournoi inter-villes avec buffet et prix (2000 €) pour la visibilité du club ; (2) Option B, investissement de 2000 € en matériel pédagogique et échiquiers. Ces deux points portent sur des objectifs différents (visibilité contre pédagogie) et ne se recouvrent pas en substance. Le point (3), Option C, est tronqué (« adopter un for… ») et ne peut pas être évalué. Le verdict externe « redondance_sémantique » n'est pas localisé dans le texte visible : aucune reprise n'est démontrable sur les deux points complets. Le score intermédiaire reflète cette incertitude, faute de passages répétés vérifiables.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565255,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 713,
+      "prompt_tokens": 447,
+      "total_tokens": 1160,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

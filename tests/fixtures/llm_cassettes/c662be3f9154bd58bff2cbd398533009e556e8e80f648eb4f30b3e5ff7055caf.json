@@ -1,0 +1,36 @@
+{
+  "key": "c662be3f9154bd58bff2cbd398533009e556e8e80f648eb4f30b3e5ff7055caf",
+  "value": {
+    "id": "msg_011ChNgbvDRtKJrkaan8qqse",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "```json\n{\"chain_holds\": false, \"structure_verdict\": \"saut_logique\", \"reasoning\": \"La prémisse de dissuasion ne établit pas la nécessité, car elle ne montre pas que la peine de mort dissuade mieux que l'emprisonnement à perpétuité, et la prémisse sur l'ADN répond à un risque d'erreur judiciaire sans justifier le caractère nécessaire de la sanction.\"}\n```",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565772,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 550,
+      "prompt_tokens": 688,
+      "total_tokens": 1238,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

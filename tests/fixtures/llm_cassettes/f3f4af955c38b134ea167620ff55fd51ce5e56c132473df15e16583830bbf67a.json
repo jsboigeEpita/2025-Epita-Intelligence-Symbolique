@@ -1,0 +1,36 @@
+{
+  "key": "f3f4af955c38b134ea167620ff55fd51ce5e56c132473df15e16583830bbf67a",
+  "value": {
+    "id": "msg_011ChNfUy7FR6U5DtGvC9yqJ",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\": 0.5, \"exhibit\": \"Thèse : « La réforme des retraites est nécessaire. » Les propositions de l'argument servent cette thèse, à l'exception d'une digression mineure : la dernière phrase, « C'est un argument d'autorité qui ne tient pas compte des différences structurelles entre les systèmes. », est une critique externe de l'argument et ne soutient pas la thèse. L'ensemble reste centré sur la thèse. Note : le verdict de l'étape 2 (« toutes_pertinentes ») contredit l'identification de cette digression à l'étape 1 ; le score retient la digression identifiée, d'où 0.5 plutôt que 1.0.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795564891,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 706,
+      "prompt_tokens": 431,
+      "total_tokens": 1137,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

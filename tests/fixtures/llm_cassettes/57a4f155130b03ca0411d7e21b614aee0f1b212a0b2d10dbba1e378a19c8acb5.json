@@ -1,0 +1,36 @@
+{
+  "key": "57a4f155130b03ca0411d7e21b614aee0f1b212a0b2d10dbba1e378a19c8acb5",
+  "value": {
+    "id": "msg_011ChNgatCbqgzDBixH5Ydwa",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "```json\n{\"has_clarity_obstacle\": true, \"obstacles\": \"Anaphore non résolvable : le pronom « Elle » (« Elle sert de dissuasion contre les crimes les plus graves ») n'a pas d'antécédent dans le texte. Le sujet implicite, probablement la peine de mort, n'est jamais nommé. Le seul nom féminin antérieur est absent, et « système » est masculin, donc « Elle » ne peut pas s'y rapporter.\"}\n```",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565757,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 442,
+      "prompt_tokens": 497,
+      "total_tokens": 939,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

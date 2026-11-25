@@ -1,0 +1,36 @@
+{
+  "key": "0d13e4f20e8e5ac22dc55b406f3136b0c138f3a697ae2d129312674b11bf01bb",
+  "value": {
+    "id": "msg_011ChNgD5YsJAY3AYGA4ZsM1",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_chain\": true, \"premises\": \"Le tournoi inter-villes avec buffet et prix augmentera la visibilité du club et recrutera de nouveaux membres.\", \"conclusion\": \"Il faut organiser un tournoi inter-villes avec buffet et prix pour 2000 euros (Option A).\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565460,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 365,
+      "prompt_tokens": 537,
+      "total_tokens": 902,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

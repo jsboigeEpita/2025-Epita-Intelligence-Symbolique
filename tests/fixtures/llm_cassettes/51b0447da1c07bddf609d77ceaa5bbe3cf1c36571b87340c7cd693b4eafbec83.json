@@ -1,0 +1,36 @@
+{
+  "key": "51b0447da1c07bddf609d77ceaa5bbe3cf1c36571b87340c7cd693b4eafbec83",
+  "value": {
+    "id": "msg_011ChNgk7mBV4A9fy3vUCzdj",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "```json\n{\"distinct_points\": \"1. Le consensus des modèles prédictifs sur l'impact des activités humaines appuie la thèse de l'auteur.\\n2. Les sceptiques, en affirmant que le climat a toujours changé, omettent la vitesse sans précédent du changement actuel.\\n3. Ceux qui minimisent la crise climatique utilisent souvent des données sélectives pour soutenir leur position.\"}\n```",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565882,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 579,
+      "prompt_tokens": 417,
+      "total_tokens": 996,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

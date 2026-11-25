@@ -1,0 +1,36 @@
+{
+  "key": "64020eff03d43bdadacb1b22633073803f2c720c259b3a711be127e0224b177a",
+  "value": {
+    "id": "msg_011ChNfqwLQzvMb6gpfUSAkw",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"arguments\": [{\"text\": \"L'unanimité des experts est présentée comme la preuve suffisante de la vérité d'une thèse.\", \"source_quote\": \"Argument 1 : Les experts sont unanimes, c'est donc vrai.\", \"move_author\": \"speaker\"}, {\"text\": \"Seule l'opinion des experts compte : le avis d'une personne non experte est présenté comme sans valeur dans le débat.\", \"source_quote\": \"Argument 2 : Si vous n'etes pas expert, votre avis ne compte pas.\", \"move_author\": \"speaker\"}], \"claims\": [{\"text\": \"Les experts sont unanimes sur la question en débat.\", \"source_quote\": \"Les experts sont unanimes, c'est donc vrai.\"}, {\"text\": \"Un avis formulé par une personne qui n'est pas experte n'a pas de valeur.\", \"source_quote\": \"Si vous n'etes pas expert, votre avis ne compte pas.\"}], \"summary\": \"Le texte est très bref et présente deux arguments d'autorité : le premier tire la vérité de l'unanimité des experts, le second dénie toute valeur à l'avis des non-experts. Aucun des deux n'est étayé par une source ou une démonstration, et le texte ne précise ni quels experts ni quelle thèse est visée, ce qui limite la vérification des affirmations.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565176,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 824,
+      "prompt_tokens": 884,
+      "total_tokens": 1708,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

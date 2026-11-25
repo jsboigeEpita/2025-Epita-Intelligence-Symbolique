@@ -1,0 +1,36 @@
+{
+  "key": "e41943a8c55663c90c2317b0791fa47f207e3a106c35e2845780a18e1da274fd",
+  "value": {
+    "id": "msg_011ChNgm2MmBmJZfe69eEhFW",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\": 0.5, \"exhibit\": \"Thèse : la transition énergétique est nécessaire et économiquement avantageuse à long terme. Digression localisée : une phrase sur ceux qui minimisent la crise climatique et utilisent des données sélectives. Elle porte sur les opposants et non sur la transition, mais reste isolée, et l'argumentation principale demeure centrée sur la thèse.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565894,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 308,
+      "prompt_tokens": 449,
+      "total_tokens": 757,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

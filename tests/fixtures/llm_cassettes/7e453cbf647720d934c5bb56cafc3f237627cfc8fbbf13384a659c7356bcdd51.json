@@ -1,0 +1,36 @@
+{
+  "key": "7e453cbf647720d934c5bb56cafc3f237627cfc8fbbf13384a659c7356bcdd51",
+  "value": {
+    "id": "msg_011ChNfVSgSAeA7v9xivGioq",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_opposing_claim\": true, \"opposing_claim\": \"Le gouvernement soutient que travailler plus longtemps est « dans l'ordre des choses », que le système s'effondrera dans cinq ans sans action immédiate, et que le déficit atteindra 2,3 % du PIB d'ici 2030.\", \"main_thesis\": \"Les arguments du gouvernement en faveur de la réforme sont fallacieux ou peu fiables : il recourt à un sophisme naturaliste, à un appel à la peur, et ses projections de déficit reposent sur des hypothèses de croissance optimistes.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795564896,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 548,
+      "prompt_tokens": 618,
+      "total_tokens": 1166,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

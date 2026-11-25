@@ -1,0 +1,36 @@
+{
+  "key": "86efb22cc04828d2f8aa2e3f7fb7421598cf4a0952518b31e8137bcc62f28f16",
+  "value": {
+    "id": "msg_011ChNgW6RvfQ7YrStFvvbWi",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "```json\n{\"score\": 0.5, \"exhibit\": \"Thèse : les personnes qui affirment que les vaccins sont dangereux ont tort, car elles ignorent la recherche clinique accumulée sur plusieurs décennies. Digression localisée : la phrase « L'argument selon lequel les produits pharmaceutiques cachent les effets secondaires est une théorie du complot sans fondement. » porte sur les intentions supposées des acteurs, sans servir directement la thèse. L'argumentation reste centrée sur la thèse, la digression étant mineure et isolée.\"}\n```",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565691,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 399,
+      "prompt_tokens": 473,
+      "total_tokens": 872,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

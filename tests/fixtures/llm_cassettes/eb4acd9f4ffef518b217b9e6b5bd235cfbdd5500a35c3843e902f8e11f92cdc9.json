@@ -1,0 +1,36 @@
+{
+  "key": "eb4acd9f4ffef518b217b9e6b5bd235cfbdd5500a35c3843e902f8e11f92cdc9",
+  "value": {
+    "id": "msg_011ChNg3tfmVy9qjR474cLDF",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"chain_holds\": true, \"structure_verdict\": \"progression_logique\", \"reasoning\": \"Le vieillissement du fonds et le nombre élevé de jeunes lecteurs fournissent une justification pertinente pour élargir le fonds jeunesse, bien qu'une prémisse implicite (ces lecteurs sont mal desservis ou la priorité leur revient) soit nécessaire pour que l'inférence soit pleinement concluante.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565337,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 435,
+      "prompt_tokens": 705,
+      "total_tokens": 1140,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

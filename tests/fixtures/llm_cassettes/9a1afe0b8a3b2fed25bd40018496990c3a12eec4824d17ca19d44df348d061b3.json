@@ -1,0 +1,36 @@
+{
+  "key": "9a1afe0b8a3b2fed25bd40018496990c3a12eec4824d17ca19d44df348d061b3",
+  "value": {
+    "id": "msg_011ChNfw8iRPyDgXfCDPd5MW",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_opposing_claim\": false, \"opposing_claim\": \"\", \"main_thesis\": \"Aucune thèse explicite : le texte énumère des options de répartition d'un budget de 2000 euros (option B : matériel pédagogique et échiquiers neufs ; option C : format hybride, 1000 euros pour un tournoi réduit et 1000 euros pour du matériel).\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565244,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 348,
+      "prompt_tokens": 466,
+      "total_tokens": 814,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

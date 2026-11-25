@@ -1,0 +1,21 @@
+{
+  "key": "8f8b92736a01b00e0b1da4556f15d9ef92399137392536533d194b7be8165aa7",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "## Analyse du texte source\n\n- **Nature du texte** : le document est constitué quasi exclusivement de texte de remplissage (« Lorem ipsum… », « Sed non risus… », « Suspendisse lectus tortor… ») répété de nombreuses fois.\n- **Contenu pertinent** : une seule phrase en français traite du sujet : « La déclaration cruciale sur l'économie verte est enfouie ici. ». Elle est collée sans espace au passage suivant (« enfouie ici.Lorem ipsum… »), ce qui impose de choisir des bornes précises.\n- **Unicité** : la formulation « La déclaration cruciale » n'apparaît qu'une fois, ce qui en fait un marqueur de début fiable. « enfouie ici. » apparaît également une seule fois.\n\n## Proposition\n\n```json\n{\n  \"start_marker\": \"La déclaration cruciale\",\n  \"end_marker\": \"enfouie ici.\",\n  \"template_start\": null,\n  \"explanation\": \"Le texte source ne contient aucun véritable contenu sur l'économie verte, hormis la phrase « La déclaration cruciale sur l'économie verte est enfouie ici. ». Le marqueur de début « La déclaration cruciale » est unique dans le document et correspond au début de cette phrase. Le marqueur de fin « enfouie ici. » est également unique et marque la fin de la phrase, sans inclure le texte de remplissage qui la suit immédiatement (« Lorem ipsum… »), car celui-ci n'a aucun rapport avec la dénomination « Le point sur l'économie verte ». Le champ template_start est laissé à null, car aucun élément de structure (titre, en-tête) ne précède la phrase dans le texte source. Remarque : l'extrait obtenu est très court ; si la dénomination doit correspondre à un passage plus étendu, il faudrait disposer d'un texte source réel, car le texte fourni est un gabarit de remplissage.\"\n}\n```",
+      "metadata": {
+        "logprobs": null,
+        "id": "msg_011ChNgN7jaXgYV19k2Bmgwg",
+        "created": 1795565588,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 15537,
+          "prompt_tokens_details": null,
+          "completion_tokens": 1476,
+          "completion_tokens_details": null
+        }
+      }
+    }
+  ]
+}

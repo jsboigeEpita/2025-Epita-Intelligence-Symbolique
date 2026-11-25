@@ -1,0 +1,36 @@
+{
+  "key": "91fef9a75ea16a20132313aa793a8353d5f392c2194f3f16301e5da66ea6984e",
+  "value": {
+    "id": "msg_011ChNgcUgoE3VRwREDrhBqp",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "```json\n{\"chain_holds\": false, \"structure_verdict\": \"saut_logique\", \"reasoning\": \"Le fait que certains criminels soient irrécupérables et dangereux ne démontre pas à lui seul que la peine capitale soit justifiée, car il manque une prémisse reliant cette dangerosité à la peine de mort plutôt qu'à l'emprisonnement à vie, et l'irréversibilité concédée dans le texte reste sans réponse.\"}\n```",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565779,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 463,
+      "prompt_tokens": 682,
+      "total_tokens": 1145,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

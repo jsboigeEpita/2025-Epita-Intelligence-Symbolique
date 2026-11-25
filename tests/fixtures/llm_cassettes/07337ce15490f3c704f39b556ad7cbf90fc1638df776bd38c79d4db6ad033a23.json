@@ -1,0 +1,36 @@
+{
+  "key": "07337ce15490f3c704f39b556ad7cbf90fc1638df776bd38c79d4db6ad033a23",
+  "value": {
+    "id": "msg_011ChNfXaBwec71XfVrbRySM",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "```json\n{\"has_chain\": true, \"premises\": \"La menace d'un effondrement du système dans cinq ans, présentée comme conséquence de l'inaction (« si nous n'agissons pas maintenant »), vise à provoquer une réaction émotionnelle plutôt qu'à être démontrée ; elle sert à pousser à agir immédiatement sans fondement argumentatif explicite.\", \"conclusion\": \"Cette menace relève de l'appel à la peur (sophisme), et ne constitue donc pas une raison valable d'agir maintenant.\"}\n```",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795564927,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 864,
+      "prompt_tokens": 401,
+      "total_tokens": 1265,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

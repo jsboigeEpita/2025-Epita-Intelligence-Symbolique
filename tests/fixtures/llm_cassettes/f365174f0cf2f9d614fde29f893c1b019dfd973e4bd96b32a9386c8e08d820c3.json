@@ -1,0 +1,36 @@
+{
+  "key": "f365174f0cf2f9d614fde29f893c1b019dfd973e4bd96b32a9386c8e08d820c3",
+  "value": {
+    "id": "msg_011ChNgVv7Z5CdauxLC2mMdB",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_digression\": true, \"relevance_verdict\": \"digression_localisée\", \"located_digression\": \"Ceux qui affirment que les vaccins sont dangereux ignorent les décennies de recherche clinique. ; Les taux de vaccination élevés protègent aussi ceux qui ne peuvent pas être vaccinés grâce à l'immunité collective.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565690,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 501,
+      "prompt_tokens": 701,
+      "total_tokens": 1202,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

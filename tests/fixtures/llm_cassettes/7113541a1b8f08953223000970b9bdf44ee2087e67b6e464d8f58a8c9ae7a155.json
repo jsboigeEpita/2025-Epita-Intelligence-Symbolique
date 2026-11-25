@@ -1,0 +1,36 @@
+{
+  "key": "7113541a1b8f08953223000970b9bdf44ee2087e67b6e464d8f58a8c9ae7a155",
+  "value": {
+    "id": "msg_011ChNfw8QZZa3pfwHeD8BEU",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "```json\n{\"obstacle_genuinely_opaque\": false, \"clarity_verdict\": \"résolvable_contexte\", \"reasoning\": \"Le décompte « trois options » ne correspond qu'à deux options présentées, mais le sens du débat (A contre B) reste clair et compréhensible, de sorte que l'incohérence est une lacune de comptage plutôt qu'un sens inaccessible.\"}\n```",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565245,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 541,
+      "prompt_tokens": 617,
+      "total_tokens": 1158,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

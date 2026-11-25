@@ -1,0 +1,36 @@
+{
+  "key": "e22f5cbd1ff30217dff5df23e4737d9fe1200702dfbee69db307fadfd34ea8ba",
+  "value": {
+    "id": "msg_011ChNgjW9nzEXy1QemvfbXo",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "```json\n{\"distinct_points\": \"1. Le changement climatique est une réalité scientifique incontestable, ce qui fonde la position de l'auteur (énoncé deux fois, reformulation d'un même point). 2. Les mesures de température globale montrent une augmentation de 1,1 degré depuis l'ère préindustrielle (preuve empirique avancée à l'appui du point 1).\"}\n```",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565873,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 367,
+      "prompt_tokens": 355,
+      "total_tokens": 722,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

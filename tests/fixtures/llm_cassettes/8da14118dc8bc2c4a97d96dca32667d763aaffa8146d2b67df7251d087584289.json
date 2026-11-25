@@ -1,0 +1,36 @@
+{
+  "key": "8da14118dc8bc2c4a97d96dca32667d763aaffa8146d2b67df7251d087584289",
+  "value": {
+    "id": "msg_011ChNgcwKgQX2nYBvsCFf3S",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_digression\": true, \"relevance_verdict\": \"digression_localisée\", \"located_digression\": \"il faut reconnaître que la peine de mort est irréversible, ce qui rend toute erreur fatale\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565784,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 377,
+      "prompt_tokens": 668,
+      "total_tokens": 1045,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

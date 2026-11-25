@@ -1,0 +1,36 @@
+{
+  "key": "782cb296bb12aa7539a23d83fb16caf1ac8add3ecd76853aaa2fc0917e7d5b57",
+  "value": {
+    "id": "msg_011ChNgbKz8iF8suM9Yeuasv",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "```json\n{\"has_chain\": true, \"premises\": \"Elle sert de dissuasion contre les crimes les plus graves comme le meurtre de masse.\", \"conclusion\": \"La peine de mort est une sanction nécessaire dans certains cas extrêmes.\"}\n```",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565763,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 471,
+      "prompt_tokens": 421,
+      "total_tokens": 892,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

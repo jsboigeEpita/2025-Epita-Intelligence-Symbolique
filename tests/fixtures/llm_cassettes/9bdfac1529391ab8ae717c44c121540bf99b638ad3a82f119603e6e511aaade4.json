@@ -1,0 +1,36 @@
+{
+  "key": "9bdfac1529391ab8ae717c44c121540bf99b638ad3a82f119603e6e511aaade4",
+  "value": {
+    "id": "msg_011ChNgiw4iRZftaLX8zfx63",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"engages_real_claim\": true, \"engagement_verdict\": \"engagement_réel\", \"reasoning\": \"La réfutation reprend directement la prémisse « le climat a toujours changé » et oppose l'argument de la vitesse sans précédent du changement actuel, ce qui touche la conclusion visée (que le réchauffement actuel ne serait pas particulier) sans déformer la position.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565866,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 491,
+      "prompt_tokens": 595,
+      "total_tokens": 1086,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

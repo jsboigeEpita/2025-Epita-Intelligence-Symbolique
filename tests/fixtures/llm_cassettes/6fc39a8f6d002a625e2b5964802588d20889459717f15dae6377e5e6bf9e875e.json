@@ -1,0 +1,36 @@
+{
+  "key": "6fc39a8f6d002a625e2b5964802588d20889459717f15dae6377e5e6bf9e875e",
+  "value": {
+    "id": "msg_011ChNgWErSEyZB8PpGWTMZS",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "```json\n{\"has_opposing_claim\": true, \"opposing_claim\": \"Les vaccins sont dangereux\", \"main_thesis\": \"La vaccination est efficace et sûre, comme le montrent les décennies de recherche clinique et ses résultats (éradication de la variole, forte réduction de la polio), et les allégations de dissimulation des effets secondaires par l'industrie pharmaceutique sont infondées.\"}\n```",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565693,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 252,
+      "prompt_tokens": 543,
+      "total_tokens": 795,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "key": "d4f3df77ff836a33c742c06906f1541e5ce30d9d0a34ea114c123b0b8220c04c",
+  "value": {
+    "id": "msg_011ChNfVu1ii9JbrW94qRZYw",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "```json\n{\"score\": 0.0, \"exhibit\": \"Chaîne reconstruite : prémisse « Tous les pays européens ont déjà fait la réforme des retraites. » → conclusion « La réforme des retraites est nécessaire. » Verdict de structure : saut logique. Le fait que tous les pays européens aient déjà réformé leurs retraites ne établit pas que la réforme soit nécessaire ; la conclusion ne découle pas des prémisses, sans inférence reliant les deux.\"}\n```",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795564902,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 405,
+      "prompt_tokens": 404,
+      "total_tokens": 809,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

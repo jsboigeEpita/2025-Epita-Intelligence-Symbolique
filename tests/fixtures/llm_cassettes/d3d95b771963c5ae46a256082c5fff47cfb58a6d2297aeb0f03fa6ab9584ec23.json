@@ -1,0 +1,36 @@
+{
+  "key": "d3d95b771963c5ae46a256082c5fff47cfb58a6d2297aeb0f03fa6ab9584ec23",
+  "value": {
+    "id": "msg_011ChNgcPWFDtzhk11khh6vq",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\": 1.0, \"exhibit\": \"Position adverse identifiée : « Le système judiciaire peut se tromper et condamner des innocents. » Verdict d'engagement : engagement_réel, la réfutation s'engage effectivement sur cette thèse adverse, et non sur un homme de paille. La structure démontrée est donc une réfutation constructive complète.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565777,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 363,
+      "prompt_tokens": 393,
+      "total_tokens": 756,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

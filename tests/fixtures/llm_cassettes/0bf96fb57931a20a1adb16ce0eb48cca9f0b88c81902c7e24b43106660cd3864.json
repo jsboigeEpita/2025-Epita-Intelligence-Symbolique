@@ -1,0 +1,36 @@
+{
+  "key": "0bf96fb57931a20a1adb16ce0eb48cca9f0b88c81902c7e24b43106660cd3864",
+  "value": {
+    "id": "msg_011ChNgkLokKihR2ZEZ1MYJS",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"obstacle_genuinely_opaque\": false, \"clarity_verdict\": \"résolvable_contexte\", \"reasoning\": \"L'expression « Position opposée » est précisée par le deux-points qui suit (« attribuée à ceux qui minimisent la crise »), et la thèse à laquelle elle s'oppose se déduit des phrases suivantes (crise réelle, transition nécessaire), donc le lecteur peut l'inférer sans difficulté.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565886,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 631,
+      "prompt_tokens": 600,
+      "total_tokens": 1231,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

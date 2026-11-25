@@ -1,0 +1,36 @@
+{
+  "key": "f3eaab222f33ce174219a6498510eca1aaf9363ed2e3a6f2ec21649d80eaab2e",
+  "value": {
+    "id": "msg_011ChNgigk1Yn2Tjbtd7zhb6",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "```json\n{\"has_opposing_claim\": false, \"opposing_claim\": \"\", \"main_thesis\": \"Le changement climatique est une réalité scientifique incontestable, étayée par les mesures de température globale montrant une hausse de 1,1 degré depuis l'ère préindustrielle.\"}\n```",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565861,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 204,
+      "prompt_tokens": 439,
+      "total_tokens": 643,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

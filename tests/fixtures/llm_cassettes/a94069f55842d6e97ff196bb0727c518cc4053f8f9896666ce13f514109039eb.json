@@ -1,0 +1,36 @@
+{
+  "key": "a94069f55842d6e97ff196bb0727c518cc4053f8f9896666ce13f514109039eb",
+  "value": {
+    "id": "msg_011ChNgnSufjZ76Z9TuEqf6G",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\": 1.0, \"exhibit\": \"Trois points distincts : (1) la transition énergétique est nécessaire ; (2) elle est économiquement avantageuse à long terme ; (3) ceux qui minimisent la crise climatique utilisent souvent des données sélectives. Les points 1 et 2 portent sur deux affirmations différentes (nécessité versus avantage économique) et le point 3 porte sur une critique des contradicteurs. Aucune reprise en substance n'est localisée dans ces trois points. Le verdict « redondance_sémantique » ne s'appuie sur aucune paire précise de points listés.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565915,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 671,
+      "prompt_tokens": 425,
+      "total_tokens": 1096,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

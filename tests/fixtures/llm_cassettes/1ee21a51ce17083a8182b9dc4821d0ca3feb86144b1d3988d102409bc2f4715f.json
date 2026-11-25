@@ -1,0 +1,36 @@
+{
+  "key": "1ee21a51ce17083a8182b9dc4821d0ca3feb86144b1d3988d102409bc2f4715f",
+  "value": {
+    "id": "msg_011ChNfUpWpArtxxV2zRViND",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_thesis\": true, \"thesis\": \"Le gouvernement justifie à tort le fait de travailler plus longtemps en le présentant comme « dans l'ordre des choses », ce qui constitue un sophisme naturaliste.\", \"digressions\": \"La phrase sur le ministre des finances (« le ministre des finances a présenté des chiffres montrant que le déficit atteindra 2.3% du PIB d'ici 2030, mais cette projection repose sur des hypothèses de croissance optimistes de 1.8% par an ») introduit un nouveau sujet, celui de la crédibilité des projections budgétaires, sans lien direct avec le sophisme naturaliste. La phrase répétée « Les syndicats rétorquent que le gouvernement utilise un sophisme naturaliste… » est une redondance et non une digression de fond.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795564890,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 850,
+      "prompt_tokens": 566,
+      "total_tokens": 1416,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

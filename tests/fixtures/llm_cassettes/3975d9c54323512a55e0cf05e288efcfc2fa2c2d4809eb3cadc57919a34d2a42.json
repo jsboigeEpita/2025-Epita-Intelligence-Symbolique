@@ -1,0 +1,36 @@
+{
+  "key": "3975d9c54323512a55e0cf05e288efcfc2fa2c2d4809eb3cadc57919a34d2a42",
+  "value": {
+    "id": "msg_011ChNfVj4RYa2zGFKy1a66d",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\": 1.0, \"exhibit\": \"Position adverse identifiée : la projection du ministre des finances selon laquelle le déficit atteindra 2.3% du PIB d'ici 2030. Verdict d'engagement : engagement_réel, la réfutation s'attaque à cette projection précise et non à une version simplifiée ou déformée.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795564900,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 396,
+      "prompt_tokens": 410,
+      "total_tokens": 806,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

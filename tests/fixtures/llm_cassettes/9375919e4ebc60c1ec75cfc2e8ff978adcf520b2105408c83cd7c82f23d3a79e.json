@@ -1,0 +1,36 @@
+{
+  "key": "9375919e4ebc60c1ec75cfc2e8ff978adcf520b2105408c83cd7c82f23d3a79e",
+  "value": {
+    "id": "msg_011ChNgc9j2yNE3J8teFBNjh",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "```json\n{\"score\": 0.0, \"exhibit\": \"Chaîne reconstruite : prémisse 1 « La peine de mort a un effet dissuasif contre les crimes les plus graves, comme le meurtre de masse. » ; prémisse 2 « Les avancées en ADN réduisent considérablement le … » (phrase tronquée) ; conclusion « La peine de mort est une sanction nécessaire dans certains cas extrêmes. » Verdict de structure : saut_logique. La conclusion ne découle pas des prémisses : un effet dissuasif allégué ne justifie pas à lui seul la nécessité de la peine, et la seconde prémisse, incomplète, ne permet pas d'établir l'inférence. Aucune structure d'inférence valide n'est démontrée, d'où le score 0.0.\"}\n```",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565773,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 403,
+      "prompt_tokens": 449,
+      "total_tokens": 852,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

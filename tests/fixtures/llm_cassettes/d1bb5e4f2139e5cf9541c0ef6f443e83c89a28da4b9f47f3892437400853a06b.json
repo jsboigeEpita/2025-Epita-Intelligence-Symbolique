@@ -1,0 +1,36 @@
+{
+  "key": "d1bb5e4f2139e5cf9541c0ef6f443e83c89a28da4b9f47f3892437400853a06b",
+  "value": {
+    "id": "msg_011ChNg47beVfEsp9nHMLotZ",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\": 1.0, \"exhibit\": \"Deux points distincts sont identifiés : (1) l'option C est justifiée par le fait qu'elle sert les deux publics (fonds livre et espace numérique) sans en favoriser un ; (2) l'option B vise la création d'un espace numérique avec ordinateurs en libre accès. Ces points portent sur des options différentes et ne se répètent pas en substance, donc aucune redondance localisée n'est observable. Limite : le point 2 est tronqué (« vise ») et le verdict fourni « redondance_sémantique » n'est pas étayé par le contenu affiché. Il faudrait le texte complet pour confirmer ce verdict.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565340,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 581,
+      "prompt_tokens": 442,
+      "total_tokens": 1023,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

@@ -3,29 +3,17 @@
   "value": [
     {
       "role": "assistant",
-      "content": "**Hypothèse :** La Terre tourne autour du Soleil sur une orbite, ce qui explique les variations apparentes de sa position dans le ciel et les changements de saisons.",
+      "content": "Votre message ne décrit pas la situation précise, mais à partir de l'indice, on peut formuler une hypothèse testable :\n\n**Hypothèse :** Si la Terre tourne autour du Soleil, alors la position apparente du Soleil et des étoiles dans le ciel change au cours de l'année, et les observations faites à six mois d'intervalle, depuis le même lieu à la même heure, donnent des résultats différents.\n\n**Formulation en « si… alors… » :**\n- **Si** la Terre décrit une orbite autour du Soleil,\n- **alors** les étoiles proches devraient paraître se déplacer légèrement par rapport aux étoiles lointaines au cours de l'année (c'est la parallaxe stellaire).\n\n**Comment la tester :** on observe une étoile proche à six mois d'intervalle et on mesure son angle par rapport à des étoiles plus lointaines. Un décalage mesurable confirme l'hypothèse. C'est d'ailleurs ce que Friedrich Bessel a réussi en 1838 avec l'étoile 61 Cygni.\n\nSi vous me donnez la situation exacte (un phénomène observé, un exercice, un contexte scolaire), je peux formuler une hypothèse plus ciblée.",
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EkNymJ7B2ODcieRNdI4bn7dNj125l",
-        "created": 1794723972,
+        "id": "msg_011ChNgKTZrcfUXrXMhmifMu",
+        "created": 1795565549,
         "system_fingerprint": null,
         "usage": {
-          "prompt_tokens": 41,
-          "prompt_tokens_details": {
-            "audio_tokens": 0,
-            "cache_write_tokens": 0,
-            "cached_tokens": 0,
-            "image_tokens": null,
-            "text_tokens": null
-          },
-          "completion_tokens": 83,
-          "completion_tokens_details": {
-            "accepted_prediction_tokens": 0,
-            "audio_tokens": 0,
-            "reasoning_tokens": 38,
-            "rejected_prediction_tokens": 0,
-            "text_tokens": null
-          }
+          "prompt_tokens": 68,
+          "prompt_tokens_details": null,
+          "completion_tokens": 738,
+          "completion_tokens_details": null
         }
       }
     }

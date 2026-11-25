@@ -1,0 +1,36 @@
+{
+  "key": "a6d9aa601e8a4889444607ee2a5aa0e180aae2a1899cc4809c12b9ec8f2d3337",
+  "value": {
+    "id": "msg_011ChNgiQ59ngWccVM1v3aPr",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "```json\n{\"has_thesis\": true, \"thesis\": \"Le changement climatique est une réalité scientifique incontestable.\", \"digressions\": \"\"}\n```",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565859,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 465,
+      "prompt_tokens": 452,
+      "total_tokens": 917,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

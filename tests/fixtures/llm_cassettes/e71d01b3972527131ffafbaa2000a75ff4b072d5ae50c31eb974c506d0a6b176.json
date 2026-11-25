@@ -1,0 +1,36 @@
+{
+  "key": "e71d01b3972527131ffafbaa2000a75ff4b072d5ae50c31eb974c506d0a6b176",
+  "value": {
+    "id": "msg_011ChNgiky1Pp8keGBdFSZUx",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_opposing_claim\": true, \"opposing_claim\": \"Le climat a toujours changé, donc le réchauffement actuel ne constitue pas une preuve d'un changement climatique particulier ou sans précédent\", \"main_thesis\": \"Le changement climatique est une réalité scientifique incontestable, attestée par une hausse de 1,1 °C de la température globale depuis l'ère préindustrielle, et la vitesse actuelle du changement est sans précédent\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565863,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 471,
+      "prompt_tokens": 504,
+      "total_tokens": 975,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

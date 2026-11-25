@@ -1,0 +1,36 @@
+{
+  "key": "b854c7b1cf764ac4cc11a4e7ec861b969f1ef772ff8e55e5a647e36be71befff",
+  "value": {
+    "id": "msg_011ChNgCtBzXy2sheTv5wbgD",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"chain_holds\": false, \"structure_verdict\": \"saut_logique\", \"reasoning\": \"L'usure des échiquiers justifie au mieux le remplacement des échiquiers, mais ne dit rien des horloges ni des supports de cours, et ne montre pas pourquoi investir la totalité des 2000 € serait préférable aux autres options.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565458,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 412,
+      "prompt_tokens": 742,
+      "total_tokens": 1154,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

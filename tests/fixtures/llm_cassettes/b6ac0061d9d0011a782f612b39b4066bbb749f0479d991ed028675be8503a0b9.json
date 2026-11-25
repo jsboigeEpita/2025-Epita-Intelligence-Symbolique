@@ -1,0 +1,36 @@
+{
+  "key": "b6ac0061d9d0011a782f612b39b4066bbb749f0479d991ed028675be8503a0b9",
+  "value": {
+    "id": "msg_011ChNginF9udmLT5T9LUpTt",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_opposing_claim\": true, \"opposing_claim\": \"Le climat a toujours changé, donc le changement climatique actuel ne serait pas anormal.\", \"main_thesis\": \"Le changement climatique actuel est anormal, car il se produit à une vitesse sans précédent, et il est causé par les activités humaines.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565863,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 329,
+      "prompt_tokens": 499,
+      "total_tokens": 828,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

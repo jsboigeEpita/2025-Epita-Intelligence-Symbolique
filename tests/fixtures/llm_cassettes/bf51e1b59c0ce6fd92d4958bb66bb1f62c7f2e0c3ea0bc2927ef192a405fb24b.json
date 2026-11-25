@@ -1,0 +1,36 @@
+{
+  "key": "bf51e1b59c0ce6fd92d4958bb66bb1f62c7f2e0c3ea0bc2927ef192a405fb24b",
+  "value": {
+    "id": "msg_011ChNg3oG5c71YXjU1bEj3x",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_chain\": true, \"premises\": \"Le fonds actuel vieillit ; les plus jeunes lecteurs sont les plus nombreux.\", \"conclusion\": \"Il faut élargir le fonds de livres jeunesse (Option A).\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565334,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 275,
+      "prompt_tokens": 529,
+      "total_tokens": 804,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

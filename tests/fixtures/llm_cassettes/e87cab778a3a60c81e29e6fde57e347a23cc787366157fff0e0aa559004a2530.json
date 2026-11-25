@@ -1,0 +1,36 @@
+{
+  "key": "e87cab778a3a60c81e29e6fde57e347a23cc787366157fff0e0aa559004a2530",
+  "value": {
+    "id": "msg_011ChNgkju4iRpbu1duccPjL",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_thesis\": true, \"thesis\": \"La crise climatique est réelle et d'origine humaine, et ceux qui la minimisent ont tort.\", \"digressions\": \"La dernière phrase, « La transition énergétique est non seulement nécessaire mais aussi économiquement avantageuse à long terme. », porte sur les politiques et l'économie de la transition et non sur la gravité de la crise ou la validité de la position des minimisateurs. Elle s'écarte donc de la thèse.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565892,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 799,
+      "prompt_tokens": 436,
+      "total_tokens": 1235,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

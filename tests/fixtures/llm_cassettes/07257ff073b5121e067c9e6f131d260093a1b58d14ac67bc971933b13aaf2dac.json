@@ -1,0 +1,36 @@
+{
+  "key": "07257ff073b5121e067c9e6f131d260093a1b58d14ac67bc971933b13aaf2dac",
+  "value": {
+    "id": "msg_011ChNfVR8B5i7nGtTZvsTsB",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\": 1.0, \"exhibit\": \"Position adverse identifiée : l'opposition assimile la réforme à une suppression des retraites et invoque l'intérêt des enfants (« pensez à vos enfants ») pour s'y opposer. Verdict d'engagement : engagement_réel, la thèse adverse est effectivement adressée et non seulement évoquée. Structure démontrée : position adverse présente + engagement réel sur cette position, soit une réfutation constructive pleinement démontrée.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795564896,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 479,
+      "prompt_tokens": 432,
+      "total_tokens": 911,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "key": "c3c43aff2031ee4684eccad5462fc56e9e71a9ed6f5b0b6dadb4854f3f68c67a",
+  "value": {
+    "id": "msg_011ChNgkbhSsJbrCAS19u3vW",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "```json\n{\"score\": 0.5, \"exhibit\": \"Points distincts visibles : (1) le consensus des modèles prédictifs sur l'impact des activités humaines appuie la thèse ; (2) les sceptiques, en invoquant les changements climatiques passés, omettent la vitesse sans précédent du changement actuel. Le point 3 (minimisation) est tronqué, donc non évaluable. Le verdict de redondance sémantique n'est pas localisé dans les points visibles : les points 1 et 2 traitent d'aspects différents (preuve par consensus vs réfutation par la vitesse). Score attribué faute de données complètes : quelques reprises possibles, à confirmer sur le texte intégral.\"}\n```",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565889,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 632,
+      "prompt_tokens": 445,
+      "total_tokens": 1077,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

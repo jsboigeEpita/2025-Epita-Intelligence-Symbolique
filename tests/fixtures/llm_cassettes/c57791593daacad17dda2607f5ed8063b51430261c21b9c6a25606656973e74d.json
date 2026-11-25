@@ -1,0 +1,36 @@
+{
+  "key": "c57791593daacad17dda2607f5ed8063b51430261c21b9c6a25606656973e74d",
+  "value": {
+    "id": "msg_011ChNgkkdy8kwicAu51BxHt",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_thesis\": true, \"thesis\": \"La transition énergétique est nécessaire et économiquement avantageuse à long terme.\", \"digressions\": \"« Ceux qui minimisent la crise climatique utilisent souvent des données sélectives pour soutenir leur position. » Cette phrase ne soutient pas la thèse et porte sur les opposants, pas sur la transition énergétique elle-même.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565890,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 326,
+      "prompt_tokens": 422,
+      "total_tokens": 748,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

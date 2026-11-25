@@ -1,0 +1,36 @@
+{
+  "key": "a1b2290c1952c4f30655d8feeb67c3648213cf9f54d3f529a8a30b5a18071aad",
+  "value": {
+    "id": "msg_011ChNgefTzurCL8cY2kp1S5",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "```json\n{\"score\": 0.5, \"exhibit\": \"Points distincts visibles (extrait tronqué) : (1) les coûts des appels et procédures de la peine de mort dépassent souvent ceux de l'emprisonnement à vie, ce qui affaiblit l'argument financier en sa faveur ; (2) la peine de mort est irréversible, ce qui rend toute erreur judiciaire impossible à corriger. Ces deux points portent sur des idées différentes (coût économique vs irréversibilité). Le verdict de redondance sémantique indique des reprises, mais elles ne sont pas localisables dans l'extrait fourni, qui s'arrête après le point 2. Le score 0.5 traduit donc une redondance modérée et non vérifiée au-delà de ces deux points.\"}\n```",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565809,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 609,
+      "prompt_tokens": 442,
+      "total_tokens": 1051,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

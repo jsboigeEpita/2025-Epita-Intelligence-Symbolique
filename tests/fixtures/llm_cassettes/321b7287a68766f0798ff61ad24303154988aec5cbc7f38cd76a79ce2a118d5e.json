@@ -1,0 +1,36 @@
+{
+  "key": "321b7287a68766f0798ff61ad24303154988aec5cbc7f38cd76a79ce2a118d5e",
+  "value": {
+    "id": "msg_011ChNgWq8C7icWv3WBB2ejr",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\": 0.2, \"exhibit\": \"Points distincts identifiés : (1) la thèse centrale selon laquelle les vaccins sont indispensables à la santé publique, formulée deux fois à l'identique sans apport nouveau ; (2) l'argument scientifique selon lequel la vaccination a éradiqué la variole et réduit fortement la polio. La redondance localisée porte sur le point 1 : la reprise identique n'éclaire ni ne fait progresser l'argument. Le verdict de l'étape 2 (redondance sémantique) confirme ce constat. L'énoncé étant tronqué, seule une partie de la structure est observable, ce qui limite l'évaluation de la couverture effective.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565703,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 668,
+      "prompt_tokens": 433,
+      "total_tokens": 1101,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

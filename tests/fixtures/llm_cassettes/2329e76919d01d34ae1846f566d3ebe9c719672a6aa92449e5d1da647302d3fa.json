@@ -1,0 +1,36 @@
+{
+  "key": "2329e76919d01d34ae1846f566d3ebe9c719672a6aa92449e5d1da647302d3fa",
+  "value": {
+    "id": "msg_011ChNgizcJ6qDUQdhxVhnuX",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "```json\n{\"chain_holds\": true, \"structure_verdict\": \"progression_logique\", \"reasoning\": \"L'observation d'une hausse de 1,1 °C de la température moyenne mondiale constitue une preuve empirique directe d'un changement climatique, donc la conclusion découle raisonnablement des prémisses, même si le terme « incontestable » est plus fort que ce qu'une seule mesure peut établir.\"}\n```",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565868,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 624,
+      "prompt_tokens": 604,
+      "total_tokens": 1228,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

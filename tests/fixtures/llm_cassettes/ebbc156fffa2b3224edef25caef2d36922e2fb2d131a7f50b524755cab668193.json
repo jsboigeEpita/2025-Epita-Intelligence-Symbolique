@@ -1,0 +1,36 @@
+{
+  "key": "ebbc156fffa2b3224edef25caef2d36922e2fb2d131a7f50b524755cab668193",
+  "value": {
+    "id": "msg_011ChNgkbDBGK39vUzQPoYGX",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "```json\n{\"score\": 0.5, \"exhibit\": \"Obstacle localisé en première phrase : « Position opposée » n'a pas d'antécédent explicite, car l'argument ne précise pas à quelle position l'opposition se fait. Le fragment nominal « Position opposée attribuée à ceux qui min… » reste donc sans référent identifié dans le texte. Verdict d'opacité : résolvable_contexte. L'obstacle se résout par le contexte environnant, et le sens global de l'argument reste accessible, d'où une clarté partielle (0.5).\"}\n```",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565888,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 328,
+      "prompt_tokens": 424,
+      "total_tokens": 752,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

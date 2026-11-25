@@ -1,0 +1,36 @@
+{
+  "key": "f65200632f3fcc55a0164be80e0b45e3811145857ae6d429c35a1f523bc537b7",
+  "value": {
+    "id": "msg_011ChNg2pUyRMEqqYwokd8mH",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "```json\n{\"has_digression\": true, \"relevance_verdict\": \"digression_localisée\", \"located_digression\": \"Les passages consacrés à l'option A (élargir le fonds de livres jeunesse, car le fonds vieillit et les jeunes lecteurs sont nombreux) et à l'option C (répartir la somme entre fonds livre et espace numérique, pour servir les deux publics), qui ne justifient pas la réduction de la fracture numérique et n'avancent pas la thèse en faveur de l'option B.\"}\n```",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565322,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 580,
+      "prompt_tokens": 721,
+      "total_tokens": 1301,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

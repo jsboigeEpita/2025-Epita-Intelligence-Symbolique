@@ -1,0 +1,36 @@
+{
+  "key": "82ac8c9e75b51601650bcf77b2451fd8552cf2aaaf87294f803cb518e751d286",
+  "value": {
+    "id": "msg_011ChNgbVjmVXVjZrkBXPMgu",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"chain_holds\": false, \"structure_verdict\": \"saut_logique\", \"reasoning\": \"La prémisse invoque un effet dissuasif, ce qui peut appuyer l'utilité de la peine de mort, mais ne démontre pas qu'elle soit nécessaire, car rien n'exclut une alternative dissuasive comme la détention à perpétuité, et le passage de « dissuasive » à « nécessaire » n'est pas justifié.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565765,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 479,
+      "prompt_tokens": 598,
+      "total_tokens": 1077,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

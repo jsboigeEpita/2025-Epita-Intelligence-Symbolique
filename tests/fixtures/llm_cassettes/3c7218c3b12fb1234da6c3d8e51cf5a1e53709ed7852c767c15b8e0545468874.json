@@ -1,0 +1,36 @@
+{
+  "key": "3c7218c3b12fb1234da6c3d8e51cf5a1e53709ed7852c767c15b8e0545468874",
+  "value": {
+    "id": "msg_011ChNfUicra4PecfEtTfedA",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\": 0.5, \"exhibit\": \"Thèse : l'argument « pensez à vos enfants » est un appel à l'émotion qui détourne le débat des questions techniques de financement. Digression localisée : la phrase sur l'« homme de paille » (l'opposition ne propose pas de supprimer les retraites, seulement de les réformer autrement) porte sur une autre faute logique et ne sert pas la thèse. Digression mineure et isolée ; l'ensemble de l'argumentation reste centré sur la thèse.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795564886,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 379,
+      "prompt_tokens": 465,
+      "total_tokens": 844,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

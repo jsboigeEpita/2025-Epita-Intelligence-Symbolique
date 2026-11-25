@@ -1,0 +1,36 @@
+{
+  "key": "b782898936772ea7ca74901f3f0dc4fca4c0fa2d18212df3bf949891de802426",
+  "value": {
+    "id": "msg_011ChNgjDaPuNbGyNWwgccQT",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "```json\n{\"has_chain\": true, \"premises\": \"Les mesures de température globale montrent une augmentation de 1,1 degré depuis l'ère préindustrielle ; le raisonnement sceptique omet la vitesse sans précédent du changement actuel (même si le climat a toujours changé) ; les modèles prédictifs sont unanimes sur l'impact des activités humaines.\", \"conclusion\": \"La thèse sceptique selon laquelle le changement climatique actuel relève d'une simple variation naturelle est réfutée : le changement actuel est sans précédent et tient aux activités humaines.\"}\n```",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565870,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 529,
+      "prompt_tokens": 513,
+      "total_tokens": 1042,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

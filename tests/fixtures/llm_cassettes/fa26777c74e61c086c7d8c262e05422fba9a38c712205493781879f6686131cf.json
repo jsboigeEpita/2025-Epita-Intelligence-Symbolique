@@ -1,0 +1,36 @@
+{
+  "key": "fa26777c74e61c086c7d8c262e05422fba9a38c712205493781879f6686131cf",
+  "value": {
+    "id": "msg_011ChNgmDpM1YyFkeadp7FqC",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\": 0.5, \"exhibit\": \"Thèse : la crise climatique est réelle et d'origine humaine, et ceux qui la minimisent ont tort. Les propositions précédentes servent cette thèse. Digression localisée : la dernière phrase, « La transition énergétique est non seulement nécessaire mais aussi économiquement avantageuse à long terme. », porte sur les politiques et l'économie de la transition plutôt que sur la réalité ou l'origine humaine du changement climatique. Elle constitue une digression mineure et isolée, l'ensemble de l'argument restant centré sur la thèse.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565897,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 385,
+      "prompt_tokens": 448,
+      "total_tokens": 833,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

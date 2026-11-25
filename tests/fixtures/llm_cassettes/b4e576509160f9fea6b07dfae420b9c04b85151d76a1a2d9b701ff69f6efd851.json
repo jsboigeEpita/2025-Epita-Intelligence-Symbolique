@@ -1,0 +1,36 @@
+{
+  "key": "b4e576509160f9fea6b07dfae420b9c04b85151d76a1a2d9b701ff69f6efd851",
+  "value": {
+    "id": "msg_011ChNfwMsgz6mX5pWdWzpuC",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"distinct_points\": \"1. Option B : consacrer les 2000 euros entièrement à du matériel pédagogique et à des échiquiers neufs. 2. Option C : adopter un format hybride, répartissant le budget entre un tournoi réduit (1000 euros) et du matériel (1000 euros).\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565247,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 369,
+      "prompt_tokens": 382,
+      "total_tokens": 751,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

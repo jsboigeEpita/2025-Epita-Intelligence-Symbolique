@@ -1,0 +1,36 @@
+{
+  "key": "66ab8f1f49efeb778003cea025a39f64a2876d37aa6d5a09b8624f2347f7833f",
+  "value": {
+    "id": "msg_011ChNgcNCs41NDRvNQhtVbi",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\": 1.0, \"exhibit\": \"Deux points distincts : (1) la peine de mort est une sanction nécessaire dans certains cas extrêmes (affirmation normative sur la nécessité) ; (2) elle a un effet dissuasif contre les crimes les plus graves, comme le meurtre de masse (affirmation empirique/causale sur la dissuasion). Le second point peut servir d'appui au premier, mais il apporte une idée nouvelle et ne reprend pas le contenu du premier. Aucune redondance localisée.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565777,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 415,
+      "prompt_tokens": 410,
+      "total_tokens": 825,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "key": "3049ef2897a114cb1e2f597e0d6ea665ee18d41fdf4b8f012815ac8ef51daeae",
+  "value": {
+    "id": "msg_011ChNgWCL8176dgdBQhDAa6",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "```json\n{\"has_opposing_claim\": true, \"opposing_claim\": \"Les laboratoires pharmaceutiques dissimulent les effets secondaires des produits, et les vaccins sont dangereux.\", \"main_thesis\": \"L'idée que les laboratoires pharmaceutiques dissimulent les effets secondaires est une théorie du complot sans fondement, et les vaccins sont sûrs au vu de décennies de recherche clinique; des taux de vaccination élevés protègent aussi les personnes non vaccinables par immunité collective.\"}\n```",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565693,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 516,
+      "prompt_tokens": 536,
+      "total_tokens": 1052,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

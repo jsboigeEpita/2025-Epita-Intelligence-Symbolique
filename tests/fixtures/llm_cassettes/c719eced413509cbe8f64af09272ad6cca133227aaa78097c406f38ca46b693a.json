@@ -3,29 +3,17 @@
   "value": [
     {
       "role": "assistant",
-      "content": "Bonjour ! Oui, je suis là. Comment puis-je vous aider ?",
+      "content": "Bonjour ! Oui, je suis là. Comment puis-je vous aider aujourd'hui ?",
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EkNronqVU362hFtNJuYnCCSaXx3SI",
-        "created": 1794723540,
+        "id": "msg_011ChNfbBwqQPjRXeyeGV2ae",
+        "created": 1795564972,
         "system_fingerprint": null,
         "usage": {
-          "prompt_tokens": 12,
-          "prompt_tokens_details": {
-            "audio_tokens": 0,
-            "cache_write_tokens": 0,
-            "cached_tokens": 0,
-            "image_tokens": null,
-            "text_tokens": null
-          },
-          "completion_tokens": 17,
-          "completion_tokens_details": {
-            "accepted_prediction_tokens": 0,
-            "audio_tokens": 0,
-            "reasoning_tokens": 0,
-            "rejected_prediction_tokens": 0,
-            "text_tokens": null
-          }
+          "prompt_tokens": 21,
+          "prompt_tokens_details": null,
+          "completion_tokens": 38,
+          "completion_tokens_details": null
         }
       }
     }

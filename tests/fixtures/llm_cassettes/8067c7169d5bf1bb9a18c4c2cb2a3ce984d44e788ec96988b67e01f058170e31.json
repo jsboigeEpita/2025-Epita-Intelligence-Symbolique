@@ -1,0 +1,36 @@
+{
+  "key": "8067c7169d5bf1bb9a18c4c2cb2a3ce984d44e788ec96988b67e01f058170e31",
+  "value": {
+    "id": "msg_011ChNgbp7ZiixppQEUAGFZF",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_opposing_claim\": true, \"opposing_claim\": \"La peine de mort est justifiée pour protéger la société contre les criminels irrécupérables qui représentent un danger permanent.\", \"main_thesis\": \"La peine de mort ne devrait pas être appliquée, car son caractère irréversible rend toute erreur judiciaire fatale et son coût dépasse celui de l'emprisonnement à vie.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565771,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 889,
+      "prompt_tokens": 503,
+      "total_tokens": 1392,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

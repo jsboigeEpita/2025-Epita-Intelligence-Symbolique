@@ -1,0 +1,36 @@
+{
+  "key": "3ba8276595911fa068461178860068d610d10e48d810f0bb7a41ec07ed342f20",
+  "value": {
+    "id": "msg_011ChNgWLegcz5EADofzouMY",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"engages_real_claim\": false, \"engagement_verdict\": \"non_sequitur\", \"reasoning\": \"La réfutation démontre l'efficacité des vaccins (éradication de la variole, recul de la polio), ce qui ne dit rien de leur dangerosité, et écarte la question des effets secondaires en la qualifiant de théorie du complot sans examiner de données de sécurité.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565696,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 628,
+      "prompt_tokens": 595,
+      "total_tokens": 1223,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

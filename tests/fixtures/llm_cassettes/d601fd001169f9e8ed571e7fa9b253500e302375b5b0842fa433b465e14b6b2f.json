@@ -1,0 +1,36 @@
+{
+  "key": "d601fd001169f9e8ed571e7fa9b253500e302375b5b0842fa433b465e14b6b2f",
+  "value": {
+    "id": "msg_011ChNgc6urcTttQegiS83s5",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "```json\n{\"has_opposing_claim\": true, \"opposing_claim\": \"Le système judiciaire peut se tromper et condamner des innocents.\", \"main_thesis\": \"La peine de mort est justifiée comme moyen de dissuasion contre les crimes les plus graves, comme le meurtre de masse.\"}\n```",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565773,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 325,
+      "prompt_tokens": 490,
+      "total_tokens": 815,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

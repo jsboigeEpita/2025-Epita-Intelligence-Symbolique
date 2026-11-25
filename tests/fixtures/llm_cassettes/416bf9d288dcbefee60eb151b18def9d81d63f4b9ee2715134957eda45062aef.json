@@ -1,0 +1,36 @@
+{
+  "key": "416bf9d288dcbefee60eb151b18def9d81d63f4b9ee2715134957eda45062aef",
+  "value": {
+    "id": "msg_011ChNfVeJgnCKr8LHZRKKTN",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "```json\n{\"score\": 0.0, \"exhibit\": \"Position adverse identifiée : le gouvernement attaque l'opposition comme si elle proposait de supprimer les retraites, position qui lui est attribuée de façon implicite et non tenue par l'opposition. Verdict d'engagement : engagement_réel, mais porté sur une thèse imputée et non sur la position effectivement défendue par l'adversaire. Il s'agit donc d'un homme de paille : la réfutation constructive n'est pas démontrée, même si l'engagement avec la caricature est réel.\"}\n```",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795564900,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 786,
+      "prompt_tokens": 422,
+      "total_tokens": 1208,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

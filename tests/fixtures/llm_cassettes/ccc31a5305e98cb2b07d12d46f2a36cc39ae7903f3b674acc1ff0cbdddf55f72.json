@@ -1,0 +1,36 @@
+{
+  "key": "ccc31a5305e98cb2b07d12d46f2a36cc39ae7903f3b674acc1ff0cbdddf55f72",
+  "value": {
+    "id": "msg_011ChNgd4Dff8vYGo6pVZaBa",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_semantic_redundancy\": true, \"redundancy_verdict\": \"redondance_sémantique\", \"located_redundancy\": \"Le point 1 (certains criminels sont irrécupérables et constituent un danger permanent pour la société) est repris presque mot pour mot dans la phrase « De plus, certains criminels sont irrécupérables et représentent un danger permanent pour la société », sans apport nouveau.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565786,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 466,
+      "prompt_tokens": 698,
+      "total_tokens": 1164,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

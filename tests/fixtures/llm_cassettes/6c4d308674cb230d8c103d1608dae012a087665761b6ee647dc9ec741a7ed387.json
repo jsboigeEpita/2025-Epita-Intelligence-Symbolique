@@ -3,29 +3,17 @@
   "value": [
     {
       "role": "assistant",
-      "content": "{\n  \"formulas\": [\n    \"forall X: (Test(X) => Important(X))\"\n  ],\n  \"predicates\": {\n    \"Test\": \"est un test\",\n    \"Important\": \"est important\"\n  },\n  \"variables\": {\n    \"X\": \"thing\"\n  },\n  \"reasoning\": \"La phrase « Tous les tests sont importants » se traduit par une implication universelle : pour tout objet X, si X est un test, alors X est important. « Test mémoire numéro 2 » est interprété comme un titre et ne constitue pas une assertion logique supplémentaire.\"\n}",
+      "content": "```json\n{\n    \"formulas\": [\n        \"forall X: (Test(X) => Important(X))\",\n        \"Test(testmemoire2)\"\n    ],\n    \"predicates\": {\n        \"Test\": \"est un test\",\n        \"Important\": \"est important\"\n    },\n    \"variables\": {\n        \"X\": \"un objet quelconque (ici, un test)\"\n    },\n    \"reasoning\": \"La phrase « Tous les tests sont importants » se traduit par un quantificateur universel : pour tout X, si X est un test, alors X est important, d'où forall X: (Test(X) => Important(X)). La première phrase, « Test mémoire numéro 2 », désigne un test particulier, qui est ici nommé par la constante testmemoire2 (les constantes sont en minuscules, sans espaces ni accents). Elle est donc traduite par le fait atomique Test(testmemoire2). Les accents sont omis dans les identifiants pour rester compatibles avec la syntaxe TweetyProject. On peut déduire Important(testmemoire2) à partir de ces deux formules.\"\n}\n```",
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EkNwnTLd5A8ntC2csg6aooFcPHWcW",
-        "created": 1794723849,
+        "id": "msg_011ChNg8qUv8Nx1YYrZuNss4",
+        "created": 1795565404,
         "system_fingerprint": null,
         "usage": {
-          "prompt_tokens": 285,
-          "prompt_tokens_details": {
-            "audio_tokens": 0,
-            "cache_write_tokens": 0,
-            "cached_tokens": 0,
-            "image_tokens": null,
-            "text_tokens": null
-          },
-          "completion_tokens": 371,
-          "completion_tokens_details": {
-            "accepted_prediction_tokens": 0,
-            "audio_tokens": 0,
-            "reasoning_tokens": 238,
-            "rejected_prediction_tokens": 0,
-            "text_tokens": null
-          }
+          "prompt_tokens": 459,
+          "prompt_tokens_details": null,
+          "completion_tokens": 620,
+          "completion_tokens_details": null
         }
       }
     }

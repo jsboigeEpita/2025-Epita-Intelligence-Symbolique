@@ -1,0 +1,36 @@
+{
+  "key": "f92b5be11e88f41a0b1ea1984a777f9086972351bb5a944cd1697a38eb8d60e9",
+  "value": {
+    "id": "msg_011ChNgiusnBWN63EoxTnt16",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"engages_real_claim\": true, \"engagement_verdict\": \"engagement_réel\", \"reasoning\": \"La réfutation reprend le prémisse exact (« le climat a toujours changé ») et attaque directement le passage vers la conclusion « non anormal » en opposant la vitesse du changement actuel, ce qui constitue une réponse pertinente à l'inférence adverse plutôt qu'à une version déformée.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565866,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 427,
+      "prompt_tokens": 571,
+      "total_tokens": 998,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

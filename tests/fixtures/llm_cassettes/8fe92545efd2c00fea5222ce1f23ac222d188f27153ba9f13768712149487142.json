@@ -1,0 +1,36 @@
+{
+  "key": "8fe92545efd2c00fea5222ce1f23ac222d188f27153ba9f13768712149487142",
+  "value": {
+    "id": "msg_011ChNgdKj4dodnwFbFSnSAB",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "```json\n{\"distinct_points\": \"1. Objection des opposants : le système judiciaire peut se tromper et condamner des innocents.\\n2. La peine (capitale) sert de dissuasion contre les crimes les plus graves, comme le meurtre de masse.\\n3. Les avancées en ADN réduisent considérablement le risque d'erreur judiciaire.\\n4. Certains criminels sont irrécupérables et représentent un danger permanent pour la société.\"}\n```",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565790,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 485,
+      "prompt_tokens": 406,
+      "total_tokens": 891,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

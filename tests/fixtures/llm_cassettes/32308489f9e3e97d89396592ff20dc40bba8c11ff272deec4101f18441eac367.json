@@ -1,0 +1,36 @@
+{
+  "key": "32308489f9e3e97d89396592ff20dc40bba8c11ff272deec4101f18441eac367",
+  "value": {
+    "id": "msg_011ChNgbCwUoDaWm61YUCsW4",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\": 0.5, \"exhibit\": \"Obstacle localisé : le pronom « Elle » dans « Elle sert de dissuasion contre les crimes les plus graves » n'a pas d'antécédent explicite dans le texte fourni ; le sujet implicite est probablement la peine de mort. Verdict d'opacité (étape 2) : résolvable_contexte. Le sens reste globalement accessible grâce au contexte, d'où la clarté partielle (0.5). Remarque : l'étape 1 qualifie l'anaphore de « non résolvable » dans le texte seul, ce qui tient à l'absence d'antécédent explicite, alors que le verdict retient une résolution par le contexte ; le score suit le verdict, mais cette tension entre les deux étapes reste à noter.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565762,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 613,
+      "prompt_tokens": 431,
+      "total_tokens": 1044,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

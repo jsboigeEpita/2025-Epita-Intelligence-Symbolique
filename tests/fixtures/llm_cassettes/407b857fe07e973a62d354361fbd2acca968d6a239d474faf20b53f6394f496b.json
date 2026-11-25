@@ -1,0 +1,36 @@
+{
+  "key": "407b857fe07e973a62d354361fbd2acca968d6a239d474faf20b53f6394f496b",
+  "value": {
+    "id": "msg_011ChNgbdExu3a6Y3wi87fZz",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\": 0.5, \"exhibit\": \"Thèse : rejet de la peine de mort, au motif que son caractère irréversible rend toute erreur judiciaire fatale et irrémédiable, et que son coût en procédures d'appel est élevé. Digression localisée : une seule proposition (« certains criminels sont irrécupérables et représentent un danger permanent pour la société ») avance un argument en faveur de la peine de mort, donc contraire à la thèse abolitionniste. Le reste de l'argumentation reste centré sur la thèse.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565767,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 516,
+      "prompt_tokens": 473,
+      "total_tokens": 989,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

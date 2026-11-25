@@ -3,29 +3,17 @@
   "value": [
     {
       "role": "assistant",
-      "content": "{\n  \"formulas\": [\n    \"Test(test_memoire_numero_4)\",\n    \"forall X: (Test(X) => Important(X))\"\n  ],\n  \"predicates\": {\n    \"Test\": \"est un test\",\n    \"Important\": \"est important\"\n  },\n  \"variables\": {\n    \"X\": \"thing\"\n  },\n  \"reasoning\": \"La première phrase affirme l'existence du test de mémoire numéro 4, représenté par la constante test_memoire_numero_4. La seconde phrase signifie que tout objet qui est un test est important.\"\n}",
+      "content": "```json\n{\n    \"formulas\": [\n        \"forall X: (Test(X) => Important(X))\",\n        \"Test(test4)\"\n    ],\n    \"predicates\": {\n        \"Test\": \"est un test\",\n        \"Important\": \"est important\"\n    },\n    \"variables\": {\n        \"X\": \"un objet quelconque\"\n    },\n    \"reasoning\": \"La phrase « Tous les tests sont importants » est une généralisation universelle : pour tout X, si X est un test, alors X est important, d'où forall X: (Test(X) => Important(X)). Le fragment « Test mémoire numéro 4 » désigne un individu particulier, qu'on nomme test4 et qu'on déclare comme test, d'où Test(test4). Cette seconde formule est une interprétation du titre : si le texte ne doit pas être lu comme une affirmation sur un individu, elle peut être retirée. Les accents ont été omis dans les noms de prédicats pour respecter la syntaxe ASCII de TweetyProject.\"\n}\n```",
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EkNwtJyswSby7rkavIiLclA1KTq1Z",
-        "created": 1794723855,
+        "id": "msg_011ChNg9KqVDdREVeZ3dRdpF",
+        "created": 1795565411,
         "system_fingerprint": null,
         "usage": {
-          "prompt_tokens": 285,
-          "prompt_tokens_details": {
-            "audio_tokens": 0,
-            "cache_write_tokens": 0,
-            "cached_tokens": 0,
-            "image_tokens": null,
-            "text_tokens": null
-          },
-          "completion_tokens": 267,
-          "completion_tokens_details": {
-            "accepted_prediction_tokens": 0,
-            "audio_tokens": 0,
-            "reasoning_tokens": 134,
-            "rejected_prediction_tokens": 0,
-            "text_tokens": null
-          }
+          "prompt_tokens": 459,
+          "prompt_tokens_details": null,
+          "completion_tokens": 665,
+          "completion_tokens_details": null
         }
       }
     }

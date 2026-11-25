@@ -1,0 +1,36 @@
+{
+  "key": "472be3103d0791731d63da7de3ec95f2c56807c17c1cbcaf82ff076142728c93",
+  "value": {
+    "id": "msg_011ChNgmdoEm3yZ7ShnEj8Xf",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\": 0.0, \"exhibit\": \"Position adverse identifiée : « La crise climatique est minimisée, donc la transition énergétique n'est pas nécessaire ». Verdict d'engagement : non_sequitur. La conclusion ne découle pas de la prémisse, donc la position adverse n'est pas réfutée de façon constructive (score 0.0 selon la grille : non-sequitur).\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565902,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 303,
+      "prompt_tokens": 401,
+      "total_tokens": 704,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

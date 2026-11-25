@@ -1,0 +1,36 @@
+{
+  "key": "03a55d774ca1765988b5087f8af60540684ca40e2d4fcebbf4ca67fad5e944f2",
+  "value": {
+    "id": "msg_011ChNgjR1yQaLgefaWtw6Wr",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"chain_holds\": false, \"structure_verdict\": \"saut_logique\", \"reasoning\": \"Le constat d'une hausse de 1,1 °C et d'une vitesse inhabituelle est une raison pertinente contre la seule variabilité naturelle, mais il ne suffit pas à établir que la thèse sceptique est « réfutée » : il manque un lien d'attribution causale (activité humaine) que la prémisse sur les modèles n'est pas explicitement reliée à la conclusion.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565873,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 537,
+      "prompt_tokens": 729,
+      "total_tokens": 1266,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

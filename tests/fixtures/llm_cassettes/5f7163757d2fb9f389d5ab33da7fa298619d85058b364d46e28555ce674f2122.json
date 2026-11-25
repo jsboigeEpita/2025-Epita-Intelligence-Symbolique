@@ -1,0 +1,36 @@
+{
+  "key": "5f7163757d2fb9f389d5ab33da7fa298619d85058b364d46e28555ce674f2122",
+  "value": {
+    "id": "msg_011ChNgcEHcgGnSEL9yYDryb",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"engages_real_claim\": true, \"engagement_verdict\": \"engagement_réel\", \"reasoning\": \"La réfutation reprend fidèlement la thèse adverse (le système peut se tromper et condamner des innocents) et y répond directement en invoquant la réduction du risque d'erreur grâce à l'ADN, même si elle ne l'élimine pas entièrement.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565775,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 446,
+      "prompt_tokens": 553,
+      "total_tokens": 999,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

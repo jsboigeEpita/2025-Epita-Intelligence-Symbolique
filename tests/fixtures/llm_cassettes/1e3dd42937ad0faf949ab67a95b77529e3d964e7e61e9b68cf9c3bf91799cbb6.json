@@ -1,0 +1,36 @@
+{
+  "key": "1e3dd42937ad0faf949ab67a95b77529e3d964e7e61e9b68cf9c3bf91799cbb6",
+  "value": {
+    "id": "msg_011ChNfX4G7mWG2i5B52q2TV",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\": 1.0, \"exhibit\": \"Deux points distincts sont identifiés : (1) le gouvernement attaque un homme de paille, car personne n'a proposé de supprimer les retraites, seulement de les réformer autrement ; (2) la projection de déficit à 2,3 % du PIB d'ici 2030 repose sur des hypothèses (texte tronqué). Ces deux points portent sur des idées différentes (une critique de l'adversaire vs. la fiabilité d'une projection chiffrée) et aucune reprise en substance n'apparaît entre eux. Aucune redondance localisée n'est démontrée. Le verdict 'redondance_sémantique' n'est pas corroboré par les seuls points fournis ; il pourrait porter sur des passages absents ou tronqués.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795564919,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 756,
+      "prompt_tokens": 439,
+      "total_tokens": 1195,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

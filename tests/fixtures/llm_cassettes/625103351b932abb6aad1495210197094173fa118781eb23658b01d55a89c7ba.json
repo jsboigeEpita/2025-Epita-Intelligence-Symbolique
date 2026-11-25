@@ -1,0 +1,36 @@
+{
+  "key": "625103351b932abb6aad1495210197094173fa118781eb23658b01d55a89c7ba",
+  "value": {
+    "id": "msg_011ChNfwPzvfthPi8psoxS4r",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "```json\n{\"distinct_points\": \"1. Option A : organiser un tournoi inter-villes avec buffet et prix pour 2000 euros, afin d'augmenter la visibilité du club.\\n2. Option B : investir l'intégralité des 2000 euros en matériel pédagogique et échiquiers neufs.\\n3. Option C : adopter un format hybride, avec 1000 euros pour un tournoi réduit et 1000 euros pour du matériel.\"}\n```",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565248,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 483,
+      "prompt_tokens": 419,
+      "total_tokens": 902,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

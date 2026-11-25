@@ -1,0 +1,36 @@
+{
+  "key": "3f1b94848863242fa8f6fa902960b2b2c0f227858976495ad48938991da9e6b9",
+  "value": {
+    "id": "msg_011ChNgWudaAxmyWbLLDJPPW",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\": 0.0, \"exhibit\": \"Chaîne reconstruite : prémisse = « La vaccination a éradiqué la variole et réduit considérablement la polio, comme le montrent les études scientifiques. Ceux qui affirment que les vacci… » (prémisse tronquée) ; conclusion = « Les vaccins sont indispensables pour la santé publique. » Verdict de structure : saut_logique. Le verdict indique que la conclusion ne découle pas des prémisses reconstruites, ce qui correspond au niveau 0.0 de l'échelle.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565703,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 499,
+      "prompt_tokens": 439,
+      "total_tokens": 938,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

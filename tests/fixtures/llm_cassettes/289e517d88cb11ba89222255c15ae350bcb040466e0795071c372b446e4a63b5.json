@@ -1,0 +1,36 @@
+{
+  "key": "289e517d88cb11ba89222255c15ae350bcb040466e0795071c372b446e4a63b5",
+  "value": {
+    "id": "msg_011ChNgcg3QrHp2vyQAvuKeG",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\": 0.0, \"exhibit\": \"Chaîne reconstruite : prémisses = « Certains criminels sont irrécupérables et constituent un danger permanent pour la société. Les avancées en ADN réduisent considérablement le risque d' » (phrase tronquée) ; conclusion = « La peine capitale est justifiée. » Verdict de structure : saut_logique. La conclusion ne découle pas des prémisses : celles-ci établissent un danger et une réduction du risque par l'ADN, mais aucune inférence ne mène à la justification de la peine capitale.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565780,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 377,
+      "prompt_tokens": 427,
+      "total_tokens": 804,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

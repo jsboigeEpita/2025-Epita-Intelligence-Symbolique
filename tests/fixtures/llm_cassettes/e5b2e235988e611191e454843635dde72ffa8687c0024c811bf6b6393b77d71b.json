@@ -1,0 +1,36 @@
+{
+  "key": "e5b2e235988e611191e454843635dde72ffa8687c0024c811bf6b6393b77d71b",
+  "value": {
+    "id": "msg_011ChNfVGgg3Vf1KFMc5fGd6",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\": 0.5, \"exhibit\": \"Thèse : la projection de déficit du ministre des finances est fragilisée par des hypothèses de croissance optimistes (1,8 % par an). Digression localisée : un passage sur les syndicats qui accusent le gouvernement d'un sophisme naturaliste (travailler plus longtemps serait « dans l'ordre des choses »), sans lien avec la fiabilité de la projection. Le reste de l'argumentation reste centré sur la thèse.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795564893,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 352,
+      "prompt_tokens": 469,
+      "total_tokens": 821,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "key": "362402e98883cfaa2277ee0091093059d4834a2d30a0efa2a812631572f860e4",
+  "value": {
+    "id": "msg_011ChNgngm7VHoG9fqwhwNNu",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\": 1.0, \"exhibit\": \"Trois points distincts : (1) position adverse attribuée, selon laquelle la crise climatique ne serait pas aussi grave qu'on le dit ; (2) consensus des modèles prédictifs sur l'impact des activités humaines, qui porte sur la causalité ; (3) stratégies attribuées à ceux qui minimisent la crise, qui porte sur le discours. Aucune reprise en substance n'est repérée. Le point 1 et le point 3 gravitent autour du même camp, mais le premier énonce une thèse et le second décrit des procédés. Le point 3 est tronqué (« utilisent »), donc son contenu ne peut pas être entièrement évalué.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565918,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 646,
+      "prompt_tokens": 444,
+      "total_tokens": 1090,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

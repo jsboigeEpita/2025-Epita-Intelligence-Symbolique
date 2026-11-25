@@ -1,0 +1,36 @@
+{
+  "key": "3a06be83ad5d6919be086cf1e050c4c1fc5ffb0d5aff7b67c72632293e4baf6a",
+  "value": {
+    "id": "msg_011ChNgeV1hHSsLkMVHgdsmi",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_semantic_redundancy\": true, \"redundancy_verdict\": \"redondance_sémantique\", \"located_redundancy\": \"La phrase « le coût des appels et procédures est souvent supérieur à l'emprisonnement à vie » apparaît deux fois dans l'argument complet, en substance identique : une fois comme énoncé de l'argument économique et une fois en conclusion de l'extrait, sans apport nouveau. Les points 1 (coût) et 2 (irréversibilité) restent distincts entre eux.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565806,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 467,
+      "prompt_tokens": 683,
+      "total_tokens": 1150,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

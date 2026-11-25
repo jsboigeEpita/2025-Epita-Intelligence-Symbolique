@@ -1,0 +1,36 @@
+{
+  "key": "e1674264bb1574e71940c2617200414481283310fb21e7cee7ad75869c61bf3e",
+  "value": {
+    "id": "msg_011ChNfx8YXzmhcu6ewhiaFw",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_opposing_claim\": false, \"opposing_claim\": \"\", \"main_thesis\": \"Aucune thèse défendue : le texte présente des options concurrentes (A : tournoi inter-villes avec buffet et prix pour 2000 euros afin d'accroître la visibilité du club ; B : investir les 2000 euros en matériel pédagogique et échiquiers neufs) sans argumenter en faveur de l'une ni contre l'autre.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565258,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 486,
+      "prompt_tokens": 512,
+      "total_tokens": 998,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

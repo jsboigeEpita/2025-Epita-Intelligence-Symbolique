@@ -1,0 +1,36 @@
+{
+  "key": "f5f69af45dd5715804cddca4196c74a5ada89796408452297077c7786a754559",
+  "value": {
+    "id": "msg_011ChNgWeH61ETUsHk7vLSMH",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "```json\n{\"has_chain\": true, \"premises\": \"1) Les études scientifiques montrent que la vaccination a éradiqué la variole et réduit considérablement la polio. 2) Ceux qui affirment que les vaccins sont dangereux ignorent les décennies de recherche clinique. 3) L'argument selon lequel les produits pharmaceutiques cachent les effets secondaires est une théorie du complot sans fondement.\", \"conclusion\": \"La position selon laquelle les vaccins sont dangereux est affaiblie et non fondée.\"}\n```",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565699,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 436,
+      "prompt_tokens": 532,
+      "total_tokens": 968,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

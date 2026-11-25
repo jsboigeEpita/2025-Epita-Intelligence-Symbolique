@@ -1,0 +1,36 @@
+{
+  "key": "9fec95a469614eeb1a84304274f9c8f407f0de98e56c43bffc714c7c591dfd02",
+  "value": {
+    "id": "msg_011ChNgWnr2Y49aphhDNWkAU",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"chain_holds\": false, \"structure_verdict\": \"saut_logique\", \"reasoning\": \"Les prémisses établissent l'efficacité des vaccins (éradication de la variole, recul de la polio), mais cela ne démontre ni leur innocuité ni l'absence de risques, si bien que la conclusion « non fondée » ne découle pas de ces données, et l'affirmation sur les opposants qui « ignorent la recherche » est elle-même non étayée.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565702,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 601,
+      "prompt_tokens": 736,
+      "total_tokens": 1337,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

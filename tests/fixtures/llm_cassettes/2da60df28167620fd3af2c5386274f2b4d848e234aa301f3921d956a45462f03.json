@@ -1,0 +1,36 @@
+{
+  "key": "2da60df28167620fd3af2c5386274f2b4d848e234aa301f3921d956a45462f03",
+  "value": {
+    "id": "msg_011ChNftzmsZ7zFUinXzLc9H",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "```json\n{\"has_thesis\": true, \"thesis\": \"Ce que les experts affirment à l'unanimité est vrai.\", \"digressions\": \"\"}\n```",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565215,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 342,
+      "prompt_tokens": 320,
+      "total_tokens": 662,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

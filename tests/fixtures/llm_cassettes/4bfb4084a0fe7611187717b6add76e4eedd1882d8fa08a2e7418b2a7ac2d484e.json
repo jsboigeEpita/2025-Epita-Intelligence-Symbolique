@@ -1,0 +1,36 @@
+{
+  "key": "4bfb4084a0fe7611187717b6add76e4eedd1882d8fa08a2e7418b2a7ac2d484e",
+  "value": {
+    "id": "msg_011ChNg3UbfPCt3DbHx4ihGL",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "```json\n{\"score\": 0.5, \"exhibit\": \"Thèse : élargir le fonds de livres jeunesse (Option A), car le fonds actuel vieillit et les plus jeunes lecteurs sont les plus nombreux. Digression localisée : la proposition alternative Option B (espace numérique avec ordinateurs en libre accès pour réduire la fracture numérique), signalée comme ne servant pas la thèse, ainsi qu'une mention tronquée « Trois usages s' ». L'argumentation reste centrée sur la thèse, la digression étant isolée.\"}\n```",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565330,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 438,
+      "prompt_tokens": 477,
+      "total_tokens": 915,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

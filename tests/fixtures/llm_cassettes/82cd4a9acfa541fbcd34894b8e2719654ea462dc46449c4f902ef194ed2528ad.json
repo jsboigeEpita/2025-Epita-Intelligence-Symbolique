@@ -1,0 +1,36 @@
+{
+  "key": "82cd4a9acfa541fbcd34894b8e2719654ea462dc46449c4f902ef194ed2528ad",
+  "value": {
+    "id": "msg_011ChNgjDp31LzTA2zzRH2fR",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"engages_real_claim\": true, \"engagement_verdict\": \"engagement_réel\", \"reasoning\": \"La réfutation vise directement la base avancée par la position adverse (des données sélectives), donc elle ne construit pas un homme de paille, même si l'accusation reste non démontrée et que la mention de la transition énergétique relève d'un autre sujet.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565871,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 629,
+      "prompt_tokens": 588,
+      "total_tokens": 1217,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

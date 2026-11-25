@@ -1,0 +1,36 @@
+{
+  "key": "183f11e80101d98de6388d69774eb5674ab5133bb963bf029c798a786779aedb",
+  "value": {
+    "id": "msg_011ChNgX27VLZTxy5RaMp4kq",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\": 0.0, \"exhibit\": \"Chaîne reconstruite : (P1) Les études scientifiques montrent que la vaccination a éradiqué la variole et réduit considérablement la polio ; (P2) Ceux qui affirment que les vacci[ns sont dangereux...] (phrase tronquée) → (C) La position selon laquelle les vaccins sont dangereux est affaiblie et non fondée. Verdict de structure : saut_logique. Les prémisses établissent l'efficacité des vaccins contre des maladies données, mais la conclusion porte sur leur dangerosité, qui ne découle pas directement de cette efficacité. La structure démontrée est donc un saut logique net, ce qui correspond au score 0.0.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565704,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 511,
+      "prompt_tokens": 453,
+      "total_tokens": 964,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

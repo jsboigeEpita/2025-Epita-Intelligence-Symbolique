@@ -1,0 +1,36 @@
+{
+  "key": "dfbf0e30b4ea0b3c4087f50e0526f59473172d25585ec27ca241e5a67fba1bae",
+  "value": {
+    "id": "msg_011ChNgjmv672sTZETLrTvwV",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "```json\n{\"score\": 0.5, \"exhibit\": \"Points distincts identifiés : (1) le changement climatique est une réalité scientifique incontestable, qui fonde la position de l'auteur ; (2) les mesures de température globale montrent une hausse de 1,1 degré depuis l'ère préindustrielle. Redondance localisée : le point 1 est énoncé deux fois sous des formulations différentes, sans idée nouvelle à la seconde occurrence. Le verdict de redondance sémantique est retenu, mais la reprise porte sur un seul point et le texte fourni est tronqué, ce qui limite l'évaluation de la couverture globale.\"}\n```",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565878,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 570,
+      "prompt_tokens": 436,
+      "total_tokens": 1006,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

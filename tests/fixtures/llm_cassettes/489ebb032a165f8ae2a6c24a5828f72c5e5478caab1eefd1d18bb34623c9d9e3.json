@@ -1,0 +1,36 @@
+{
+  "key": "489ebb032a165f8ae2a6c24a5828f72c5e5478caab1eefd1d18bb34623c9d9e3",
+  "value": {
+    "id": "msg_011ChNfUrGyUQfvumHteo9Z7",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_thesis\": true, \"thesis\": \"La projection de déficit du ministre des finances est fragilisée par des hypothèses de croissance optimistes (1.8% par an).\", \"digressions\": \"Le passage sur les syndicats qui accusent le gouvernement d'utiliser un sophisme naturaliste (travailler plus longtemps serait « dans l'ordre des choses ») ne concerne pas la fiabilité de la projection de déficit. Le passage sur l'opposition qui dénonce un homme de paille à propos de la suppression des retraites porte sur le débat des retraites, hors sujet par rapport à la thèse.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795564888,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 415,
+      "prompt_tokens": 544,
+      "total_tokens": 959,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

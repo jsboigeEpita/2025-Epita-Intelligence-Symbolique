@@ -1,0 +1,36 @@
+{
+  "key": "845c1686301f7fe291a7eb734b179990adac52c09a2b29803c6afb9ceedc204e",
+  "value": {
+    "id": "msg_011ChNgWGgpR6ZrA4y93ctLL",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\": 1.0, \"exhibit\": \"Chaîne reconstruite : prémisse : « Les études scientifiques montrent que la vaccination a éradiqué la variole et réduit considérablement la polio. » → conclusion : « Les vaccins sont indispensables pour la santé publique. » Verdict de structure : progression_logique. Les prémisses, de nature empirique (efficacité démontrée sur deux maladies), sont reliées à la conclusion par une inférence explicite de l'efficacité vers l'importance pour la santé publique.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565695,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 609,
+      "prompt_tokens": 423,
+      "total_tokens": 1032,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

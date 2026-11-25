@@ -1,0 +1,36 @@
+{
+  "key": "786a3e3d718d6fce724a827c1aad8992b5ec883bdab6a8574cf0278d194d011d",
+  "value": {
+    "id": "msg_011ChNgciorWqR5QHkCsY5EB",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\": 0.5, \"exhibit\": \"Deux points distincts identifiés : (1) effet dissuasif de la peine de mort contre les crimes les plus graves, comme le meurtre de masse ; (2) la peine de mort comme sanction nécessaire dans certains cas (énoncé tronqué, contenu incomplet). Redondance localisée : le point 1 est répété presque à l'identique dans les deux phrases, compté une seule fois à l'étape 1. Cette unique reprise n'apporte pas de clarification, mais elle reste isolée, d'où le score intermédiaire.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565783,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 722,
+      "prompt_tokens": 434,
+      "total_tokens": 1156,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

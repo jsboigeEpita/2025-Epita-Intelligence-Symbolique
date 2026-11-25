@@ -1,0 +1,36 @@
+{
+  "key": "27b56030f2bbea3ddab58482c8fcf97c9b69bf9776a2f4974fbc14fe60d86df0",
+  "value": {
+    "id": "msg_011ChNgeMncperrBigLizwY5",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "```json\n{\"distinct_points\": \"1. Les coûts des appels et des procédures de la peine de mort dépassent souvent ceux de l'emprisonnement à vie, ce qui affaiblit l'argument financier en faveur de la peine de mort. 2. La peine de mort est irréversible, ce qui rend toute erreur judiciaire fatale.\"}\n```",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565803,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 317,
+      "prompt_tokens": 410,
+      "total_tokens": 727,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

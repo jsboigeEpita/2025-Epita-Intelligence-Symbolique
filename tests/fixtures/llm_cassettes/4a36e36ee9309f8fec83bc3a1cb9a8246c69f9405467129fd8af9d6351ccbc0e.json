@@ -1,0 +1,36 @@
+{
+  "key": "4a36e36ee9309f8fec83bc3a1cb9a8246c69f9405467129fd8af9d6351ccbc0e",
+  "value": {
+    "id": "msg_011ChNfVLQfU9QUN8kPDPAh3",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\": 0.5, \"exhibit\": \"Thèse : le gouvernement justifie à tort le fait de travailler plus longtemps en le présentant comme « dans l'ordre des choses », ce qui constitue un sophisme. Digression localisée : la phrase sur le ministre des finances (déficit de 2,3 % du PIB d'ici 2030, projection reposant sur des hypothèses contestées), qui ne sert pas directement la thèse. L'ensemble de l'argumentation reste centré sur la thèse, la digression étant mineure et isolée.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795564894,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 328,
+      "prompt_tokens": 479,
+      "total_tokens": 807,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

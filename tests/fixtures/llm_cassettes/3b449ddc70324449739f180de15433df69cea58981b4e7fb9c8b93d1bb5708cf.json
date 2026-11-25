@@ -1,0 +1,36 @@
+{
+  "key": "3b449ddc70324449739f180de15433df69cea58981b4e7fb9c8b93d1bb5708cf",
+  "value": {
+    "id": "msg_011ChNgcF21uXEBdDWRznKSF",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"engages_real_claim\": true, \"engagement_verdict\": \"engagement_réel\", \"reasoning\": \"La réfutation reprend la prémisse exacte de la position adverse (le risque d'erreur judiciaire) et tente de la réduire via les progrès de l'ADN, même si elle ne traite pas entièrement la conclusion (l'inacceptabilité) ni les erreurs non couvertes par l'ADN.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565775,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 433,
+      "prompt_tokens": 593,
+      "total_tokens": 1026,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "key": "b18dc1e2b04ffa399e955067e13700ed8e511b0d17c9f60f435dbb85c6a8635f",
+  "value": {
+    "id": "msg_011ChNfvuThkrXmzX3jiHJet",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "```json\n{\"has_clarity_obstacle\": true, \"obstacles\": \"Référence non résolvable : « Trois options divergentes s'affrontent » annonce trois options, mais seules deux sont présentées (Option A et Option B). L'antécédent de « trois options » est absent. Le texte est aussi redondant (l'Option A apparaît deux fois, avec une formulation légèrement différente et un extrait de citation tronqué), ce qui brouille la lecture sans constituer en soi un obstacle de sens.\"}\n```",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565242,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 633,
+      "prompt_tokens": 519,
+      "total_tokens": 1152,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

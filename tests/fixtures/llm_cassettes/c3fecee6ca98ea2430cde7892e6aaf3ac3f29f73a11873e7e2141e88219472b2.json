@@ -1,0 +1,36 @@
+{
+  "key": "c3fecee6ca98ea2430cde7892e6aaf3ac3f29f73a11873e7e2141e88219472b2",
+  "value": {
+    "id": "msg_011ChNgCQFUN8mwVHB6SwTf2",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "```json\n{\"score\": 0.5, \"exhibit\": \"Thèse : justifier l'Option A, un tournoi inter-villes avec buffet et prix pour 2000 €, par la hausse attendue de la visibilité du club et le recrutement d'(argument tronqué). Digression localisée : la proposition « Option B » (investir les 2000 € en matériel pédagogique : échiquiers neufs, horloges et supports de cours, les échiquiers actuels étant usés) ne sert pas la thèse. L'ensemble de l'argumentation reste centré sur la thèse, la digression étant mineure et circonscrite.\"}\n```",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565451,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 424,
+      "prompt_tokens": 483,
+      "total_tokens": 907,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}
