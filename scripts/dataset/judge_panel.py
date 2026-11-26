@@ -500,42 +500,30 @@ def build_judge_prompt(text_1: str, text_2: str, document: str) -> str:
 
 
 def pipeline_text_from_state(state: Dict[str, Any], signature: Dict[str, Any]) -> str:
-    """The pipeline's judged text IS the fiche's full-text section — verbatim.
+    """The judged text IS the fiche's full-text section — verbatim.
 
-    One producer, two callers (#3375 tranche 3): ``pipeline_full_text`` in the
-    reading-folder renderer builds it, the fiche prints it and the judge reads
-    it. The classification and outcome live at the SIGNATURE's root (#1909
-    slice 2) — that is why the signature rides along, and a document the
-    campaign classified non-argumentative shows the judge its terminal
-    classification instead of an empty string.
+    One producer, two callers (#3375 tranche 3): the reading-folder renderer
+    builds the text, the fiche prints it and the judge reads it. The
+    classification and outcome live at the SIGNATURE's root (#1909 slice 2) —
+    that is why the signature rides along, and a document the campaign
+    classified non-argumentative shows the judge its terminal classification
+    instead of an empty string.
 
-    #3470: a ``conversation_real`` signature routes to that engine's own
-    producer — its recorded findings are its arm, and the pipeline's acts
-    vocabulary (four absence lines) would read as this engine's failure
-    when it is its shape.
-    #3472: same rule for ``hierarchical_delegation`` — the 3-tier chain's
-    recorded tasks and strategic conclusion are its arm; it has no acts by
-    design, so the acts vocabulary would read its shape as the pipeline's
-    failure.
+    #3470, #3472: a record routes by ``provenance.mode`` to the engine that
+    produced it — a ``conversation_real`` signature reads that engine's
+    recorded findings, a ``hierarchical_delegation`` one the 3-tier chain's
+    recorded tasks and strategic conclusion. Neither has acts by design: the
+    pipeline's acts vocabulary (four absence lines) would read their shape as
+    the pipeline's failure.
+
+    #3695: the routing lives beside the producers, in the renderer
+    (``arm_text_from_state``), and the fiche goes through it too — this entry
+    point and the fiche read one text on every arm. The name is kept: ten
+    test files and the runner call it.
     """
-    from scripts.dataset.render_campaign_reading_folder import (
-        conversation_real_full_text,
-        hierarchical_delegation_full_text,
-        pipeline_full_text,
-    )
+    from scripts.dataset.render_campaign_reading_folder import arm_text_from_state
 
-    st = state.get("state") or state
-    provenance_mode = (signature.get("provenance") or {}).get("mode")
-    if provenance_mode == "conversation_real":
-        return conversation_real_full_text(st, signature.get("outcome") or {})
-    if provenance_mode == "hierarchical_delegation":
-        return hierarchical_delegation_full_text(st, signature.get("outcome") or {})
-    return pipeline_full_text(
-        st,
-        signature.get("document_classification"),
-        str(signature.get("opaque_id") or ""),
-        signature.get("outcome") or {},
-    )
+    return arm_text_from_state(state, signature)
 
 
 def arm_health(

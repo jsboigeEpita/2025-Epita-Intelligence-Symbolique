@@ -25,16 +25,15 @@ per document, offline — no call, no network, no JVM:
 
 2. **Whether the harvest round-trips byte for byte.** Three constructions of
    the same text must be the SAME string: the judge's entry point on the
-   harvested records, the fiche caller on the same records (``doc_facts`` →
-   ``pipeline_full_text``), and the replay path — the records through a JSON
-   round trip, the recorded act texts written back at the state's root, which
-   is what the driver will hand the judge. With ``--renders-dir`` the
-   reference is the harvested FICHE itself: its ``## Le pipeline, en texte
-   intégral`` section is the producer's own output, compared with the rebuilt
-   text byte for byte (no normalisation, no whitespace folding). On the two
-   other engines' records (``conversation_real``, ``hierarchical_delegation``)
-   the fiche caller does not route the provenance: the witness names that
-   divergence of the two callers instead of certifying one text.
+   harvested records, the fiche on the same records (the renderer's own
+   ``render_fiche``, its full-text section read back out), and the replay
+   path — the records through a JSON round trip, the recorded act texts
+   written back at the state's root, which is what the driver will hand the
+   judge. Every arm is read the same way: the fiche routes a record by its
+   ``provenance.mode`` to the engine that produced it, as the judge does
+   (#3695). With ``--renders-dir`` the reference is the harvested FICHE
+   itself: its full-text section is the producer's own output, compared with
+   the rebuilt text byte for byte (no normalisation, no whitespace folding).
 
    The full state dump is the ONLY carrier of the act texts: the signature
    embeds the *sanitised* state, where each narrative field is reduced to
@@ -104,10 +103,11 @@ QUESTION = "interpretive_question"
 RENDER_INPUTS: Tuple[str, ...] = ACTS + (SYNTHESIS,)
 TEXT_INPUTS: Tuple[str, ...] = RENDER_INPUTS + (QUESTION,)
 
-#: The two headings ``render_fiche`` puts around the full-text section. They
-#: are literals inside the renderer, not constants: the witness declares them
-#: here and a unit test pins them against ``render_fiche``'s own output, so a
-#: heading change reddens instead of silently emptying the extraction.
+#: The headings ``render_fiche`` puts around the full-text section: one
+#: opening heading per arm (``FICHE_SECTION_STARTS``), then the zero-shot's.
+#: They are literals inside the renderer, not constants: the witness declares
+#: them here and a unit test pins them against ``render_fiche``'s own output,
+#: so a heading change reddens instead of silently emptying the extraction.
 FICHE_SECTION_START = "## Le pipeline, en texte intégral"
 FICHE_SECTION_END = "## La réponse zero-shot, intégrale"
 NOTES_HEADING = "Notes du pipeline (ancres du run)"
@@ -128,11 +128,23 @@ BRANCH_NON_ARGUMENTATIVE = "non_argumentative"
 BRANCH_CONVERSATION_REAL = "conversation_real"
 BRANCH_HIERARCHICAL_DELEGATION = "hierarchical_delegation"
 
+#: The opening heading of the full-text section, per branch: the pipeline's on
+#: its three branches, then each other engine's (#3695 — the fiche is titled
+#: after what it holds).
+FICHE_SECTION_STARTS: Dict[str, str] = {
+    BRANCH_ACTS: FICHE_SECTION_START,
+    BRANCH_CUT: FICHE_SECTION_START,
+    BRANCH_NON_ARGUMENTATIVE: FICHE_SECTION_START,
+    BRANCH_CONVERSATION_REAL: "## Le moteur conversationnel, en texte intégral",
+    BRANCH_HIERARCHICAL_DELEGATION: "## La chaîne de délégation, en texte intégral",
+}
+
 #: The inputs read off the producer's source, per branch — ``pipeline_full_text``
 #: and its two helpers (``render_cut_analysis_material``,
 #: ``render_non_argumentative_reader_paragraph``), both other arm producers
 #: (``conversation_real_full_text``, ``hierarchical_delegation_full_text``), and
-#: the routing in ``judge_panel.pipeline_text_from_state``.
+#: the routing they share, ``arm_text_from_state``, which the judge's entry
+#: point and the fiche both go through.
 DECLARED_STATE_INPUTS: Dict[str, FrozenSet[str]] = {
     BRANCH_ACTS: frozenset(TEXT_INPUTS),
     # Every act key empty: the cut dump reads the upstream material instead.
@@ -191,24 +203,6 @@ _GATE_FLIPS: Dict[str, Tuple[str, ...]] = {
 #: takes ``opaque_id`` and does not use it). Named so the report does not read
 #: as an omission.
 PASSED_UNREAD: Tuple[str, ...] = ("opaque_id",)
-
-#: The two engines the judge's entry point routes to through ``provenance.mode``.
-_ENGINE_BRANCHES: Tuple[str, ...] = (
-    BRANCH_CONVERSATION_REAL,
-    BRANCH_HIERARCHICAL_DELEGATION,
-)
-
-#: What the witness says on those engines' records. The fiche caller
-#: (``render_fiche`` → ``pipeline_full_text``) does not route the provenance:
-#: there the fiche prints the pipeline's acts vocabulary — four absence lines
-#: — where the judge reads the engine's own text. That is a divergence of the
-#: two callers, not a harvest that fails to round-trip: it is named, never
-#: certified as one text.
-FICHE_DOES_NOT_ROUTE = (
-    "the fiche caller does not route this engine's provenance: the fiche "
-    "prints the pipeline's acts vocabulary where the judge reads the "
-    "engine's own text"
-)
 
 SYNTHETIC_STATE: Dict[str, Any] = {
     "act1_framing": "Acte I synthétique : le cadre inventé du témoin.",
@@ -298,7 +292,7 @@ def load_records(
 
 
 def render_branch(state: Mapping[str, Any], signature: Mapping[str, Any]) -> str:
-    """Which producer the judge's entry point routes this record to."""
+    """Which producer a record routes to — the judge's and the fiche's (#3695)."""
     mode = ((signature or {}).get("provenance") or {}).get("mode")
     if mode == BRANCH_CONVERSATION_REAL:
         return BRANCH_CONVERSATION_REAL
@@ -324,20 +318,29 @@ def judge_render(state: Mapping[str, Any], signature: Mapping[str, Any]) -> str:
 
 
 def fiche_render(state: Mapping[str, Any], signature: Mapping[str, Any]) -> str:
-    """The fiche caller: ``doc_facts`` supplies the two signature fields."""
-    from scripts.dataset.render_campaign_reading_folder import (
-        doc_facts,
-        pipeline_full_text,
-    )
+    """The fiche: the renderer's own ``render_fiche``, its section read back.
+
+    The same calls the reading folder's ``main`` makes — ``doc_facts`` on the
+    two records, then ``render_fiche`` — so the witness reads what a reader
+    would, on every arm: the fiche routes a record by its ``provenance.mode``
+    to the engine that produced it, as the judge's entry point does (#3695).
+    A fiche the declared headings cannot read back is an error, never an empty
+    text compared as equal.
+    """
+    from scripts.dataset.render_campaign_reading_folder import doc_facts, render_fiche
 
     facts = doc_facts(dict(signature), dict(state))
-    return pipeline_full_text(
-        _inner(state),
-        facts.get("classification"),
-        str(facts.get("opaque_id") or ""),
-        facts.get("outcome") or {},
-        chars=facts["chars"],
+    fiche = render_fiche(
+        dict(facts), dict(state), None, "witness", "witness", "witness"
     )
+    text = fiche_full_text(fiche, render_branch(state, signature))
+    if text is None:
+        raise RuntimeError(
+            "render_fiche produced no full-text section under the heading "
+            "declared for this branch — the witness's headings have drifted "
+            "from the renderer's"
+        )
+    return text
 
 
 def recorded_acts(state: Mapping[str, Any]) -> Dict[str, Any]:
@@ -775,12 +778,18 @@ def branch_controls(
 # ---------------------------------------------------------------------------
 
 
-def fiche_full_text(fiche: str) -> Optional[str]:
-    """The ``## Le pipeline, en texte intégral`` section of a harvested fiche."""
-    start = fiche.find(FICHE_SECTION_START + "\n\n")
-    if start < 0:
+def fiche_full_text(fiche: str, branch: str) -> Optional[str]:
+    """The full-text section of a fiche, under its branch's heading.
+
+    ``None`` when the fiche carries neither that heading nor the zero-shot's:
+    a fiche titled for another arm is not read as this one's — it was not
+    rendered as this record's.
+    """
+    start = FICHE_SECTION_STARTS[branch]
+    start_at = fiche.find(start + "\n\n")
+    if start_at < 0:
         return None
-    body = fiche[start + len(FICHE_SECTION_START) + 2 :]
+    body = fiche[start_at + len(start) + 2 :]
     end = body.find("\n" + FICHE_SECTION_END)
     if end < 0:
         return None
@@ -1007,15 +1016,7 @@ def _failures(entry: Mapping[str, Any]) -> List[str]:
     """Why one document's witness does not hold (empty = it holds)."""
     reasons: List[str] = []
     for name, equal in entry["equal"].items():
-        if equal is not False:
-            continue
-        if (
-            name == "fiche_vs_replay"
-            and entry.get("branch") in _ENGINE_BRANCHES
-            and entry["equal"].get("judge_vs_replay") is True
-        ):
-            reasons.append(FICHE_DOES_NOT_ROUTE)
-        else:
+        if equal is False:
             reasons.append(f"render mismatch ({name})")
     for scope in ("state", "signature"):
         for key in entry["inputs"][scope]["undeclared"]:
@@ -1170,11 +1171,14 @@ def main(argv: Optional[List[str]] = None) -> int:
 
     for doc in ordered:
         label = labels.get(doc, doc)
+        branch = render_branch(states[doc], signatures[doc])
         fiche_text: Optional[str] = None
         if args.renders_dir is not None:
             matches = find_fiches(args.renders_dir, doc)
             if len(matches) == 1:
-                fiche_text = fiche_full_text(matches[0].read_text(encoding="utf-8"))
+                fiche_text = fiche_full_text(
+                    matches[0].read_text(encoding="utf-8"), branch
+                )
             if fiche_text is None:
                 print(
                     f"{label}: no readable fiche ({len(matches)} match(es)) — "

@@ -85,6 +85,10 @@ _DELEGATION_STATE: Dict[str, Any] = {
     "partial": False,
 }
 
+#: What the pipeline's producer prints for an act no state carries — what the
+#: fiche printed on an engine's record before it routed the provenance (#3695).
+_ABSENCE_LINE = "absent de l'état — acte i — cadrage non produit"
+
 
 def _state(**overrides: Any) -> Dict[str, Any]:
     state = dict(w.SYNTHETIC_STATE)
@@ -583,40 +587,187 @@ def test_the_fiche_section_the_witness_extracts_is_the_producer_s_own_text() -> 
 
     assert w.FICHE_SECTION_START in fiche
     assert w.FICHE_SECTION_END in fiche
-    extracted = w.fiche_full_text(fiche)
+    extracted = w.fiche_full_text(fiche, w.BRANCH_ACTS)
 
     assert extracted is not None
     assert extracted == w.judge_render(w.SYNTHETIC_STATE, signature)
     assert extracted == w.replay_render(w.SYNTHETIC_STATE, signature)
 
 
+@pytest.mark.parametrize(
+    "state, signature",
+    [
+        (w.SYNTHETIC_STATE, {**_PIPELINE_SIGNATURE, "metadata": {}}),
+        (_CONVERSATION_STATE, _engine_signature(w.BRANCH_CONVERSATION_REAL)),
+        (_DELEGATION_STATE, _engine_signature(w.BRANCH_HIERARCHICAL_DELEGATION)),
+    ],
+)
+def test_each_arm_s_fiche_is_titled_after_what_it_holds(
+    state: Dict[str, Any], signature: Dict[str, Any]
+) -> None:
+    """#3695: the declared heading of each arm is the renderer's own."""
+    branch = w.render_branch(state, signature)
+    fiche = _fiche(state, signature)
+
+    assert w.FICHE_SECTION_STARTS[branch] in fiche
+    assert w.FICHE_SECTION_END in fiche
+    extracted = w.fiche_full_text(fiche, branch)
+
+    assert extracted is not None
+    assert extracted == w.judge_render(state, signature)
+    if branch in (w.BRANCH_CONVERSATION_REAL, w.BRANCH_HIERARCHICAL_DELEGATION):
+        assert w.FICHE_SECTION_START not in fiche
+
+
 def test_a_fiche_without_the_two_headings_is_not_read_as_a_text() -> None:
-    assert w.fiche_full_text("## Autre chose\n\ndu texte\n") is None
-    assert w.fiche_full_text(w.FICHE_SECTION_START + "\n\ndu texte sans fin\n") is None
+    assert w.fiche_full_text("## Autre chose\n\ndu texte\n", w.BRANCH_ACTS) is None
+    assert (
+        w.fiche_full_text(
+            w.FICHE_SECTION_START + "\n\ndu texte sans fin\n", w.BRANCH_ACTS
+        )
+        is None
+    )
+    # A fiche read as another arm's is not a readable fiche: the heading of
+    # the branch asked for is the one looked for.
+    engine_fiche = _fiche(
+        dict(_CONVERSATION_STATE), _engine_signature(w.BRANCH_CONVERSATION_REAL)
+    )
+    assert w.fiche_full_text(engine_fiche, w.BRANCH_ACTS) is None
+    assert w.fiche_full_text(
+        engine_fiche, w.BRANCH_CONVERSATION_REAL
+    ) == w.judge_render(
+        dict(_CONVERSATION_STATE), _engine_signature(w.BRANCH_CONVERSATION_REAL)
+    )
 
 
-def test_the_fiche_caller_does_not_route_the_two_other_engines() -> None:
-    """Measured on main: the reader's fiche and the judge's text diverge there.
+@pytest.mark.parametrize(
+    "mode, state",
+    [
+        (w.BRANCH_CONVERSATION_REAL, _CONVERSATION_STATE),
+        (w.BRANCH_HIERARCHICAL_DELEGATION, _DELEGATION_STATE),
+    ],
+)
+def test_the_fiche_reads_an_engine_s_record_as_the_judge_does(
+    mode: str, state: Dict[str, Any]
+) -> None:
+    """#3695: one text, two callers, on the two other engines too.
 
-    The judge's entry point routes ``provenance.mode`` to the engine's own
-    producer; ``render_fiche`` calls ``pipeline_full_text``, which has no such
-    routing. The witness must name that, never certify one text.
+    Before the routing, the fiche printed the pipeline's four absence lines
+    here where the judge read the engine's findings. The witness used to name
+    that divergence (``FICHE_DOES_NOT_ROUTE``) instead of certifying a text;
+    it now certifies, because the fiche routes ``provenance.mode``.
     """
-    state = dict(_CONVERSATION_STATE)
-    signature = _engine_signature(w.BRANCH_CONVERSATION_REAL)
+    signature = _engine_signature(mode)
 
     judged = w.judge_render(state, signature)
-    extracted = w.fiche_full_text(_fiche(state, signature))
-
-    assert "Sophismes relevés par l'agent informel" in judged
-    assert extracted is not None
-    assert extracted != judged
-    assert "absent de l'état — acte i — cadrage non produit" in extracted
+    assert _ABSENCE_LINE not in judged
+    assert w.fiche_render(state, signature) == judged
 
     entry = w.witness_document(state, signature)
+    assert entry["branch"] == mode
     assert entry["equal"]["judge_vs_replay"] is True
-    assert entry["equal"]["fiche_vs_replay"] is False
-    assert w._failures(entry) == [w.FICHE_DOES_NOT_ROUTE]
+    assert entry["equal"]["fiche_vs_replay"] is True
+    assert w._failures(entry) == []
+
+
+def test_an_engine_record_s_fiche_mismatch_is_named_like_any_other() -> None:
+    """#3695 removed the exemption: the fiche routes, so a divergence is a defect."""
+    entry: Dict[str, Any] = {
+        "branch": w.BRANCH_CONVERSATION_REAL,
+        "equal": {"judge_vs_replay": True, "fiche_vs_replay": False},
+        "inputs": {
+            "state": {"undeclared": [], "crashed": []},
+            "signature": {"undeclared": [], "crashed": []},
+        },
+        "recorded_lengths": {},
+        "controls": {"ok": True},
+    }
+
+    assert w._failures(entry) == ["render mismatch (fiche_vs_replay)"]
+
+
+def test_the_witness_s_fiche_is_the_renderer_s_own_output(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The fiche construction is the renderer's call, not a second routing.
+
+    A witness that rebuilt the text on its own could agree with the judge on
+    an engine's record while the reader's fiche said something else.
+    """
+    from scripts.dataset import render_campaign_reading_folder as folder
+
+    facts_seen: List[Dict[str, Any]] = []
+
+    def renderer(facts: Any, state: Any, zeroshot: Any, *rest: Any) -> str:
+        facts_seen.append(dict(facts))
+        return (
+            w.FICHE_SECTION_START
+            + "\n\nTEXTE SORTI DU RENDU\n"
+            + w.FICHE_SECTION_END
+            + "\n"
+        )
+
+    monkeypatch.setattr(folder, "render_fiche", renderer)
+
+    assert w.fiche_render(w.SYNTHETIC_STATE, w.SYNTHETIC_SIGNATURE) == (
+        "TEXTE SORTI DU RENDU"
+    )
+    assert facts_seen[0]["provenance"] == {}
+    assert facts_seen[0]["chars"] == len(w.SYNTHETIC_STATE["raw_text"])
+
+
+def test_a_fiche_the_witness_s_headings_cannot_read_is_an_error() -> None:
+    """The declared headings and the renderer's drift apart: said, not compared."""
+    from scripts.dataset import render_campaign_reading_folder as folder
+
+    with pytest.MonkeyPatch.context() as patch:
+        patch.setattr(folder, "render_fiche", lambda *args: "## Rien de déclaré\n")
+        with pytest.raises(RuntimeError, match="headings"):
+            w.fiche_render(w.SYNTHETIC_STATE, w.SYNTHETIC_SIGNATURE)
+
+
+def test_main_compares_a_harvested_engine_fiche_under_its_own_heading(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """#3695: ``main`` reads a fiche by its record's arm, end to end."""
+    cycle = _write_cycle(tmp_path, {"synth_engine": dict(_CONVERSATION_STATE)})
+    signature_path = cycle / "signatures" / "signature_synth_engine.json"
+    signature = json.loads(signature_path.read_text(encoding="utf-8"))
+    signature["provenance"] = {"mode": w.BRANCH_CONVERSATION_REAL}
+    signature_path.write_text(json.dumps(signature), encoding="utf-8")
+    renders = tmp_path / "renders"
+    renders.mkdir()
+    fiche = renders / "00_synth_engine_un-titre.md"
+    fiche.write_text(_fiche(dict(_CONVERSATION_STATE), signature), encoding="utf-8")
+    out = tmp_path / "report.json"
+    argv = [
+        "--cycle-dir",
+        str(cycle),
+        "--renders-dir",
+        str(renders),
+        "--no-fresh-process",
+    ]
+
+    assert w.main([*argv, "--out", str(out)]) == 0
+    document = json.loads(out.read_text(encoding="utf-8"))["documents"]["synth_engine"]
+    assert document["branch"] == w.BRANCH_CONVERSATION_REAL
+    assert document["reference"]["source"] == "harvested-fiche"
+    assert document["equal"]["harvested_vs_judge"] is True
+    assert document["equal"]["fiche_vs_replay"] is True
+    assert document["failures"] == []
+
+    # A fiche titled for the pipeline is not this record's fiche: the witness
+    # says so and fails, instead of comparing two different texts.
+    fiche.write_text(
+        _fiche(_state(), {**w.SYNTHETIC_SIGNATURE, "opaque_id": "synth_engine"}),
+        encoding="utf-8",
+    )
+
+    assert w.main([*argv, "--out", str(out)]) == 1
+    document = json.loads(out.read_text(encoding="utf-8"))["documents"]["synth_engine"]
+    assert document["reference"]["source"] == "judge-entry-point"
+    assert "no readable harvested fiche" in document["failures"]
+    assert "no readable fiche" in capsys.readouterr().out
 
 
 def test_every_mismatch_the_witness_can_name() -> None:
