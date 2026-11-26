@@ -66,6 +66,36 @@ SETTLE = 2
 # threads. Well below BOUND, so the dump is in stderr when the bound expires.
 EXIT_WATCHDOG = 60
 _WATCHDOG_ENV = "NESTED_PYTEST_EXIT_WATCHDOG"
+# How long one process listing may take before the walk below a child gives
+# up. The listing is machine work — a WMI query on Windows, ``ps`` on posix —
+# and the slowest thing this module asks of a busy seat. Measured 2026-11-26:
+# a fixed 60 s was outrun under four workers on a degraded machine, the same
+# node passing alone in 79 s (#3702). Derived from the number of workers
+# sharing the seat, and capped, so a mis-set variable cannot make the walk
+# wait forever.
+LISTING_BASE = 60
+LISTING_MAX_FACTOR = 3
+
+
+def listing_budget() -> int:
+    """How long one process listing may take: ``LISTING_BASE`` seconds per
+    worker sharing the machine, up to ``LISTING_MAX_FACTOR`` of them."""
+    try:
+        workers = int(os.environ.get("PYTEST_XDIST_WORKER_COUNT", "1"))
+    except ValueError:
+        workers = 1
+    return LISTING_BASE * max(1, min(workers, LISTING_MAX_FACTOR))
+
+
+class ProcessListingFailed(RuntimeError):
+    """The process table could not be read — the walk's own failure (#3702).
+
+    Raised instead of ``subprocess.TimeoutExpired`` so that a run states
+    *which* instrument failed. The child the walk was asked about may have
+    behaved perfectly; what cannot be said is what it left running.
+    """
+
+
 # OpenProcess access right, enough for GetProcessTimes.
 _QUERY_LIMITED_INFORMATION = 0x1000
 
@@ -130,9 +160,21 @@ def descendants(pid, created):
     else:
         argv = ["ps", "-eo", "pid=,ppid=,comm="]
         width = 3
-    listing = subprocess.run(
-        argv, capture_output=True, text=True, timeout=60, check=True
-    ).stdout
+    budget = listing_budget()
+    try:
+        listing = subprocess.run(
+            argv, capture_output=True, text=True, timeout=budget, check=True
+        ).stdout
+    except subprocess.TimeoutExpired as expired:
+        raise ProcessListingFailed(
+            f"the process listing did not answer within {budget} s "
+            f"(listing budget {budget} s = {LISTING_BASE} s per worker, "
+            f"PYTEST_XDIST_WORKER_COUNT="
+            f"{os.environ.get('PYTEST_XDIST_WORKER_COUNT', '1')}): the walk "
+            "found nothing because it could not read the process table. This "
+            "is the walk's failure, not the child's — say nothing about what "
+            "the child left running."
+        ) from expired
     children = {}
     for line in listing.splitlines():
         fields = line.split(None, width - 1)
