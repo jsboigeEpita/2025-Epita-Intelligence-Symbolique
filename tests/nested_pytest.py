@@ -23,9 +23,10 @@ that exits and leaves processes behind fails the test, and they are killed. On
 ai-01, 17 probe sessions with a real JVM left none.
 
 The wait is bounded. After ``BOUND`` seconds the process tree is killed, and
-the test fails with the processes still below it, how the caller kept time
-during the wait, and what the child wrote. The timekeeping tells a child that
-hangs from a machine that stalls: on the runners, runs 35972448838 and
+the test fails with the processes still below it — or with the fact that they
+could not be listed, when the walk itself failed (#3702) — how the caller kept
+time during the wait, and what the child wrote. The timekeeping tells a child
+that hangs from a machine that stalls: on the runners, runs 35972448838 and
 35967808661 lost minutes outside any child (an in-process extraction bounded
 at 30 s measured 669 s; one warnings summary printed with 19 min between two
 of its lines), and a bound that expires then says nothing about the child.
@@ -93,6 +94,12 @@ class ProcessListingFailed(RuntimeError):
     Raised instead of ``subprocess.TimeoutExpired`` so that a run states
     *which* instrument failed. The child the walk was asked about may have
     behaved perfectly; what cannot be said is what it left running.
+
+    It lands on two paths, which do not treat it alike. On the exit path
+    (``_left_behind``) it propagates: the child is over, and the failure is
+    what the run has to report. At the bound (``_state_at_bound``) it is one
+    line of the bound's report: the child's failure is that it outlived its
+    bound, and it is killed either way.
     """
 
 
@@ -145,6 +152,9 @@ def descendants(pid, created):
     dwm.exe and fontdrvhost.exe as left behind by the probe, and killed them
     (#2662). On posix an orphan is re-parented, so a parent id always names a
     live process, and the table has no creation column.
+
+    A listing that does not answer within ``listing_budget()`` seconds raises
+    ``ProcessListingFailed`` (#3702), so the run states which instrument failed.
     """
     if os.name == "nt":
         argv = [
@@ -200,10 +210,21 @@ def descendants(pid, created):
 
 
 def _state_at_bound(process):
-    """What was below ``process`` when the bound expired. ``(text, pids)``."""
+    """What was below ``process`` when the bound expired. ``(text, pids)``.
+
+    Never raises: the walk completes the report, it does not decide anything.
+    Whatever stops it — ``ProcessListingFailed``, or a kind nobody listed — the
+    caller still reads "not listed" under ``--- at the bound``, and still
+    kills the process. Measured 2026-11-26 (#3702): with the walk raising
+    outside ``(OSError, subprocess.SubprocessError)``, ``kill_tree`` was
+    skipped and the child that had outlived its bound stayed running — on
+    ``main`` with a ``ValueError``, and here with the named failure itself,
+    which is a ``RuntimeError``. The bound's verdict is the child's; a failure
+    of the walk that describes it is a line of that verdict.
+    """
     try:
         below = descendants(process.pid, _created(process.pid))
-    except (OSError, subprocess.SubprocessError) as exc:
+    except Exception as exc:
         return f"--- at the bound\ndescendants: not listed ({exc!r})\n", []
     listed = ", ".join(f"{pid} {name}" for pid, name in below) or "none"
     return f"--- at the bound\ndescendants: {listed}\n", [pid for pid, _ in below]
@@ -298,6 +319,14 @@ def _left_behind(process):
     started; on posix an orphan is re-parented and escapes it. A process
     created before ``process`` is not counted, whatever parent id it names
     (#2662).
+
+    When the first listing fails, the walk has seen nothing, and its message
+    says so. When the second fails, it must not erase the first: measured
+    2026-11-26 (#3702), the message said "the walk found nothing" while the
+    first listing had seen a process, and the sighting was lost. Nothing is
+    killed on the first listing alone — a pid is killed only where a listing
+    reads it below the child again — so the failure carries the sighting
+    instead.
     """
     created = _created(process.pid)
     below = descendants(process.pid, created)
@@ -305,9 +334,19 @@ def _left_behind(process):
         return []
     time.sleep(SETTLE)
     first = {pid for pid, _ in below}
-    left = [
-        (pid, name) for pid, name in descendants(process.pid, created) if pid in first
-    ]
+    try:
+        again = descendants(process.pid, created)
+    except (OSError, subprocess.SubprocessError, ProcessListingFailed) as failed:
+        seen = ", ".join(f"{pid} {name}" for pid, name in below)
+        raise ProcessListingFailed(
+            f"below the child that had exited, the first listing saw {seen}. "
+            f"The second, {SETTLE} s later, could not read the process table: "
+            "whether they were still there was not read, and nothing was "
+            "killed — a process is killed only where a listing reads it below "
+            "the child. The listing is the instrument that failed; the "
+            "sighting stands."
+        ) from failed
+    left = [(pid, name) for pid, name in again if pid in first]
     _kill([pid for pid, _ in left])
     return left
 
