@@ -69,10 +69,17 @@ def ensure_gitignored(path: Path, repo_root: Path = REPO_ROOT) -> None:
 
 
 def read_panel(panel_file: Optional[Path]) -> Optional[List[str]]:
-    """The panel's ids through the campaign's ONE parser, or ``None``."""
+    """The panel's ids through the campaign's ONE parser, or ``None``.
+
+    The parser is imported from ``scripts.dataset.panel_ids``, the module
+    that holds it (#3700): importing it from the corpus batch runner loaded
+    the whole pipeline runtime, and the checkout's ``.env`` with it, on the
+    way to thirty lines of ``re`` and ``pathlib`` — which an instrument that
+    must stay keyless cannot afford (#3658 item 46c).
+    """
     if panel_file is None:
         return None
-    from scripts.dataset.run_corpus_batch import parse_doc_ids
+    from scripts.dataset.panel_ids import parse_doc_ids
 
     return parse_doc_ids(None, str(panel_file))
 
