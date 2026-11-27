@@ -1492,6 +1492,7 @@ def run(
     observed: Optional[Observed] = None,
     runtime: Optional[Runtime] = None,
     results_root: Path = c.RESULTS_ROOT,
+    probe: bool = False,
 ) -> Dict[str, Any]:
     """The whole live replay: preflight, gate, control, the paid acts, the tag.
 
@@ -1499,12 +1500,18 @@ def run(
     ``ok`` whether the tag is a measurement. Nothing is written before the
     identity control has given the record back, and the tag's first
     ``pipeline.json`` says ``rc`` 1.
+
+    ``probe`` (#3658 item 46g) declares the named panel a subset chosen on
+    purpose: only those documents are replayed, the rest of the cycle is named
+    in ``report["probe"]`` and in the tag, and the tag carries one document, so
+    a judges stage given the whole panel refuses it (``unharvested`` names the
+    documents it is missing) instead of grading a probe as a panel.
     """
     cycle_dir, destination = Path(cycle_dir), Path(destination)
     report: Dict[str, Any] = {
         "provenance": provenance(argv, cycle_dir, destination, panel)
     }
-    verdict = preflight(cycle_dir, destination, panel)
+    verdict = preflight(cycle_dir, destination, panel, probe=probe)
     if not verdict.ok:
         report.update(
             {"ok": False, "stage": STAGE_PREFLIGHT, "preflight": verdict.as_dict()}
@@ -1556,6 +1563,29 @@ def run(
             {"ok": False, "stage": STAGE_RECORDS, "refused": f"{type(exc).__name__}"}
         )
         return report
+    probe_scope: Optional[Dict[str, Any]] = None
+    if probe:
+        # #3658 item 46g — the probe's scope, named: the documents it covers
+        # are the ones it named, and the rest of the cycle is declared left out
+        # here and in the tag. Nothing is dropped silently.
+        named = set(panel or ())
+        covered = [doc for doc in docs if doc in named]
+        if not covered:
+            report.update(
+                {
+                    "ok": False,
+                    "stage": STAGE_RECORDS,
+                    "refused": "the probe names no document of this cycle",
+                }
+            )
+            return report
+        probe_scope = {
+            "named": len(named),
+            "covered": covered,
+            "left_out": [doc for doc in docs if doc not in named],
+            "cycle_documents": len(docs),
+        }
+        docs = covered
     environment, recorded_model, problems = recorded_settings(signatures)
     seat_input = observed or observe()
     seat = gate(environment, recorded_model, seat_input)
@@ -1750,6 +1780,7 @@ def run(
             assembled_rows,
             check,
             count_ok=count_ok,
+            probe=probe_scope,
         )
 
     # Every pair is on disk, and the record still refuses: a run that dies here
@@ -1799,6 +1830,7 @@ def run(
             "ok": ok,
             "stage": STAGE_DONE,
             "counts": counts,
+            "probe": probe_scope,
             "call_budget": {
                 "documents": len(live_docs),
                 "per_document": ACT_CALLS_PER_DOCUMENT,
@@ -1888,9 +1920,10 @@ def _final_record(
     rows: Sequence[Mapping[str, Any]],
     self_check: Mapping[str, Any],
     count_ok: bool,
+    probe: Optional[Mapping[str, Any]] = None,
 ) -> Dict[str, Any]:
     live_rows = [row for row in rows if row.get("mode") == LIVE]
-    return {
+    record: Dict[str, Any] = {
         "rc": 0 if count_ok and head_before == head_after else 1,
         "stage": LIVE,
         "instrument": INSTRUMENT,
@@ -1916,6 +1949,12 @@ def _final_record(
             "guard_would_refuse": self_check.get("guard", {}).get("would_refuse"),
         },
     }
+    if probe is not None:
+        # The tag says it is a probe, in the file the judges read: a tag that
+        # covered one document of a ten-document cycle must never look like a
+        # panel that happened to hold one.
+        record["probe"] = dict(probe)
+    return record
 
 
 def _write_pipeline(destination: Path, record: Mapping[str, Any]) -> None:
@@ -2025,15 +2064,23 @@ def main(
     argv: Optional[Sequence[str]] = None,
     *,
     results_root: Path = c.RESULTS_ROOT,
+    probe: bool = False,
 ) -> int:
     """Run the replay and print its summary; the report follows the tag.
 
     ``results_root`` is the run's own seam (:func:`run` already carries it): the
     launcher passes the cycle's, and no production caller passes anything.
+    ``probe`` says the named panel is a declared subset (:func:`run`), which the
+    preflight has to know before it can let a partial panel through.
     """
     invoked = list(sys.argv[1:] if argv is None else argv)
     report = run(
-        Path(cycle_dir), Path(destination), panel, invoked, results_root=results_root
+        Path(cycle_dir),
+        Path(destination),
+        panel,
+        invoked,
+        results_root=results_root,
+        probe=probe,
     )
     tag = Path(destination)
     if tag.is_dir():
@@ -2042,7 +2089,7 @@ def main(
         )
         summary = {
             key: report.get(key)
-            for key in ("ok", "stage", "counts", "refused", "refusals")
+            for key in ("ok", "stage", "counts", "probe", "refused", "refusals")
             if report.get(key) is not None
         }
         print(json.dumps(summary, indent=1, sort_keys=True))
@@ -2078,6 +2125,16 @@ def cli(argv: Optional[Sequence[str]] = None) -> int:
     )
     parser.add_argument("--panel-file", default=None, type=Path)
     parser.add_argument("--doc-ids", default=None)
+    parser.add_argument(
+        "--probe",
+        action="store_true",
+        help=(
+            "the named panel is a declared subset of the cycle: the documents "
+            "left out are named instead of refusing the run (the tag then "
+            "carries one document, and a judges stage given the whole panel "
+            "refuses it as unharvested)"
+        ),
+    )
     args = parser.parse_args(sys.argv[1:] if argv is None else list(argv))
     panel: Optional[List[str]] = None
     if args.panel_file is not None or args.doc_ids is not None:
@@ -2102,7 +2159,9 @@ def cli(argv: Optional[Sequence[str]] = None) -> int:
                 )
             )
             return EXIT_USAGE
-    return main(args.cycle_dir, args.dest, panel, sys.argv[1:])
+    if args.probe and not panel:
+        parser.error("--probe: needs --panel-file or --doc-ids to name the subset")
+    return main(args.cycle_dir, args.dest, panel, sys.argv[1:], probe=bool(args.probe))
 
 
 if __name__ == "__main__":

@@ -161,6 +161,11 @@ class Verdict:
     membership: str
     pairs_ok: int
     problems: Tuple[Problem, ...]
+    #: #3658 item 46g — a probe names a subset on purpose: the rest of the
+    #: cycle is then left out rather than refused, and named here so nothing
+    #: downstream can mistake the subset for the panel.
+    probe: bool = False
+    left_out: Tuple[str, ...] = ()
 
     @property
     def ok(self) -> bool:
@@ -182,6 +187,8 @@ class Verdict:
             "panel_size": len(self.panel),
             "membership": self.membership,
             "pairs_ok": self.pairs_ok,
+            "probe": self.probe,
+            "left_out": list(self.left_out),
             "counts": self.counts(),
             "problems": [problem.as_dict() for problem in self.problems],
         }
@@ -292,12 +299,17 @@ def _panel_size(cycle_dir: Path, problems: List[Problem]) -> Optional[int]:
 
 
 def _membership(
-    cycle_dir: Path, docs: Sequence[str], panel: Optional[Sequence[str]]
-) -> Tuple[List[Problem], Tuple[str, ...], str]:
-    """``(problems, the documents to check, how membership was verified)``."""
+    cycle_dir: Path,
+    docs: Sequence[str],
+    panel: Optional[Sequence[str]],
+    probe: bool = False,
+) -> Tuple[List[Problem], Tuple[str, ...], str, Tuple[str, ...]]:
+    """``(problems, the documents to check, how membership was verified, the
+    documents a probe leaves out)``."""
     problems: List[Problem] = []
     counts = _harvest_counts(cycle_dir, problems)
     size = _panel_size(cycle_dir, problems)
+    left_out: Tuple[str, ...] = ()
 
     if panel is None:
         to_check = tuple(docs)
@@ -305,11 +317,18 @@ def _membership(
     else:
         to_check = tuple(dict.fromkeys(panel))
         membership = MEMBERSHIP_SET
-        problems.extend(
-            Problem(STRAY_PAIR, doc, "the panel does not name it")
-            for doc in docs
-            if doc not in to_check
-        )
+        outside = tuple(doc for doc in docs if doc not in to_check)
+        if probe:
+            # #3658 item 46g — the caller declared a probe on a named subset:
+            # what it does not name is left out, and named in the verdict. The
+            # harvest checks below still read the cycle's whole harvest, so a
+            # probe never weakens them.
+            left_out = outside
+        else:
+            problems.extend(
+                Problem(STRAY_PAIR, doc, "the panel does not name it")
+                for doc in outside
+            )
 
     if counts:
         missing, stale = counts.get("missing"), counts.get("stale")
@@ -331,7 +350,7 @@ def _membership(
                 HARVEST_COUNT_MISMATCH, detail=f"panel_size={size} present={len(docs)}"
             )
         )
-    return problems, to_check, membership
+    return problems, to_check, membership, left_out
 
 
 # ---------------------------------------------------------------------------
@@ -464,8 +483,16 @@ def preflight(
     destination: Path,
     panel: Optional[Sequence[str]] = None,
     repo_root: Path = c.REPO_ROOT,
+    *,
+    probe: bool = False,
 ) -> Verdict:
     """The three checks, in the order of the module's docstring.
+
+    ``probe`` declares that the named panel is a subset chosen on purpose — one
+    document to measure the paid path before the whole panel is spent. The
+    documents outside it are then left out and named (``left_out``) instead of
+    refused as strays; a caller that does not declare it still gets the
+    refusal, so a panel silently narrower than the cycle stays a defect.
 
     Every problem is collected and none stops the next check: one run shows
     the whole state of the cycle. Nothing is written on any path."""
@@ -493,7 +520,7 @@ def preflight(
     docs = sorted(
         _ids(states_dir, STATE_PREFIX) | _ids(signatures_dir, SIGNATURE_PREFIX)
     )
-    found, to_check, membership = _membership(cycle_dir, docs, panel)
+    found, to_check, membership, left_out = _membership(cycle_dir, docs, panel, probe)
     problems.extend(found)
     pairs_ok = 0
     for doc in to_check:
@@ -502,7 +529,14 @@ def preflight(
         pairs_ok += int(matched)
     problems.extend(_destination(destination, cycle_dir, repo_root))
     return Verdict(
-        cycle_dir, destination, to_check, membership, pairs_ok, tuple(problems)
+        cycle_dir,
+        destination,
+        to_check,
+        membership,
+        pairs_ok,
+        tuple(problems),
+        probe=probe,
+        left_out=left_out,
     )
 
 
@@ -530,12 +564,23 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             "the panel"
         ),
     )
+    parser.add_argument(
+        "--probe",
+        action="store_true",
+        help=(
+            "declare the named panel a probe on a subset: the cycle's other "
+            "documents are then left out and named, not refused as strays"
+        ),
+    )
     args = parser.parse_args(sys.argv[1:] if argv is None else list(argv))
     panel = _split_panel(args.panel) if args.panel is not None else None
     if args.panel is not None and not panel:
         # An empty panel would check nothing, and call the cycle whole.
         parser.error("--panel: empty — an empty panel checks nothing")
-    verdict = preflight(args.cycle_dir, args.dest, panel)
+    if args.probe and panel is None:
+        # A probe is a subset; without --panel there is no subset to be a probe on.
+        parser.error("--probe: needs --panel — a probe names the documents it covers")
+    verdict = preflight(args.cycle_dir, args.dest, panel, probe=args.probe)
     print(json.dumps(verdict.as_dict(), sort_keys=True))
     return EXIT_OK if verdict.ok else EXIT_FAILED
 

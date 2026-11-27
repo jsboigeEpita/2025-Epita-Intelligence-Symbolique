@@ -971,6 +971,79 @@ def test_the_run_writes_a_tag_the_judges_stage_reads(
     assert report["self_check"]["guard"]["would_refuse"] is False
 
 
+def test_a_probe_replays_the_named_document_and_names_the_rest(
+    tmp_path: Path, rig: tuple
+) -> None:
+    """#3658 item 46g — the paid path is measured on ONE document before the
+    panel is spent. The run replays only what it was given, the report and the
+    tag say what was left out, and a judges stage handed the whole panel
+    refuses the tag as unharvested instead of grading a probe as a panel."""
+    from scripts.panel.run_cycle import recorded_pipeline, unharvested
+
+    runtime, harness = rig
+    cycle = build_cycle(tmp_path)
+    tag = tmp_path / "panel_cycles" / "tag1"
+
+    report = live.run(
+        cycle,
+        tag,
+        ["doc_t1"],
+        ["--acts", "live", "--doc-ids", "doc_t1", "--probe"],
+        observed=seat(),
+        runtime=runtime,
+        results_root=tmp_path,
+        probe=True,
+    )
+
+    assert report["ok"] is True, (report.get("refused"), report.get("self_check"))
+    assert report["probe"] == {
+        "named": 1,
+        "covered": ["doc_t1"],
+        "left_out": ["doc_t2"],
+        "cycle_documents": len(DOCS),
+    }
+    assert report["counts"]["documents"] == 1
+    # One document's three acts, and nothing else was paid for.
+    assert harness.paid() == len(c.ACTS)
+    assert report["call_budget"]["bound"] == live.ACT_CALLS_PER_DOCUMENT
+
+    record = json.loads((tag / "pipeline.json").read_text(encoding="utf-8"))
+    assert record["probe"]["left_out"] == ["doc_t2"]
+    cfg = _judge_config(tag, tmp_path)
+    assert recorded_pipeline(cfg) is not None
+    # The probe is usable on its own subset, and refused as a panel.
+    assert unharvested(cfg, ["doc_t1"]) == []
+    assert unharvested(cfg, list(DOCS)) == ["doc_t2"]
+
+
+def test_a_probe_that_names_no_document_writes_nothing_and_pays_nothing(
+    tmp_path: Path, rig: tuple
+) -> None:
+    """A caller that declares a probe without naming a subset would otherwise
+    replay the whole cycle under a word that says it did not: the branch is
+    fail-closed, and named."""
+    runtime, harness = rig
+    cycle = build_cycle(tmp_path)
+    tag = tmp_path / "panel_cycles" / "tag1"
+
+    report = live.run(
+        cycle,
+        tag,
+        None,
+        [],
+        observed=seat(),
+        runtime=runtime,
+        results_root=tmp_path,
+        probe=True,
+    )
+
+    assert report["ok"] is False
+    assert report["stage"] == live.STAGE_RECORDS
+    assert report["refused"] == "the probe names no document of this cycle"
+    assert not tag.exists()
+    assert harness.paid() == 0
+
+
 def test_the_final_record_says_rc_zero_only_once_the_check_holds(
     tmp_path: Path, rig: tuple
 ) -> None:
