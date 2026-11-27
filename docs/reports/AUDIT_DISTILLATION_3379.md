@@ -123,9 +123,14 @@ pas re-mesurées.
   l'issue sur aucun des 9 documents ; la manipulabilité atteint le prompt sur 5
   documents, et aucun des 9 rendus ne contient le mot « manipulab » ; le Q-learning n'a
   pas d'appelant. Le re-scope câble les électeurs propres au document (les joueurs de
-  la lecture stratège) et mesure : 0 document sur 9 (cycle 6) et 0 sur 8 (cycle 7) où
-  leur coalition change l'issue — la mesure est enregistrée sur l'état, jamais rendue ;
-  le Q-learning est consigné non applicable à l'analyse mono-document.
+  la lecture stratège) et mesure : 0 document sur 9 (cycle 6), 0 sur 8 (cycle 7) et 0
+  sur 143 documents mesurables sur 17 cycles (re-compte du 25/11, State sur #3386) où
+  leur coalition change l'issue — la mesure est enregistrée sur l'état, jamais rendue.
+  Sur ces 143 documents le prédicat n'est jamais vrai ; le plus petit témoin planté
+  trouvé exige 9 électeurs sur 7 framings, au-delà des 2 à 6 framings et des 2 à 8
+  joueurs classant tout qu'observent les cycles, et il est épinglé par
+  `tests/unit/argumentation_analysis/orchestration/test_player_play_positive_control_3386.py`
+  (#3692) ; le Q-learning est consigné non applicable à l'analyse mono-document.
 - **1 ligne non portée** sans contribution analytique : CaseAI.
 - Le moteur de stratégie réclamé par l'utilisateur n'est pas dans la table parce qu'il n'a
   jamais été livré par un projet : 2.1.6 offrait la matière (coalitions, manipulabilité).
