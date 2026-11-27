@@ -66,9 +66,13 @@ Report: counts, per-act presence, and sha256 digests, never a passage. It is
 valid JSON whose first key is ``provenance`` (#2353), naming the three
 instruments that composed it — this launcher, the preflight, the fidelity
 witness — by content sha256, so a cited report says which code produced it.
-Exit 0 = every document round-trips and every control held in its stated
-direction; 1 = a mismatch, a control that did not hold, or a cycle the cycle
-itself refuses; 2 = the invocation could not run as asked (nothing is written).
+The report also carries the sha256 of every input file of the cycle, taken
+before and after the measurement (``cycle_inputs``): a replay that writes into
+the cycle it reads reddens, and names the file. Exit 0 = every document
+round-trips, every control held in its stated direction, and the cycle's
+inputs did not move; 1 = a mismatch, a control that did not hold, a cycle the
+cycle itself refuses, or an input that moved under the measurement; 2 = the
+invocation could not run as asked (nothing is written).
 """
 
 from __future__ import annotations
@@ -121,6 +125,34 @@ NEGATIVE_BRANCHES = (
 def _digest(text: str) -> str:
     """The sha256 of a rendered text — the only thing the report keeps of it."""
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
+def cycle_inputs(cycle_dir: Path) -> Dict[str, str]:
+    """The sha256 of every input file of the cycle, keyed by its path under it.
+
+    Taken twice, around the measurement, so the report can say its inputs held.
+    Relative paths and digests only — never a byte of content, and never a
+    passage: the report stays quotable on a GitHub-indexed surface.
+    """
+    root = Path(cycle_dir)
+    out: Dict[str, str] = {}
+    for path in sorted(root.rglob("*")):
+        if path.is_file():
+            out[path.relative_to(root).as_posix()] = hashlib.sha256(
+                path.read_bytes()
+            ).hexdigest()
+    return out
+
+
+def input_drift(before: Mapping[str, str], after: Mapping[str, str]) -> List[str]:
+    """The paths whose digest differs, appeared or vanished (names only).
+
+    Empty means every file the cycle had before the measurement is there after
+    it, byte for byte, and nothing was added beside them.
+    """
+    return sorted(
+        path for path in set(before) | set(after) if before.get(path) != after.get(path)
+    )
 
 
 def _instruments() -> Dict[str, Optional[str]]:
@@ -423,6 +455,9 @@ def replay(
             "stage": STAGE_PREFLIGHT,
             "preflight": verdict.as_dict(),
         }
+    # The cycle has been declared runnable: this is the last moment its inputs
+    # can be read without anything of the replay having touched them.
+    inputs_before = cycle_inputs(Path(cycle_dir))
     # --- past this line, and only past it, the text builders may exist ---
     from scripts.panel import act_replay_fidelity as fidelity
     from scripts.panel.run_cycle import pipeline_problem
@@ -464,6 +499,8 @@ def replay(
             entries.append(document(doc, states[doc], signatures[doc], fidelity))
         except Exception as failed:  # one record must not cost the other nine
             entries.append(_broken(doc, failed))
+    inputs_after = cycle_inputs(Path(cycle_dir))
+    drifted = input_drift(inputs_before, inputs_after)
     failures = {entry["doc"]: _reasons(entry) for entry in entries if not entry["ok"]}
     counts: Dict[str, int] = {
         "documents": len(entries),
@@ -488,11 +525,18 @@ def replay(
     }
     return {
         "provenance": prov,
-        "ok": not failures,
+        "ok": not failures and not drifted,
         "stage": STAGE_REPLAYED,
         "acts": acts,
         "preflight": verdict.as_dict(),
         "counts": counts,
+        "cycle_inputs": {
+            "files": len(inputs_before),
+            "unchanged": not drifted,
+            "drifted": drifted,
+            "before": inputs_before,
+            "after": inputs_after,
+        },
         "documents": entries,
         "failures": failures,
     }
@@ -580,13 +624,17 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     (destination / REPORT).write_text(
         json.dumps(report, ensure_ascii=False, indent=1), encoding="utf-8"
     )
-    print(
-        json.dumps(
-            {key: report.get(key) for key in ("ok", "stage", "counts", "failures")},
-            indent=1,
-            sort_keys=True,
-        )
-    )
+    summary: Dict[str, Any] = {
+        key: report.get(key) for key in ("ok", "stage", "counts", "failures")
+    }
+    inputs = report.get("cycle_inputs")
+    if isinstance(inputs, Mapping):
+        # The summary names what drifted; the whole before/after map stays in
+        # the report on disk, where a reader can check a single file.
+        summary["cycle_inputs"] = {
+            key: inputs.get(key) for key in ("files", "unchanged", "drifted")
+        }
+    print(json.dumps(summary, indent=1, sort_keys=True))
     return EXIT_OK if report.get("ok") else EXIT_FAILED
 
 
