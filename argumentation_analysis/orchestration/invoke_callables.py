@@ -648,8 +648,8 @@ def _expose_finish_reason(call: Any, result: Any, settings: Any) -> None:
         if cap:
             break
     try:
-        call.last_finish_reason = reason  # type: ignore[attr-defined]
-        call.last_max_tokens = cap  # type: ignore[attr-defined]
+        call.last_finish_reason = reason
+        call.last_max_tokens = cap
     except Exception:  # pragma: no cover - a callable that refuses attributes
         pass
 
