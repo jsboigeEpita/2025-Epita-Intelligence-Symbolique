@@ -53,6 +53,7 @@ Concretely:
 | What a selection change would examine, on recorded states | `scripts/panel/replay_selection.py` | `orchestration/selection.py` and the budgets of `core/reading_window.py`, as the checked-out code computes them; each line states whether the replay reproduced the recorded selection, and the same passages redrawn at random stand beside every count |
 | What the first reading names, recorded or redrawn | `scripts/panel/first_reading_draws.py calibrate` (free) · `paid --draws 3` | `agents/core/reading.py`: the recorded moves, or `build_first_reading` called again on the checked-out code, one call per document and per draw |
 | Defect classes of the traced items | `scripts/panel/classify_items.py` (`--dry-run` prints the estimate) | one call per document to a stronger model over the tracer's output; the class is a reading of the stage, never a replacement for it |
+| Whether a recorded state reproduces the render, before an act replay | `scripts/panel/act_replay_fidelity.py --cycle-dir <cycle> [--renders-dir <folder>] [--panel-file <panel>]` | the recorded states and signatures only — no model call, no network, no JVM: every state and signature field perturbed in memory against the inputs read off the producers' source, the judge, fiche and replay constructions compared byte for byte, three negative controls, every digest recomputed in a child that reads no `.env`; the report opens with its provenance header (#3658 item 46c) |
 
 Add a row when a new render gains a producer. A render cited in a PR with no
 row here is the defect #2353 describes.
