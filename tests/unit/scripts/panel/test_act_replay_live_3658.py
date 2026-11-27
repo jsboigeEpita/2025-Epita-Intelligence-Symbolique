@@ -35,6 +35,7 @@ from __future__ import annotations
 
 import copy
 import dataclasses
+import hashlib
 import json
 import types
 from pathlib import Path
@@ -45,6 +46,7 @@ import pytest
 from scripts.panel import _common as c
 from scripts.panel import act_replay_fidelity as fidelity
 from scripts.panel import act_replay_live as live
+from tests.support.tree_walk import iter_files
 
 DOCS = ("doc_t1", "doc_t2")
 MARK = "INVENTED-ACT-live-3658"
@@ -953,9 +955,14 @@ def test_the_run_writes_a_tag_the_judges_stage_reads(
         "control_documents": len(DOCS),
         "control_ok": len(DOCS),
         "degraded_arms": 0,
+        "model_calls": len(DOCS) * len(c.ACTS),
+        "call_bound": len(DOCS) * live.ACT_CALLS_PER_DOCUMENT,
     }
-    # the paid step: one call per act and per document, measured
+    # the paid step: one call per act and per document, measured, and the
+    # announced bound is above what was really spent, never below it
     assert harness.paid() == len(DOCS) * len(c.ACTS)
+    assert report["call_budget"]["made"] == harness.paid()
+    assert report["call_budget"]["bound"] >= report["call_budget"]["made"]
     cfg = _judge_config(tag, tmp_path)
     assert recorded_pipeline(cfg) is not None
     assert pipeline_problem(dict(recorded_pipeline(cfg) or {})) is None
@@ -1026,6 +1033,161 @@ def test_a_tag_whose_self_check_fails_keeps_rc_one(
     assert report["refused"] == "the self-check failed"
     assert report["self_check"]["problems"]
     assert json.loads((tag / "pipeline.json").read_text(encoding="utf-8"))["rc"] == 1
+
+
+# ---------------------------------------------------------------------------
+# 9. #3658 item 46g — the paid run declares its bound and its inputs held
+# ---------------------------------------------------------------------------
+
+
+def test_the_run_announces_its_call_bound_before_the_first_call(
+    tmp_path: Path, rig: tuple, capsys: pytest.CaptureFixture
+) -> None:
+    """The bound is said out loud before anything is spent, not deduced from
+    the bill afterwards."""
+    runtime, _ = rig
+    cycle = build_cycle(tmp_path)
+    tag = tmp_path / "panel_cycles" / "tag1"
+
+    report = live.run(
+        cycle,
+        tag,
+        list(DOCS),
+        [],
+        observed=seat(),
+        runtime=runtime,
+        results_root=tmp_path,
+    )
+
+    said = capsys.readouterr().out
+    assert f"at most {live.ACT_CALLS_PER_DOCUMENT} model calls each" in said
+    assert f"at most {len(DOCS) * live.ACT_CALLS_PER_DOCUMENT} call(s)" in said
+    assert report["call_budget"] == {
+        "documents": len(DOCS),
+        "per_document": live.ACT_CALLS_PER_DOCUMENT,
+        "bound": len(DOCS) * live.ACT_CALLS_PER_DOCUMENT,
+        "made": len(DOCS) * len(c.ACTS),
+        "per_document_made": {doc: len(c.ACTS) for doc in DOCS},
+    }
+
+
+def test_the_run_digests_the_cycle_before_and_after_the_acts(
+    tmp_path: Path, rig: tuple
+) -> None:
+    """The instrument only reads the cycle, so every one of its files must
+    still hold, byte for byte, once the acts are done."""
+    runtime, _ = rig
+    cycle = build_cycle(tmp_path)
+    tag = tmp_path / "panel_cycles" / "tag1"
+
+    report = live.run(
+        cycle,
+        tag,
+        list(DOCS),
+        [],
+        observed=seat(),
+        runtime=runtime,
+        results_root=tmp_path,
+    )
+
+    # the repository's sanctioned walk (#2607), not ``rglob``, and read
+    # independently of the instrument's own reader
+    on_disk: Dict[str, str] = {}
+    for path in iter_files(cycle, "*"):
+        on_disk[path.relative_to(cycle).as_posix()] = hashlib.sha256(
+            path.read_bytes()
+        ).hexdigest()
+    assert report["ok"] is True, report.get("refused")
+    assert report["cycle_inputs"] == {
+        "files": len(on_disk),
+        "unchanged": True,
+        "drifted": [],
+        "before": on_disk,
+        "after": on_disk,
+    }
+    assert json.loads((tag / "pipeline.json").read_text(encoding="utf-8"))["rc"] == 0
+
+
+def test_a_cycle_file_rewritten_during_the_live_run_is_named_and_refuses_the_tag(
+    tmp_path: Path, rig: tuple, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The witness: one byte written into the cycle it reads refuses the tag,
+    and the file is named. Nothing else is wrong with this run."""
+    runtime, _ = rig
+    cycle = build_cycle(tmp_path)
+    tag = tmp_path / "panel_cycles" / "tag1"
+    touched = cycle / "states" / f"state_full_{DOCS[1]}.json"
+    real = live.assemble
+
+    def _then_writes(*args: Any, **kwargs: Any) -> Any:
+        if getattr(args[0] if args else None, "doc", None) == DOCS[1]:
+            touched.write_text(
+                touched.read_text(encoding="utf-8") + " ", encoding="utf-8"
+            )
+        return real(*args, **kwargs)
+
+    monkeypatch.setattr(live, "assemble", _then_writes)
+
+    report = live.run(
+        cycle,
+        tag,
+        list(DOCS),
+        [],
+        observed=seat(),
+        runtime=runtime,
+        results_root=tmp_path,
+    )
+
+    name = f"states/state_full_{DOCS[1]}.json"
+    assert report["self_check"]["problems"] == []
+    assert report["ok"] is False
+    assert report["cycle_inputs"]["unchanged"] is False
+    assert report["cycle_inputs"]["drifted"] == [name]
+    assert report["refused"].startswith(
+        "the cycle's inputs moved during the measurement"
+    )
+    assert name in report["refused"]
+    assert json.loads((tag / "pipeline.json").read_text(encoding="utf-8"))["rc"] == 1
+
+
+def test_the_batch_stops_at_the_judges_own_degraded_threshold(
+    tmp_path: Path, rig: tuple
+) -> None:
+    """One degraded document is tolerated, because the judges tolerate one. At
+    their threshold the panel is one they would refuse: the rest of it stops
+    being paid for."""
+    from scripts.dataset import judge_panel as judged
+
+    runtime, harness = rig
+    harness.providers["act2_narrative"].fail = RuntimeError("invented failure")
+    docs = tuple(DOCS) + ("doc_t4",)
+    cycle = build_cycle(tmp_path, docs=docs)
+    tag = tmp_path / "panel_cycles" / "tag1"
+
+    report = live.run(
+        cycle,
+        tag,
+        list(docs),
+        [],
+        observed=seat(),
+        runtime=runtime,
+        results_root=tmp_path,
+    )
+
+    threshold = judged.DEGRADED_ARM_REFUSAL_THRESHOLD
+    live_rows = [row for row in report["documents"] if row.get("mode") == live.LIVE]
+    stopped_rows = [
+        row
+        for row in report["documents"]
+        if str(row.get("reason", "")).startswith("not_run")
+    ]
+    assert report["ok"] is False
+    assert f"DEGRADED_ARM_REFUSAL_THRESHOLD={threshold}" in report["refused"]
+    assert len(live_rows) == threshold
+    assert len(stopped_rows) == len(docs) - threshold
+    # the stop is a saving, measured: only the documents that ran were paid
+    assert report["counts"]["model_calls"] == threshold * len(c.ACTS)
+    assert harness.paid() == threshold * len(c.ACTS)
 
 
 def test_a_copy_of_the_record_is_a_pair_the_judges_stage_reads(

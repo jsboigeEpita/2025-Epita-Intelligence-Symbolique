@@ -200,6 +200,12 @@ USAGE_NOTE = (
 #: calls at most, so this only catches a provider that ignores cancellation.
 WALL_BUDGET_S = 900.0
 
+#: #3658 item 46g — the most model calls one document can cost: Act I makes
+#: one, Acts II and III each make a primary call and one bounded retry (#3343).
+#: The bound is printed before the first call, so the spend is announced rather
+#: than discovered in the bill; the calls actually made are counted apart.
+ACT_CALLS_PER_DOCUMENT = 5
+
 
 class Refused(Exception):
     """The replay cannot run as asked. Named, never silent."""
@@ -1504,6 +1510,20 @@ def run(
             {"ok": False, "stage": STAGE_PREFLIGHT, "preflight": verdict.as_dict()}
         )
         return report
+    # #3658 item 46g — this instrument only READS the cycle, so its inputs must
+    # be byte-identical once the acts are done. The map is taken here, before
+    # anything of the replay has touched the cycle: the preflight writes
+    # nothing and the tag is a separate directory, so a difference past this
+    # point means something wrote where nothing was allowed to.
+    from scripts.panel.replay_acts import InputsUnreadable, cycle_inputs, input_drift
+
+    try:
+        inputs_before = cycle_inputs(cycle_dir)
+    except InputsUnreadable as exc:
+        report.update(
+            {"ok": False, "stage": STAGE_CYCLE, "refused": f"cycle input: {exc}"}
+        )
+        return report
     problem = tag_problem(destination, results_root)
     if problem is not None:
         report.update(
@@ -1631,6 +1651,21 @@ def run(
     )
     assembled_rows: List[Dict[str, Any]] = []
     stopped: Optional[str] = None
+    stop_why: Optional[str] = None
+    degraded_docs: List[str] = []
+    calls_by_doc: Dict[str, int] = {}
+    from scripts.dataset import judge_panel as judged
+
+    threshold = judged.DEGRADED_ARM_REFUSAL_THRESHOLD
+    call_bound = len(live_docs) * ACT_CALLS_PER_DOCUMENT
+    # #3658 item 46g — the bound is announced BEFORE the first call, so the
+    # spend is a declared one. What the run actually spends is counted below.
+    print(
+        f"[act_replay] {len(live_docs)} document(s) to replay live: at most "
+        f"{ACT_CALLS_PER_DOCUMENT} model calls each (Acts II and III retry once), "
+        f"so at most {call_bound} call(s) before this run ends.",
+        flush=True,
+    )
     for doc in live_docs:
         if stopped is not None:
             copied[doc] = f"not_run: the batch stopped at {stopped}"
@@ -1660,8 +1695,37 @@ def run(
         )
         _write_pair(destination, doc, assembled.state, assembled.signature)
         assembled_rows.append(assembled.row)
+        # #3658 item 46g — what this document really cost, from the run's own
+        # usage map, every phase bucket counted (a call outside the three acts
+        # is a call). Counted even when the assembly failed: it was paid.
+        calls_by_doc[doc] = sum(
+            int(bucket.get("calls") or 0)
+            for bucket in replayed.usage.values()
+            if _is_phase_bucket(bucket)
+        )
         if assembled.failure is not None:
             stopped = doc
+            stop_why = f"the replay failed on {doc}: {assembled.failure}"
+            continue
+        try:
+            health = judged.arm_health(assembled.state, assembled.signature)
+        except Exception as exc:  # noqa: BLE001 — one document, named, fail closed
+            stopped = doc
+            stop_why = f"arm health unreadable on {doc}: {type(exc).__name__}"
+            continue
+        if health.get("pipeline_degraded"):
+            # The judges' own rule, applied while the batch runs: one degraded
+            # document is tolerated, and at their threshold the panel is one
+            # the judges stage would refuse — spending the rest of it would be
+            # paying for a refusal.
+            degraded_docs.append(doc)
+            if len(degraded_docs) >= threshold:
+                stopped = doc
+                stop_why = (
+                    f"the batch stopped: {len(degraded_docs)} degraded document(s) "
+                    f"reach DEGRADED_ARM_REFUSAL_THRESHOLD={threshold} — the "
+                    "judges' own rule would refuse this panel"
+                )
     for doc, reason in copied.items():
         shutil.copyfile(
             cycle_dir / "states" / f"state_full_{doc}.json",
@@ -1694,7 +1758,19 @@ def run(
     # it reads must already carry the completed harvest.
     _write_pipeline(destination, _record(False, {"ok": False, "guard": {}}))
     self_check = _self_check(destination, docs, results_root, _record(True, {}))
-    ok = stopped is None and self_check["ok"]
+    # #3658 item 46g — the cycle was only read: the same map again, past the
+    # acts and the copies, and a difference refuses the tag (rc 1) naming the
+    # file. A file that cannot be read at all refuses by name too — a
+    # fingerprint with a hole in it proves nothing.
+    try:
+        inputs_after = cycle_inputs(cycle_dir)
+    except InputsUnreadable as exc:
+        report.update(
+            {"ok": False, "stage": STAGE_RECORDS, "refused": f"cycle input: {exc}"}
+        )
+        return report
+    drifted = input_drift(inputs_before, inputs_after)
+    ok = stopped is None and self_check["ok"] and not drifted
     counts: Dict[str, Any] = {
         "documents": len(docs),
         "live": sum(1 for row in assembled_rows if row.get("mode") == LIVE),
@@ -1714,6 +1790,8 @@ def run(
         "control_documents": len(control_rows),
         "control_ok": sum(1 for row in control_rows if row["ok"]),
         "degraded_arms": self_check["guard"]["degraded_arms"],
+        "model_calls": sum(calls_by_doc.values()),
+        "call_bound": call_bound,
     }
     _write_pipeline(destination, _record(ok, self_check))
     report.update(
@@ -1721,16 +1799,34 @@ def run(
             "ok": ok,
             "stage": STAGE_DONE,
             "counts": counts,
+            "call_budget": {
+                "documents": len(live_docs),
+                "per_document": ACT_CALLS_PER_DOCUMENT,
+                "bound": call_bound,
+                "made": sum(calls_by_doc.values()),
+                "per_document_made": dict(calls_by_doc),
+            },
+            "cycle_inputs": {
+                "files": len(inputs_before),
+                "unchanged": not drifted,
+                "drifted": drifted,
+                "before": inputs_before,
+                "after": inputs_after,
+            },
             "documents": assembled_rows,
             "self_check": self_check,
         }
     )
     if not ok:
-        report["refused"] = (
-            f"the batch stopped at {stopped}"
-            if stopped is not None
-            else "the self-check failed"
-        )
+        if stopped is not None:
+            report["refused"] = stop_why or f"the batch stopped at {stopped}"
+        elif drifted:
+            report["refused"] = (
+                "the cycle's inputs moved during the measurement: "
+                + ", ".join(drifted[:4])
+            )
+        else:
+            report["refused"] = "the self-check failed"
     return report
 
 

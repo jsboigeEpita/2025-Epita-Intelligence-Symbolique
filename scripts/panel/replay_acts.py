@@ -127,20 +127,44 @@ def _digest(text: str) -> str:
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
+#: The digest block: a cycle holds state dumps that can be large, and the
+#: fingerprint's job is to prove a file held, not to hold it in memory.
+_DIGEST_BLOCK = 1 << 20
+
+
+class InputsUnreadable(Exception):
+    """A file of the cycle could not be read. Named, never a map with a hole in
+    it: a fingerprint that silently skipped a file would prove nothing about
+    the file it skipped."""
+
+
+def _digest_file(path: Path, relative: str) -> str:
+    """The sha256 of one file, read in blocks, refused by name if unreadable."""
+    digest = hashlib.sha256()
+    try:
+        with path.open("rb") as handle:
+            for block in iter(lambda: handle.read(_DIGEST_BLOCK), b""):
+                digest.update(block)
+    except OSError as exc:
+        raise InputsUnreadable(f"{relative}: {type(exc).__name__}") from exc
+    return digest.hexdigest()
+
+
 def cycle_inputs(cycle_dir: Path) -> Dict[str, str]:
     """The sha256 of every input file of the cycle, keyed by its path under it.
 
     Taken twice, around the measurement, so the report can say its inputs held.
     Relative paths and digests only — never a byte of content, and never a
-    passage: the report stays quotable on a GitHub-indexed surface.
+    passage: the report stays quotable on a GitHub-indexed surface. Read in
+    blocks, and an unreadable file raises :class:`InputsUnreadable` rather than
+    leaving the map one file short without saying so.
     """
     root = Path(cycle_dir)
     out: Dict[str, str] = {}
     for path in sorted(root.rglob("*")):
         if path.is_file():
-            out[path.relative_to(root).as_posix()] = hashlib.sha256(
-                path.read_bytes()
-            ).hexdigest()
+            relative = path.relative_to(root).as_posix()
+            out[relative] = _digest_file(path, relative)
     return out
 
 
@@ -457,12 +481,21 @@ def replay(
         }
     # The cycle has been declared runnable: this is the last moment its inputs
     # can be read without anything of the replay having touched them.
-    inputs_before = cycle_inputs(Path(cycle_dir))
+    prov = provenance(argv, cycle_dir, destination, panel)
+    try:
+        inputs_before = cycle_inputs(Path(cycle_dir))
+    except InputsUnreadable as exc:
+        return {
+            "provenance": prov,
+            "ok": False,
+            "stage": STAGE_CYCLE,
+            "refused": f"cycle input unreadable: {exc}",
+            "preflight": verdict.as_dict(),
+        }
     # --- past this line, and only past it, the text builders may exist ---
     from scripts.panel import act_replay_fidelity as fidelity
     from scripts.panel.run_cycle import pipeline_problem
 
-    prov = provenance(argv, cycle_dir, destination, panel)
     record_path = Path(cycle_dir) / "pipeline.json"
     try:
         record = json.loads(record_path.read_text(encoding="utf-8"))
@@ -499,7 +532,17 @@ def replay(
             entries.append(document(doc, states[doc], signatures[doc], fidelity))
         except Exception as failed:  # one record must not cost the other nine
             entries.append(_broken(doc, failed))
-    inputs_after = cycle_inputs(Path(cycle_dir))
+    try:
+        inputs_after = cycle_inputs(Path(cycle_dir))
+    except InputsUnreadable as exc:
+        return {
+            "provenance": prov,
+            "ok": False,
+            "stage": STAGE_REPLAYED,
+            "refused": f"cycle input unreadable after the replay: {exc}",
+            "preflight": verdict.as_dict(),
+            "documents": entries,
+        }
     drifted = input_drift(inputs_before, inputs_after)
     failures = {entry["doc"]: _reasons(entry) for entry in entries if not entry["ok"]}
     counts: Dict[str, int] = {
