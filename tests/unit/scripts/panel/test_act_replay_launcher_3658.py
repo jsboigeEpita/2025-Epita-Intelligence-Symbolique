@@ -36,6 +36,7 @@ sys.path.insert(0, str(REPO_ROOT))
 
 from scripts.panel import act_replay_fidelity as w  # noqa: E402
 from scripts.panel import replay_acts as ra  # noqa: E402
+from tests.support.tree_walk import iter_files  # noqa: E402
 
 DOCS = ("doc_s1", "doc_s2")
 MARK = "INVENTED-ACT-launcher-3658"
@@ -271,13 +272,17 @@ def test_the_report_never_carries_the_act_text(tmp_path: Path) -> None:
 
 
 def _files_on_disk(cycle: Path) -> Dict[str, str]:
-    """What the cycle holds, read independently of the launcher's own reader."""
+    """What the cycle holds, read independently of the launcher's own reader.
+
+    The walk is the repository's sanctioned one (``iter_files``, #2607), not
+    ``rglob``: an undeclared recursive walk in the test tree reddens
+    ``test_recursive_walk_inventory_2607`` — caught here on the first battery.
+    """
     return {
         path.relative_to(cycle)
         .as_posix(): hashlib.sha256(path.read_bytes())
         .hexdigest()
-        for path in cycle.rglob("*")
-        if path.is_file()
+        for path in iter_files(cycle, pattern="*")
     }
 
 
