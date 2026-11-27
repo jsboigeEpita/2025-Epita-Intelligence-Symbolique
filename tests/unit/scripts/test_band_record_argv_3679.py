@@ -37,17 +37,31 @@ GUARD = (
     f"if ($LASTEXITCODE -ne 0 -and $LASTEXITCODE -ne {NOT_BAND_RECORD}) "
     "{ exit $LASTEXITCODE }"
 )
-# The step says the word only once it has seen the passphrase gone: a record
+# #3019: the passphrase is neutralised BY VALUE, not by removal. `env_loader`
+# refills any name the process lacks from a root `.env`, and protects only the
+# names the caller set — even to "". Removing the name left the guarantee
+# resting on the runner having no `.env`; an empty value hands it to the
+# loader's own rule, which `CALLER_EMPTY_NAMES` re-asserts in a child process
+# whose environment was restored (#2472). Absence is therefore a FAULT, not a
+# success — a state the removal-based guard could not tell from a clean one.
+NEUTRALISE_LINE = '$env:TEXT_CONFIG_PASSPHRASE = ""'
+ABSENT_LINE = (
+    'if (-not (Test-Path Env:TEXT_CONFIG_PASSPHRASE)) { Write-Host "FAIL-LOUD: the '
+    "dataset passphrase is ABSENT, not empty — a loader would refill it from .env. "
+    'Nothing was billed."; exit 1 }'
+)
+# The step says the word only once it has seen the passphrase emptied: a record
 # that kept it stops before billing, and says nothing to the export step.
 SURVIVED_LINE = (
-    'if (Test-Path Env:TEXT_CONFIG_PASSPHRASE) { Write-Host "FAIL-LOUD: the dataset '
+    'if ($env:TEXT_CONFIG_PASSPHRASE) { Write-Host "FAIL-LOUD: the dataset '
     'passphrase survived the record step — nothing was billed."; exit 1 }'
 )
 # What the step does with a verified band record: it runs it without the
 # dataset passphrase, and tells the export step.
 WITHHOLD_BLOCK = [
     "if ($LASTEXITCODE -eq 0) {",
-    "if (Test-Path Env:TEXT_CONFIG_PASSPHRASE) { Remove-Item Env:TEXT_CONFIG_PASSPHRASE }",
+    NEUTRALISE_LINE,
+    ABSENT_LINE,
     SURVIVED_LINE,
     # ``$env:`` — a bare ``$GITHUB_OUTPUT`` names a PowerShell variable that
     # does not exist, and the word goes nowhere (the shell witness below
@@ -421,8 +435,14 @@ def test_the_record_step_runs_the_check_before_its_billable_command():
 # use for the passphrase — and without it, no prompt of the run can carry
 # corpus prose. The export's historical-year rule is reported, not blocking,
 # for such a run only (scripts/cassettes/export.py). These hold the step to
-# that: it removes the passphrase exactly for a verified band record, and it
-# says so to the export step.
+# that: it settles the passphrase to an empty value exactly for a verified band
+# record — and refuses to bill when it is absent or still set — then says so to
+# the export step.
+#
+# The other half of the chain is already witnessed: that an empty value
+# survives a child process, and that an absent carried name is re-asserted as
+# ``""``, is `test_caller_env_survives_boundary_3019`. These tests hold the
+# shell; that one holds the loader.
 
 
 def _executable_lines() -> list:
@@ -472,63 +492,89 @@ def test_the_export_step_reads_what_the_record_step_reported():
 
 @pytest.mark.skipif(shutil.which("pwsh") is None, reason="pwsh is not installed")
 @pytest.mark.parametrize(
-    ("answer", "exit_code", "passphrase", "reported", "removal", "present"),
+    ("answer", "exit_code", "final", "reported", "loud", "neutralisation", "carries"),
     [
-        (0, 0, "absent", True, "works", True),  # a verified band record
-        # no secret on the dispatch: nothing to remove, the record is without it
-        (0, 0, "absent", True, "works", False),
-        # the removal does not take: stop before billing, say nothing
-        (0, 1, "present", False, "ineffective", True),
+        # a verified band record: the value is emptied, and the word follows
+        (0, 0, "empty", True, False, "works", "secret"),
+        # no secret on the dispatch: the step STILL writes the empty value, so a
+        # loader cannot refill the name later (the removal-based step could not
+        # tell this state from the one above)
+        (0, 0, "empty", True, False, "works", "none"),
+        # the neutralisation does not take: stop before billing, say nothing
+        (0, 1, "present", False, True, "ineffective", "secret"),
+        # ... and the state the removal could never see: absent is a FAULT, not
+        # a success, because a loader would refill it from a root `.env` (#3019)
+        (0, 1, "absent", False, True, "ineffective", "none"),
+        (1, 1, "present", False, False, "works", "secret"),  # refused dispatch
         (
-            1,
-            1,
+            NOT_BAND_RECORD,
+            0,
             "present",
             False,
-            "works",
-            True,
-        ),  # a dispatch that would not select the band
-        (NOT_BAND_RECORD, 0, "present", False, "works", True),  # another lane
-        (
-            2,
-            2,
-            "present",
             False,
             "works",
-            True,
-        ),  # anything unexpected stops before billing
+            "secret",
+        ),  # another lane
+        (2, 2, "present", False, False, "works", "secret"),  # anything unexpected
     ],
 )
 def test_the_step_s_shell_withholds_exactly_for_a_verified_band_record(
-    tmp_path, answer, exit_code, passphrase, reported, removal, present
+    tmp_path, answer, exit_code, final, reported, loud, neutralisation, carries
 ):
     """The lines of the workflow, run by the shell that will run them.
 
     The recipe check stands in as a function that sets the exit code. The
-    script reports whether the passphrase survived the block — from a
-    ``finally``, since the block's own ``exit`` would skip a later line.
+    script reports the passphrase's state after the block — from a ``finally``,
+    since the block's own ``exit`` would skip a later line — in three states,
+    because empty is the success and absent is now a fault.
     """
     from scripts.cassettes import export as cassette_export
 
     output = tmp_path / "github_output.txt"
     script = tmp_path / "step.ps1"
+    block = _from_the_check_to_the_end_of_the_block()
+    if neutralisation == "ineffective":
+        # A mutation of the script under test, not of the workflow: the
+        # assignment becomes a no-op, so whatever the step found survives it.
+        block = [
+            (
+                "Write-Output 'neutralisation-neutered'"
+                if line == NEUTRALISE_LINE
+                else line
+            )
+            for line in block
+        ]
+        assert NEUTRALISE_LINE not in block
     script.write_text(
         "\n".join(
             [
                 "$ErrorActionPreference = 'stop'",
                 # GitHub runs a pwsh step with this preference: a non-terminating
-                # error (a missing Env: entry) would fail the step.
+                # error would fail the step, so the witnesses below must not raise.
                 f"function conda {{ $global:LASTEXITCODE = {answer} }}",
-                # The secret, when the dispatch has one, before the step.
-                *(["$env:TEXT_CONFIG_PASSPHRASE = 'not-a-key'"] if present else []),
-                # A removal that does nothing: the word must not follow it.
-                *(["function Remove-Item { }"] if removal == "ineffective" else []),
+                # The fixture's starting state, MEASURED: the child inherits the
+                # pytest process's environment, which has already loaded the
+                # seat's `.env` — the very refill #3019 addresses. So the case
+                # that starts with no secret must clear it here, and both cases
+                # print what they started from.
+                *(
+                    ["$env:TEXT_CONFIG_PASSPHRASE = 'not-a-key'"]
+                    if carries == "secret"
+                    else [
+                        "if (Test-Path Env:TEXT_CONFIG_PASSPHRASE) { "
+                        "Remove-Item Env:TEXT_CONFIG_PASSPHRASE }"
+                    ]
+                ),
+                "Write-Output ('START=' + $(if (Test-Path Env:TEXT_CONFIG_PASSPHRASE) "
+                "{ 'present' } else { 'absent' }))",
                 f"$env:GITHUB_OUTPUT = '{output}'",
                 "try {",
-                *_from_the_check_to_the_end_of_the_block(),
+                *block,
                 "} finally {",
-                "if (Test-Path Env:TEXT_CONFIG_PASSPHRASE) { "
+                "if (-not (Test-Path Env:TEXT_CONFIG_PASSPHRASE)) { "
+                "Write-Output 'PASSPHRASE=absent' } elseif ($env:TEXT_CONFIG_PASSPHRASE) { "
                 "Write-Output 'PASSPHRASE=present' } else { "
-                "Write-Output 'PASSPHRASE=absent' }",
+                "Write-Output 'PASSPHRASE=empty' }",
                 "}",
                 "exit 0",
             ]
@@ -542,10 +588,14 @@ def test_the_step_s_shell_withholds_exactly_for_a_verified_band_record(
         text=True,
         timeout=120,
     )
+    # The fixture's premise, measured rather than assumed: without it, an
+    # inherited value would make "absent" and "no secret" the same case.
+    started = "present" if carries == "secret" else "absent"
+    assert f"START={started}" in run.stdout, run.stdout + run.stderr
     assert run.returncode == exit_code, run.stdout + run.stderr
-    assert f"PASSPHRASE={passphrase}" in run.stdout, run.stdout + run.stderr
+    assert f"PASSPHRASE={final}" in run.stdout, run.stdout + run.stderr
     assert output.exists() is reported
-    assert ("FAIL-LOUD" in run.stdout) is (removal == "ineffective")
+    assert ("FAIL-LOUD" in run.stdout) is loud, run.stdout + run.stderr
     if reported:
         assert (
             output.read_text(encoding="utf-8").strip() == "dataset_passphrase=withheld"

@@ -144,8 +144,16 @@ jobs:
           # is written only once the passphrase is seen GONE: a record that kept
           # it must not be read as one that ran without it.
           if ($LASTEXITCODE -eq 0) {
-            if (Test-Path Env:TEXT_CONFIG_PASSPHRASE) { Remove-Item Env:TEXT_CONFIG_PASSPHRASE }
-            if (Test-Path Env:TEXT_CONFIG_PASSPHRASE) { Write-Host "FAIL-LOUD: the dataset passphrase survived the record step — nothing was billed."; exit 1 }
+            # #3019: neutralise by VALUE, not by removal. `env_loader` fills any
+            # name the process lacks from a root `.env`, and protects only the
+            # names the caller set — even to "". Removing the name left this
+            # guarantee resting on the runner having no `.env`; an empty value
+            # makes the loader's own rule hold it, and the carrier
+            # `CALLER_EMPTY_NAMES` re-asserts that emptiness in a child process
+            # whose environment was restored (#2472).
+            $env:TEXT_CONFIG_PASSPHRASE = ""
+            if (-not (Test-Path Env:TEXT_CONFIG_PASSPHRASE)) { Write-Host "FAIL-LOUD: the dataset passphrase is ABSENT, not empty — a loader would refill it from .env. Nothing was billed."; exit 1 }
+            if ($env:TEXT_CONFIG_PASSPHRASE) { Write-Host "FAIL-LOUD: the dataset passphrase survived the record step — nothing was billed."; exit 1 }
             echo "dataset_passphrase=withheld" >> $env:GITHUB_OUTPUT
           }
           # Deselected — env-shape mismatch of the RECORD lane (not LLM work):
