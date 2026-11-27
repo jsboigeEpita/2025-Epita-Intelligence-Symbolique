@@ -23,9 +23,10 @@ that exits and leaves processes behind fails the test, and they are killed. On
 ai-01, 17 probe sessions with a real JVM left none.
 
 The wait is bounded. After ``BOUND`` seconds the process tree is killed, and
-the test fails with the processes still below it, how the caller kept time
-during the wait, and what the child wrote. The timekeeping tells a child that
-hangs from a machine that stalls: on the runners, runs 35972448838 and
+the test fails with the processes still below it — or with the fact that they
+could not be listed, when the walk itself failed (#3702) — how the caller kept
+time during the wait, and what the child wrote. The timekeeping tells a child
+that hangs from a machine that stalls: on the runners, runs 35972448838 and
 35967808661 lost minutes outside any child (an in-process extraction bounded
 at 30 s measured 669 s; one warnings summary printed with 19 min between two
 of its lines), and a bound that expires then says nothing about the child.
@@ -66,6 +67,42 @@ SETTLE = 2
 # threads. Well below BOUND, so the dump is in stderr when the bound expires.
 EXIT_WATCHDOG = 60
 _WATCHDOG_ENV = "NESTED_PYTEST_EXIT_WATCHDOG"
+# How long one process listing may take before the walk below a child gives
+# up. The listing is machine work — a WMI query on Windows, ``ps`` on posix —
+# and the slowest thing this module asks of a busy seat. Measured 2026-11-26:
+# a fixed 60 s was outrun under four workers on a degraded machine, the same
+# node passing alone in 79 s (#3702). Derived from the number of workers
+# sharing the seat, and capped, so a mis-set variable cannot make the walk
+# wait forever.
+LISTING_BASE = 60
+LISTING_MAX_FACTOR = 3
+
+
+def listing_budget() -> int:
+    """How long one process listing may take: ``LISTING_BASE`` seconds per
+    worker sharing the machine, up to ``LISTING_MAX_FACTOR`` of them."""
+    try:
+        workers = int(os.environ.get("PYTEST_XDIST_WORKER_COUNT", "1"))
+    except ValueError:
+        workers = 1
+    return LISTING_BASE * max(1, min(workers, LISTING_MAX_FACTOR))
+
+
+class ProcessListingFailed(RuntimeError):
+    """The process table could not be read — the walk's own failure (#3702).
+
+    Raised instead of ``subprocess.TimeoutExpired`` so that a run states
+    *which* instrument failed. The child the walk was asked about may have
+    behaved perfectly; what cannot be said is what it left running.
+
+    It lands on two paths, which do not treat it alike. On the exit path
+    (``_left_behind``) it propagates: the child is over, and the failure is
+    what the run has to report. At the bound (``_state_at_bound``) it is one
+    line of the bound's report: the child's failure is that it outlived its
+    bound, and it is killed either way.
+    """
+
+
 # OpenProcess access right, enough for GetProcessTimes.
 _QUERY_LIMITED_INFORMATION = 0x1000
 
@@ -115,6 +152,9 @@ def descendants(pid, created):
     dwm.exe and fontdrvhost.exe as left behind by the probe, and killed them
     (#2662). On posix an orphan is re-parented, so a parent id always names a
     live process, and the table has no creation column.
+
+    A listing that does not answer within ``listing_budget()`` seconds raises
+    ``ProcessListingFailed`` (#3702), so the run states which instrument failed.
     """
     if os.name == "nt":
         argv = [
@@ -130,9 +170,21 @@ def descendants(pid, created):
     else:
         argv = ["ps", "-eo", "pid=,ppid=,comm="]
         width = 3
-    listing = subprocess.run(
-        argv, capture_output=True, text=True, timeout=60, check=True
-    ).stdout
+    budget = listing_budget()
+    try:
+        listing = subprocess.run(
+            argv, capture_output=True, text=True, timeout=budget, check=True
+        ).stdout
+    except subprocess.TimeoutExpired as expired:
+        raise ProcessListingFailed(
+            f"the process listing did not answer within {budget} s "
+            f"(listing budget {budget} s = {LISTING_BASE} s per worker, "
+            f"PYTEST_XDIST_WORKER_COUNT="
+            f"{os.environ.get('PYTEST_XDIST_WORKER_COUNT', '1')}): the walk "
+            "found nothing because it could not read the process table. This "
+            "is the walk's failure, not the child's — say nothing about what "
+            "the child left running."
+        ) from expired
     children = {}
     for line in listing.splitlines():
         fields = line.split(None, width - 1)
@@ -158,10 +210,21 @@ def descendants(pid, created):
 
 
 def _state_at_bound(process):
-    """What was below ``process`` when the bound expired. ``(text, pids)``."""
+    """What was below ``process`` when the bound expired. ``(text, pids)``.
+
+    Never raises: the walk completes the report, it does not decide anything.
+    Whatever stops it — ``ProcessListingFailed``, or a kind nobody listed — the
+    caller still reads "not listed" under ``--- at the bound``, and still
+    kills the process. Measured 2026-11-26 (#3702): with the walk raising
+    outside ``(OSError, subprocess.SubprocessError)``, ``kill_tree`` was
+    skipped and the child that had outlived its bound stayed running — on
+    ``main`` with a ``ValueError``, and here with the named failure itself,
+    which is a ``RuntimeError``. The bound's verdict is the child's; a failure
+    of the walk that describes it is a line of that verdict.
+    """
     try:
         below = descendants(process.pid, _created(process.pid))
-    except (OSError, subprocess.SubprocessError) as exc:
+    except Exception as exc:
         return f"--- at the bound\ndescendants: not listed ({exc!r})\n", []
     listed = ", ".join(f"{pid} {name}" for pid, name in below) or "none"
     return f"--- at the bound\ndescendants: {listed}\n", [pid for pid, _ in below]
@@ -256,6 +319,14 @@ def _left_behind(process):
     started; on posix an orphan is re-parented and escapes it. A process
     created before ``process`` is not counted, whatever parent id it names
     (#2662).
+
+    When the first listing fails, the walk has seen nothing, and its message
+    says so. When the second fails, it must not erase the first: measured
+    2026-11-26 (#3702), the message said "the walk found nothing" while the
+    first listing had seen a process, and the sighting was lost. Nothing is
+    killed on the first listing alone — a pid is killed only where a listing
+    reads it below the child again — so the failure carries the sighting
+    instead.
     """
     created = _created(process.pid)
     below = descendants(process.pid, created)
@@ -263,9 +334,19 @@ def _left_behind(process):
         return []
     time.sleep(SETTLE)
     first = {pid for pid, _ in below}
-    left = [
-        (pid, name) for pid, name in descendants(process.pid, created) if pid in first
-    ]
+    try:
+        again = descendants(process.pid, created)
+    except (OSError, subprocess.SubprocessError, ProcessListingFailed) as failed:
+        seen = ", ".join(f"{pid} {name}" for pid, name in below)
+        raise ProcessListingFailed(
+            f"below the child that had exited, the first listing saw {seen}. "
+            f"The second, {SETTLE} s later, could not read the process table: "
+            "whether they were still there was not read, and nothing was "
+            "killed — a process is killed only where a listing reads it below "
+            "the child. The listing is the instrument that failed; the "
+            "sighting stands."
+        ) from failed
+    left = [(pid, name) for pid, name in again if pid in first]
     _kill([pid for pid, _ in left])
     return left
 
