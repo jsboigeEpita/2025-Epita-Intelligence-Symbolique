@@ -48,7 +48,7 @@ import shutil
 import subprocess
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(REPO_ROOT))
@@ -327,6 +327,9 @@ def doc_facts(
         # absence is data, not a hole, and keys the honest render below.
         "classification": sig.get("document_classification"),
         "outcome": sig.get("outcome") or {},
+        # #3695 — which engine produced the record decides which producer
+        # renders it; the fiche routes on it exactly as the judge does.
+        "provenance": sig.get("provenance") or {},
     }
 
 
@@ -353,8 +356,8 @@ def provenance_block(run_head: str, model: str, command: str) -> str:
 # #3393 — the FB-18 anchors are the pipeline's grounding: they stay in the
 # STATE (what an auditor resolves against the run's artifacts), and the
 # READER surface prints prose — each anchor becomes a numbered note. The
-# numbering happens INSIDE `pipeline_full_text`, the one producer the fiche
-# prints and the judge reads (#3375 tranche 3): a caller that numbered on its
+# numbering happens INSIDE `pipeline_full_text`, the pipeline's one producer,
+# which both the fiche and the judge read (#3375 tranche 3): a caller that numbered on its
 # own would leave the judge reading raw `[artifact:…]` while the reader read
 # notes — the divergence that single producer exists to close.
 _ARTIFACT_ANCHOR_RE = re.compile(r"\[artifact:([^\]\s]+)\]")
@@ -986,6 +989,75 @@ def hierarchical_delegation_full_text(
     return "\n\n".join(body)
 
 
+# ---------------------------------------------------------------------------
+# One routing, two callers (#3695)
+# ---------------------------------------------------------------------------
+
+#: The provenance modes that are not the pipeline, and the producer that
+#: renders their record (#3470, #3472). Any other mode — absent, unknown — is
+#: the pipeline's: the judge has always read it so.
+_ENGINE_PRODUCERS: Dict[str, Callable[..., str]] = {
+    "conversation_real": conversation_real_full_text,
+    "hierarchical_delegation": hierarchical_delegation_full_text,
+}
+
+#: What the fiche titles its full-text section, after what it holds. The
+#: pipeline's is the heading every harvested fiche carries (#2841).
+PIPELINE_SECTION_HEADING = "## Le pipeline, en texte intégral"
+_ENGINE_SECTION_HEADINGS: Dict[str, str] = {
+    "conversation_real": "## Le moteur conversationnel, en texte intégral",
+    "hierarchical_delegation": "## La chaîne de délégation, en texte intégral",
+}
+
+
+def provenance_mode(signature: Dict[str, Any]) -> Optional[str]:
+    """The engine a signature says produced its record; ``None`` = the pipeline.
+
+    Only a mode a producer renders is an engine. The rule is the judge's, as
+    it has read every campaign: a ``conversation_real`` or a
+    ``hierarchical_delegation`` record belongs to that engine, anything else
+    to the pipeline.
+    """
+    mode = (signature.get("provenance") or {}).get("mode")
+    if isinstance(mode, str) and mode in _ENGINE_PRODUCERS:
+        return mode
+    return None
+
+
+def arm_text_from_state(
+    state: Dict[str, Any],
+    signature: Dict[str, Any],
+    chars: Optional[int] = None,
+) -> str:
+    """The text a record's own producer renders — what the judge reads.
+
+    The judged text is the fiche's full-text section: one producer, two
+    callers (#3375 tranche 3). Both go through this routing — the judge's
+    entry point (``judge_panel.pipeline_text_from_state``) and the fiche
+    (``render_fiche``). While the routing lived in the judge alone, the fiche
+    read an engine's record with the pipeline's producer: the reader met four
+    absence lines where the judge had read the engine's findings.
+
+    ``state`` is the record as its caller holds it, nested under ``state`` or
+    flat. ``signature`` carries the ``provenance``, the terminal
+    ``document_classification`` (#1909 slice 2) and the ``outcome``.
+    ``chars`` is a length the caller already measured: given, the pipeline's
+    non-argumentative branch uses it instead of reading the text again.
+    """
+    st = state.get("state") or state
+    outcome = signature.get("outcome") or {}
+    engine = provenance_mode(signature)
+    if engine is not None:
+        return _ENGINE_PRODUCERS[engine](st, outcome)
+    return pipeline_full_text(
+        st,
+        signature.get("document_classification"),
+        str(signature.get("opaque_id") or ""),
+        outcome,
+        chars=chars,
+    )
+
+
 def render_fiche(
     facts: Dict[str, Any],
     state: Dict[str, Any],
@@ -994,14 +1066,30 @@ def render_fiche(
     model: str,
     command: str,
 ) -> str:
-    """One readable fiche: the acts in full, the zero-shot beside, the facts."""
-    st = state.get("state") or state
+    """One readable fiche: the analysis in full, the zero-shot beside, the facts.
+
+    The full-text section is whatever engine produced the record, routed the
+    way the judge reads it (``arm_text_from_state``, #3695) and titled after
+    it. On a pipeline record the fiche is what it has always been, line for
+    line.
+    """
     cost_txt = f"{facts['cost']:.4f} $" if facts["cost"] is not None else "non chiffré"
     zs_cost = (
         f"{zeroshot_cost_usd(zeroshot):.4f} $"
         if zeroshot and zeroshot_cost_usd(zeroshot) is not None
         else "non chiffré"
     )
+    provenance = facts.get("provenance") or {}
+    engine = provenance_mode({"provenance": provenance})
+    # What the routing reads, rebuilt from the facts. A facts dict built by
+    # hand without the provenance is a pipeline record's.
+    signature = {
+        "provenance": provenance,
+        "document_classification": facts.get("classification"),
+        "opaque_id": facts.get("opaque_id", ""),
+        "outcome": facts.get("outcome") or {},
+    }
+    side = "pipeline" if engine is None else f"moteur `{engine}`"
     lines: List[str] = []
     lines.append(provenance_block(run_head, model, command))
     lines.append(
@@ -1015,28 +1103,39 @@ def render_fiche(
     lines.append("")
     lines.append("## Faits mesurés (lus dans l'état de la campagne)")
     lines.append("")
+    if engine is None:
+        lines.append(
+            f"- Longueur du document : **{facts['chars']} caractères** ; arguments extraits : **{facts['args']}** ; sophismes : **{facts['fallacies']}**"
+        )
+        lines.append(
+            f"- Verdicts formels : FOL **{facts['fol']}** / logique propositionnelle **{facts['pl']}** / modale **{facts['modal']}** (les « talons » non traduits s'y comptent comme résultats)"
+        )
+        lines.append(
+            f"- Durée : **{facts['wall_s']} s** ; appels LLM : **{facts['calls']}** ; coût recalculé : {side} **{cost_txt}**, zero-shot **{zs_cost}**"
+        )
+        lines.append(
+            f"- Fenêtre de lecture : `{json.dumps(facts['reading_window_status'], ensure_ascii=False) if facts['reading_window_status'] is not None else 'null'}` ; actes dégradés : `{json.dumps(facts['restitution_acts_degraded'], ensure_ascii=False) if facts['restitution_acts_degraded'] is not None else 'null'}`"
+        )
+    else:
+        # The pipeline's facts read an engine's record as zeros: its record
+        # carries none of the pipeline's collections (#3470, #3472). The
+        # fiche names what it leaves out instead of printing them.
+        lines.append(
+            f"- Moteur `{engine}` : la longueur du document, les arguments "
+            "extraits, les sophismes, les verdicts formels, la fenêtre de "
+            "lecture et les actes dégradés sont des faits du pipeline. "
+            "L'enregistrement de ce moteur ne les porte pas : ils ne sont pas "
+            "affichés, et aucun zéro ne prend leur place."
+        )
+        lines.append(
+            f"- Durée : **{facts['wall_s']} s** ; appels LLM : **{facts['calls']}** ; coût recalculé : {side} **{cost_txt}**, zero-shot **{zs_cost}**"
+        )
+    lines.append("")
     lines.append(
-        f"- Longueur du document : **{facts['chars']} caractères** ; arguments extraits : **{facts['args']}** ; sophismes : **{facts['fallacies']}**"
-    )
-    lines.append(
-        f"- Verdicts formels : FOL **{facts['fol']}** / logique propositionnelle **{facts['pl']}** / modale **{facts['modal']}** (les « talons » non traduits s'y comptent comme résultats)"
-    )
-    lines.append(
-        f"- Durée : **{facts['wall_s']} s** ; appels LLM : **{facts['calls']}** ; coût recalculé : pipeline **{cost_txt}**, zero-shot **{zs_cost}**"
-    )
-    lines.append(
-        f"- Fenêtre de lecture : `{json.dumps(facts['reading_window_status'], ensure_ascii=False) if facts['reading_window_status'] is not None else 'null'}` ; actes dégradés : `{json.dumps(facts['restitution_acts_degraded'], ensure_ascii=False) if facts['restitution_acts_degraded'] is not None else 'null'}`"
+        PIPELINE_SECTION_HEADING if engine is None else _ENGINE_SECTION_HEADINGS[engine]
     )
     lines.append("")
-    lines.append("## Le pipeline, en texte intégral")
-    lines.append("")
-    full_text = pipeline_full_text(
-        st,
-        facts.get("classification"),
-        facts["opaque_id"],
-        facts.get("outcome") or {},
-        chars=facts["chars"],
-    )
+    full_text = arm_text_from_state(state, signature, chars=facts["chars"])
     if full_text:
         lines.append(full_text)
     lines.append("## La réponse zero-shot, intégrale")

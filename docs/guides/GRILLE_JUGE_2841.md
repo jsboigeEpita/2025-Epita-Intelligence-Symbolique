@@ -13,7 +13,11 @@ avec le pipeline. Le juge, c'est un lecteur qui **cite**. Chaque affirmation ci-
 
 **Producteur du dossier de lecture** : `scripts/dataset/render_campaign_reading_folder.py`
 (sortie gitignorée, #2353). Chaque fiche porte ses faits mesurés, les actes I-III et la
-synthèse du pipeline **en texte intégral**, puis la réponse zero-shot intégrale.
+synthèse du pipeline **en texte intégral**, puis la réponse zero-shot intégrale. Pour un
+enregistrement produit par un autre moteur (`conversation_real`,
+`hierarchical_delegation`), la fiche porte le texte intégral de ce moteur, sous un titre
+qui le nomme, et dit quels faits du pipeline elle laisse de côté (#3695) : le juge lit ce
+même texte (#3470, #3472).
 
 ---
 
