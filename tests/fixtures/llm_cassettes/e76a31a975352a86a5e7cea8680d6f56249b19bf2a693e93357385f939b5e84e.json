@@ -1,0 +1,36 @@
+{
+  "key": "e76a31a975352a86a5e7cea8680d6f56249b19bf2a693e93357385f939b5e84e",
+  "value": {
+    "id": "msg_011ChNfVeVMAnefMtzGkrPuC",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_chain\": true, \"premises\": \"Tous les pays européens ont déjà fait la réforme des retraites.\", \"conclusion\": \"La réforme des retraites est nécessaire.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795564898,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 278,
+      "prompt_tokens": 493,
+      "total_tokens": 771,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

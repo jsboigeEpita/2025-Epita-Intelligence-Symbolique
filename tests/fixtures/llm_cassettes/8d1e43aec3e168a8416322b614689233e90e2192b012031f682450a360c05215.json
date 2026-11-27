@@ -1,0 +1,36 @@
+{
+  "key": "8d1e43aec3e168a8416322b614689233e90e2192b012031f682450a360c05215",
+  "value": {
+    "id": "msg_011ChNfX6akikrnpieCsio4A",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "```json\n{\"has_opposing_claim\": true, \"opposing_claim\": \"Si nous n'agissons pas maintenant, le système s'effondrera dans cinq ans.\", \"main_thesis\": \"La menace d'un effondrement du système à cinq ans, si l'on n'agit pas maintenant, relève de l'appel à la peur (sophisme argumentatif) et ne constitue pas un argument légitime.\"}\n```",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795564918,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 358,
+      "prompt_tokens": 412,
+      "total_tokens": 770,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "key": "8331eed5152bd3f31865242b399e2c069dd97ba0a41e4c781a891973e2e9254a",
+  "value": {
+    "id": "msg_011ChNgkLjnfDdGTNCT9rcR2",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_semantic_redundancy\": true, \"redundancy_verdict\": \"reformulation_utile\", \"located_redundancy\": \"Points 2 et 3 : la « vitesse sans précédent » du changement actuel est énoncée au point 2, puis reprise au point 3 sans nouvel élément factuel. Seul l'ajout de la réfutation de l'objection des sceptiques constitue un apport nouveau.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565887,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 1001,
+      "prompt_tokens": 688,
+      "total_tokens": 1689,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

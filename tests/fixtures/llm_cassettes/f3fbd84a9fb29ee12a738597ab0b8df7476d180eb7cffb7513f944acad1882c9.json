@@ -1,0 +1,36 @@
+{
+  "key": "f3fbd84a9fb29ee12a738597ab0b8df7476d180eb7cffb7513f944acad1882c9",
+  "value": {
+    "id": "msg_011ChNgiyT6YWPZaGpPiinag",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "```json\n{\"engages_real_claim\": true, \"engagement_verdict\": \"engagement_réel\", \"reasoning\": \"La réfutation reprend exactement la prémisse sceptique (« le climat a toujours changé ») et attaque l'inférence vers « rien d'exceptionnel » en soulignant que la vitesse du changement actuel, non son existence, est le point pertinent.\"}\n```",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565866,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 280,
+      "prompt_tokens": 608,
+      "total_tokens": 888,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

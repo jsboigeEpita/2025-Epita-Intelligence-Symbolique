@@ -1,0 +1,36 @@
+{
+  "key": "c4ab01dfdb10666f3180444647373591aa4ee703cf13cc964925e8fc3d848c5f",
+  "value": {
+    "id": "msg_011ChNgWitATkimvN5kQq1Fh",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_analogy\": false, \"source_domain\": \"\", \"target_domain\": \"\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565699,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 120,
+      "prompt_tokens": 520,
+      "total_tokens": 640,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

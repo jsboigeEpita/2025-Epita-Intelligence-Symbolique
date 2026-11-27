@@ -1,0 +1,36 @@
+{
+  "key": "b26cd8e689c28e3c079a020af0e695eb84434929a723c2a62daa512d97a58fd8",
+  "value": {
+    "id": "msg_011ChNgW28DWawXP48JCnmJ8",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "```json\n{\"has_opposing_claim\": true, \"opposing_claim\": \"Les produits pharmaceutiques cachent les effets secondaires (argument selon lequel les laboratoires dissimulent les effets secondaires des vaccins)\", \"main_thesis\": \"Des taux de vaccination élevés protègent aussi les personnes qui ne peuvent pas être vaccinées, grâce à l'immunité collective.\"}\n```",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565690,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 410,
+      "prompt_tokens": 505,
+      "total_tokens": 915,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

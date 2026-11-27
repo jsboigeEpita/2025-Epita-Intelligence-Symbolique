@@ -1,0 +1,36 @@
+{
+  "key": "0820bb615287c94745659006f452c32b798dfbe45566731df48186fb64a72db1",
+  "value": {
+    "id": "msg_011ChNfwBJCftoXwBUc2bEg1",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "```json\n{\"has_opposing_claim\": false, \"opposing_claim\": \"\", \"main_thesis\": \"Aucune thèse explicite : le texte présente trois options budgétaires (A : tournoi inter-villes ; B : matériel pédagogique et échiquiers ; C : format hybride) pour l'utilisation de 2000 euros, sans défendre l'une d'elles ni contredire une position adverse.\"}\n```",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565244,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 275,
+      "prompt_tokens": 503,
+      "total_tokens": 778,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

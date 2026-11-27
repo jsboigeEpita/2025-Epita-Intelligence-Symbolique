@@ -1,0 +1,36 @@
+{
+  "key": "48160b393f0ed488b5d4de20e3dc4f0070172890ba0d3d390e4bde89096b6d91",
+  "value": {
+    "id": "msg_011ChNfVrFmXEnagHjMuyBtr",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "```json\n{\"chain_holds\": false, \"structure_verdict\": \"saut_logique\", \"reasoning\": \"Que l'opposition attaque un homme de paille et use d'un appel à l'émotion peut fonder le jugement que son argumentation est fallacieuse, mais cela n'implique pas logiquement que le débat « doit donc porter sur les questions techniques », car cette conclusion normative ne découle pas des prémisses et suppose un principe non énoncé.\"}\n```",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795564902,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 469,
+      "prompt_tokens": 711,
+      "total_tokens": 1180,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

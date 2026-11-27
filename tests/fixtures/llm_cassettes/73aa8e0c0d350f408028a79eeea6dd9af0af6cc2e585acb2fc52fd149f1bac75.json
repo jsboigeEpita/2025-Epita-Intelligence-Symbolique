@@ -3,29 +3,17 @@
   "value": [
     {
       "role": "assistant",
-      "content": "{\n  \"formulas\": [\n    \"forall X: (Test(X) => Important(X))\"\n  ],\n  \"predicates\": {\n    \"Test\": \"est un test\",\n    \"Important\": \"est important\"\n  },\n  \"variables\": {\n    \"X\": \"thing\"\n  },\n  \"reasoning\": \"La phrase « Test mémoire numéro 6 » est interprétée comme un titre ou un identifiant de l'exercice, et non comme une proposition logique. La phrase « Tous les tests sont importants » se traduit par : pour tout objet X, si X est un test, alors X est important.\"\n}",
+      "content": "```json\n{\n    \"formulas\": [\n        \"forall X: (Test(X) => Important(X))\",\n        \"Test(test6)\",\n        \"Memoire(test6)\"\n    ],\n    \"predicates\": {\n        \"Test\": \"est un test\",\n        \"Important\": \"est important\",\n        \"Memoire\": \"est un test de mémoire\"\n    },\n    \"variables\": {\n        \"X\": \"un élément quelconque du domaine (test ou non)\"\n    },\n    \"reasoning\": \"La phrase « Tous les tests sont importants » est une généralisation universelle, traduite par forall X: (Test(X) => Important(X)). Le titre « Test mémoire numéro 6 » désigne un objet particulier, représenté par la constante test6, qui est un test (Test(test6)) et qui est un test de mémoire (Memoire(test6)). Le numéro 6 est un identifiant de l'objet et n'a pas été formalisé par un prédicat distinct, car il n'apporte pas d'information logique utile pour ce raisonnement. Si l'on veut en tenir compte, on peut ajouter un prédicat Numero(test6, 6), mais ce n'est pas nécessaire ici. On peut aussi déduire Important(test6) à partir de la formule universelle et de Test(test6).\"\n}\n```",
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EkNwz0jT4krKR4kfowCSO6kxvzLzs",
-        "created": 1794723861,
+        "id": "msg_011ChNg9s7vLipTQUDVngv1c",
+        "created": 1795565419,
         "system_fingerprint": null,
         "usage": {
-          "prompt_tokens": 285,
-          "prompt_tokens_details": {
-            "audio_tokens": 0,
-            "cache_write_tokens": 0,
-            "cached_tokens": 0,
-            "image_tokens": null,
-            "text_tokens": null
-          },
-          "completion_tokens": 347,
-          "completion_tokens_details": {
-            "accepted_prediction_tokens": 0,
-            "audio_tokens": 0,
-            "reasoning_tokens": 208,
-            "rejected_prediction_tokens": 0,
-            "text_tokens": null
-          }
+          "prompt_tokens": 459,
+          "prompt_tokens_details": null,
+          "completion_tokens": 933,
+          "completion_tokens_details": null
         }
       }
     }

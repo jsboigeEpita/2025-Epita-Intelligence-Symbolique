@@ -1,0 +1,36 @@
+{
+  "key": "a0840f40ceafdec0d6626f4a3130f44e0e2c60a3cf3fb7d076628aefc31c9393",
+  "value": {
+    "id": "msg_011ChNgiWhm2YcQARPBQogAH",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_thesis\": true, \"thesis\": \"Ceux qui minimisent la crise climatique ont tort : leur position repose sur des données sélectives, alors que les modèles prédictifs sont unanimes sur l'impact des activités humaines.\", \"digressions\": \"La phrase « La transition énergétique est non seulement nécessaire mais aussi économiquement avantageuse à long terme. » est une digression : elle introduit un argument de politique énergétique et d'économie qui ne concerne pas la mise en cause de ceux qui minimisent la crise. La ligne « [quote: ...] », qui répète une phrase déjà présente, n'apporte aucun argument nouveau.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565861,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 734,
+      "prompt_tokens": 446,
+      "total_tokens": 1180,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

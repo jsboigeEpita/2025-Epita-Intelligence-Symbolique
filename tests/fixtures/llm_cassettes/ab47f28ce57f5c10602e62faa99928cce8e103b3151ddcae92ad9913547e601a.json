@@ -1,0 +1,36 @@
+{
+  "key": "ab47f28ce57f5c10602e62faa99928cce8e103b3151ddcae92ad9913547e601a",
+  "value": {
+    "id": "msg_011ChNgjgsieRHddfGL34G9x",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "```json\n{\"score\": 0.0, \"exhibit\": \"Chaîne reconstruite : prémisses = « Les mesures de température globale montrent une augmentation de 1,1 °C depuis l'ère préindustrielle ; les sceptiques affirment que le climat a toujour[s] [varié] » ; conclusion = « Le changement climatique est une réalité scientifique incontestable. » Verdict de structure : saut_logique. La conclusion ne découle pas des prémisses : la mesure du réchauffement n'établit pas à elle seule le caractère « incontestable » de la réalité scientifique, et l'objection sceptique n'est pas réfutée par un raisonnement explicite. Aucune inférence solide n'est démontrée, d'où un score de 0.0.\"}\n```",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565876,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 465,
+      "prompt_tokens": 443,
+      "total_tokens": 908,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "key": "1ce83add2d5ecd7c2526aba1aaf71a5ffa13e4fb77824b59f108338839a37e2b",
+  "value": {
+    "id": "msg_011ChNgkJJwEHZhuhTanr9oH",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\": 0.5, \"exhibit\": \"Étape 1 : (1) les tenants d'une minimisation de la crise climatique s'appuient sur des données sélectives, ce qui fragilise leur position ; (2) les modèles prédictifs convergent sur l'impact des activités humaines ; (3) la transition énergétique est nécessaire ; (4) point tronqué dans l'entrée, contenu non vérifiable. Les points 1 et 2 portent tous deux sur la solidité du consensus scientifique face aux positions de minimisation, ce qui constitue une reprise partielle en substance. Le verdict de l'étape 2 (redondance sémantique) confirme ce recoupement. Le score est 0.5 et non 0.2 car les reprises restent limitées et les points 1 à 3 apportent des idées distinctes. L'évaluation reste partielle, le point 4 étant tronqué.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565885,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 673,
+      "prompt_tokens": 442,
+      "total_tokens": 1115,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "key": "41a2e0bf0c828227ffc35e299c97b7feb14116769db38c42e0766568236389c4",
+  "value": {
+    "id": "msg_011ChNgWHywepkytNqzaFyHG",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\": 0.0, \"exhibit\": \"Position adverse identifiée : les laboratoires pharmaceutiques dissimulent les effets secondaires des vaccins. Verdict d'engagement : non_sequitur. La réponse ne s'engage pas réellement sur cette thèse adverse et ne fournit pas de réfutation constructive, ce qui correspond au score 0.0.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565693,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 212,
+      "prompt_tokens": 424,
+      "total_tokens": 636,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

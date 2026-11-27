@@ -1,0 +1,21 @@
+{
+  "key": "b05136b335a6937fef4613a0002942cfcbffdabb1b1a13be722e29f6072d899c",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "```json\n{\"fallacy_name\": \"Preuve par assertion\", \"taxonomy_pk\": \"1297\", \"explanation\": \"Le texte présente le succès de la politique économique comme « incontestable » sans fournir aucun argument, donnée ou critère d'évaluation. L'affirmation tient lieu de preuve, et l'adjectif « incontestable » ferme le débat au lieu de le fonder.\", \"confidence\": 0.55, \"move_author\": \"reported\", \"move_author_label\": \"président\"}\n```",
+      "metadata": {
+        "logprobs": null,
+        "id": "msg_011ChNffHZ31zxNV6tfe2Mkn",
+        "created": 1795565030,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 29420,
+          "prompt_tokens_details": null,
+          "completion_tokens": 554,
+          "completion_tokens_details": null
+        }
+      }
+    }
+  ]
+}

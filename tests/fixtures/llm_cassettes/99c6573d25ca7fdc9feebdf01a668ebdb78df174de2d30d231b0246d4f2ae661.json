@@ -1,0 +1,36 @@
+{
+  "key": "99c6573d25ca7fdc9feebdf01a668ebdb78df174de2d30d231b0246d4f2ae661",
+  "value": {
+    "id": "msg_011ChNgbgGXms6LHCTfBim1n",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\": 0.0, \"exhibit\": \"Chaîne reconstruite : prémisse = « Elle sert de dissuasion contre les crimes les plus graves comme le meurtre de masse. » ; conclusion = « La peine de mort est une sanction nécessaire dans certains cas extrêmes. » Verdict de structure : saut_logique. La conclusion ne découle pas de la prémisse : un effet dissuasif ne démontre pas la nécessité de la peine de mort, car d'autres sanctions pourraient produire un effet dissuasif comparable.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565767,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 479,
+      "prompt_tokens": 426,
+      "total_tokens": 905,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "key": "74fe25456214d6d28d0e28143ec8f9f518d0a9e2816ba55909a361ea356f0605",
+  "value": {
+    "id": "msg_011ChNg33nvYFoSXrRriiWDX",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\": 0.5, \"exhibit\": \"Thèse : retenir l'option B (espace numérique avec ordinateurs en libre accès), justifiée par la réduction de la fracture numérique du quartier. Digressions localisées : passages consacrés à l'option A (élargir le fonds de livres jeunesse, le fonds vieillissant et les jeunes lecteurs étant nombreux) et à l'option C (répartir la somme entre fonds livre et espace numérique). Ces digressions sont circonscrites et l'argumentation reste centrée sur la thèse B.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565324,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 402,
+      "prompt_tokens": 480,
+      "total_tokens": 882,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

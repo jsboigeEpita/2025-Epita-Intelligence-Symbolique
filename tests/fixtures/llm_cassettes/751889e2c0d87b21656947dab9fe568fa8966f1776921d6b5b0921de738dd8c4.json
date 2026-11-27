@@ -1,0 +1,36 @@
+{
+  "key": "751889e2c0d87b21656947dab9fe568fa8966f1776921d6b5b0921de738dd8c4",
+  "value": {
+    "id": "msg_011ChNgDR4sRyVe2YBbFPoQM",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\": 0.0, \"exhibit\": \"Chaîne reconstruite : prémisse = le tournoi inter-villes avec buffet et prix augmentera la visibilité du club et recrutera de nouveaux membres ; conclusion = il faut organiser un tournoi inter-villes avec buffet et prix pour 2000 euros (Option A). Verdict de structure : saut_logique. La conclusion (engagement de 2000 euros et choix de l'Option A) ne découle pas des prémisses, qui ne mentionnent ni le coût ni la comparaison avec d'autres options.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565465,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 562,
+      "prompt_tokens": 447,
+      "total_tokens": 1009,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

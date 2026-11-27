@@ -3,29 +3,17 @@
   "value": [
     {
       "role": "assistant",
-      "content": "## 🕵️ Nouvelle enquête : **Le meurtre du Manoir Tudor**\n\nUne pluie glaciale s’abat sur le manoir. À **22 h 17**, toutes les lumières s’éteignent brusquement. Lorsque le courant revient, le maître des lieux, **Sir Edmund Tudor**, est retrouvé mort dans la bibliothèque.\n\nLa porte était verrouillée de l’intérieur. Une fenêtre est entrouverte, mais la boue du jardin ne porte aucune empreinte.\n\n### La victime\n**Sir Edmund Tudor**, 62 ans, propriétaire du manoir.  \nCause apparente : un violent coup porté à la tête avec un objet lourd.\n\n### Les suspects présents\n- **Lady Victoria Tudor**, son épouse, très calme malgré le drame.\n- **Arthur Tudor**, son fils, couvert de dettes.\n- **Clara Bell**, la gouvernante, au service de la famille depuis vingt ans.\n- **Dr Henry Blackwood**, médecin et vieil ami de Sir Edmund.\n- **Eleanor Graves**, journaliste invitée au manoir.\n- **James Finch**, le majordome, qui affirme avoir découvert le corps.\n\n### Les premiers éléments\n- Une horloge de cheminée est arrêtée à **22 h 05**.\n- Un verre de whisky brisé gît près du bureau.\n- Une page a été arrachée du journal intime de la victime.\n- Le lourd **chandelier en bronze** a disparu de la bibliothèque.\n- Une odeur de fumée flotte dans le couloir ouest.\n\nL’orage bloque les routes. Le meurtrier est nécessairement encore au manoir.\n\n**Votre enquête commence.**  \nQue souhaitez-vous examiner en premier : **la bibliothèque**, **les suspects**, **le couloir ouest** ou **la chronologie des événements** ?",
+      "content": "# 🕯️ LE MEURTRE DU MANOIR TUDOR 🕯️\n\n*Une enquête de style Cluedo*\n\n---\n\n**Samedi 14 novembre, 7h12.**\n\nUne tempête a balayé la lande toute la nuit. Au petit matin, le majordome **Gaston Lefèvre** découvre le corps de **Sir Harold Boddy**, propriétaire du manoir, étendu sur le tapis persan de la **bibliothèque**. Le verre de porto est renversé, les fenêtres sont fermées de l'intérieur, et la pendule du hall est arrêtée à **23h47**.\n\nLe commissaire vous a confié l'affaire. Vous disposez de **six heures** avant l'arrivée de la presse.\n\n---\n\n## 👥 LES SUSPECTS\n\nSix invités ont passé la nuit au manoir :\n\n- **Colonel Moutarde**, ancien militaire, d'humeur toujours sombre\n- **Madame Pervenche**, veuve et riche héritière, très élégante\n- **Professeur Violet**, savant excentrique, enfermé dans ses calculs\n- **Mademoiselle Rose**, jeune secrétaire de la victime\n- **Docteur Olive**, médecin de famille, discret et méthodique\n- **Monsieur Écarlate**, homme d'affaires, récemment ruiné\n\n---\n\n## 🔪 LES ARMES RETROUVÉES\n\nSept objets sont en cause, dispersés dans le manoir :\nLe **chandelier**, le **poignard**, le **revolver**, la **clé anglaise**, la **corde**, le **tuyau de plomb** et le **coupe-papier**.\n\n---\n\n## 🚪 LES PIÈCES DU MANOIR\n\nLe **hall**, le **salon**, la **salle à manger**, la **bibliothèque**, la **cuisine**, la **salle de bal**, la **serre**, le **bureau**, la **salle de billard** et la **véranda**.\n\n---\n\n## 📋 PREMIERS INDICES\n\n- Une **empreinte de gant en cuir** est visible sur la poignée de la porte-fenêtre du jardin.\n- Sur le bureau, une **lettre à moitié brûlée** mentionne « *le testament sera modifié demain* ».\n- Le **chien de garde** n'a pas aboyé de la nuit, ce qui intrigue le jardinier.\n- Un témoin affirme avoir entendu **des pas dans le couloir de l'aile est vers 23h30**.\n\n---\n\n## 🧭 VOTRE ENQUÊTE\n\nVous pouvez :\n\n1. **Interroger** un suspect (tapez son nom)\n2. **Fouiller** une pièce (tapez le nom de la pièce)\n3. **Examiner** une arme ou un indice\n4. **Consulter le plan** du manoir\n5. **Formuler une accusation** (suspect, arme, pièce)\n\nPar où commencez-vous, inspecteur ?",
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EkNytz65FHvjXQ55Yhm8iWY5Z3Rku",
-        "created": 1794723979,
+        "id": "msg_011ChNgLTm3exNqBaiPEPGL4",
+        "created": 1795565567,
         "system_fingerprint": null,
         "usage": {
-          "prompt_tokens": 29,
-          "prompt_tokens_details": {
-            "audio_tokens": 0,
-            "cache_write_tokens": 0,
-            "cached_tokens": 0,
-            "image_tokens": null,
-            "text_tokens": null
-          },
-          "completion_tokens": 437,
-          "completion_tokens_details": {
-            "accepted_prediction_tokens": 0,
-            "audio_tokens": 0,
-            "reasoning_tokens": 61,
-            "rejected_prediction_tokens": 0,
-            "text_tokens": null
-          }
+          "prompt_tokens": 51,
+          "prompt_tokens_details": null,
+          "completion_tokens": 1493,
+          "completion_tokens_details": null
         }
       }
     }

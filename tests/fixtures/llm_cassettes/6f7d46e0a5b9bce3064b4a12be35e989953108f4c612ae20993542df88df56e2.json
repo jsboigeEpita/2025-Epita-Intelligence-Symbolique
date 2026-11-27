@@ -1,0 +1,36 @@
+{
+  "key": "6f7d46e0a5b9bce3064b4a12be35e989953108f4c612ae20993542df88df56e2",
+  "value": {
+    "id": "msg_011ChNfV8mfVwsiNALS3iUic",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "```json\n{\"has_digression\": true, \"relevance_verdict\": \"digression_localisée\", \"located_digression\": \"Par ailleurs, le ministre des finances a présenté des chiffres montrant que le déficit atteindra 2.3% du PIB d'ici 2030, mais cette projection repose sur des hypothèses de croissance optimistes de 1.8% par an.\"}\n```",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795564892,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 606,
+      "prompt_tokens": 794,
+      "total_tokens": 1400,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

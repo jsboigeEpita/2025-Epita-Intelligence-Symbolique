@@ -1,0 +1,36 @@
+{
+  "key": "ec00b3bbed4e887c72704091e37d4eceefdc0a4b5ce1a9bd055129b23534e354",
+  "value": {
+    "id": "msg_011ChNfUjaQ5hMyFix57pWqN",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_digression\": true, \"relevance_verdict\": \"digression_localisée\", \"located_digression\": \"De plus, affirmer que « si nous n'agissons pas maintenant, le système s'effondrera dans cinq ans » est un appel à la peur classique.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795564886,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 413,
+      "prompt_tokens": 714,
+      "total_tokens": 1127,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

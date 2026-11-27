@@ -1,0 +1,36 @@
+{
+  "key": "dcad8b2eccb3081dabeccc24adaa2b6aa1001b1f5babaaa1554ded2f8c819565",
+  "value": {
+    "id": "msg_011ChNfWPUUaeF6M4RV6a3Qe",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"distinct_points\": \"1. Les hypothèses de croissance optimistes (1,8 % par an) sur lesquelles repose la projection de déficit du ministre des finances fragilisent ses chiffres. (Mentionnée deux fois dans l'argument, mais c'est la même idée.)\\n2. Les syndicats accusent le gouvernement d'un sophisme naturaliste lorsqu'il présente le fait de travailler plus longtemps comme « dans l'ordre des choses ».\\n3. L'opposition dénonce un homme de paille : personne n'a proposé de supprimer les retraites, seulement de les réformer autrement.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795564910,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 636,
+      "prompt_tokens": 512,
+      "total_tokens": 1148,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "key": "9541dd3dec8fb0790aa08f1ed85d35dbd626f4c469186d51f37fdfa1a08336a1",
+  "value": {
+    "id": "msg_011ChNfVp2aVPDmfnX8hYtR2",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\": 1.0, \"exhibit\": \"Position adverse identifiée : le gouvernement soutient que travailler plus longtemps est « dans l'ordre des choses », que le système s'effondrera dans cinq ans sans action immédiate, et que le déficit atteindra 2,3 % du PIB d'ici l'échéance évoquée. Verdict d'engagement : engagement_réel, c'est-à-dire que la réfutation s'attaque effectivement à cette thèse adverse et non à un homme de paille. Structure démontrée : position adverse identifiée + engagement réel sur cette thèse, ce qui correspond à une réfutation constructive pleinement démontrée.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795564901,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 520,
+      "prompt_tokens": 452,
+      "total_tokens": 972,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

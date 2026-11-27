@@ -1,0 +1,36 @@
+{
+  "key": "924583af5b10df64bb5f09a11174e3f0510eafefbc24d6fe3ff4a03c2d9b51fc",
+  "value": {
+    "id": "msg_011ChNfXEBAABHnpJCZ1mx8M",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"engages_real_claim\": true, \"engagement_verdict\": \"engagement_réel\", \"reasoning\": \"La critique cite et qualifie directement la position adverse exacte (l'effondrement du système à cinq ans si l'on n'agit pas maintenant), sans la déformer, et le lien logique est direct, même si elle conteste le caractère de l'argument (appel à la peur) plutôt que sa vérité factuelle.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795564920,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 456,
+      "prompt_tokens": 484,
+      "total_tokens": 940,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

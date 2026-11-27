@@ -1,0 +1,21 @@
+{
+  "key": "df07d628ecac9941df535780fe76c9525eea5d65e1a5f5974146a9853702e4d4",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "```json\n{\"query_ideas\": [{\"formula\": \"[](logic_coherent)\"}, {\"formula\": \"<>(proof_found)\"}, {\"formula\": \"<>(logic_coherent)\"}, {\"formula\": \"[](proof_found)\"}]}\n```",
+      "metadata": {
+        "logprobs": null,
+        "id": "msg_011ChNgTpjYakezmUXMGD9bq",
+        "created": 1795565660,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 374,
+          "prompt_tokens_details": null,
+          "completion_tokens": 350,
+          "completion_tokens_details": null
+        }
+      }
+    }
+  ]
+}

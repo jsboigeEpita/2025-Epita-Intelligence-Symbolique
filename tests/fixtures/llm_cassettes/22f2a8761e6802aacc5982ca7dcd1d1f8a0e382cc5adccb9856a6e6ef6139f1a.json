@@ -1,0 +1,36 @@
+{
+  "key": "22f2a8761e6802aacc5982ca7dcd1d1f8a0e382cc5adccb9856a6e6ef6139f1a",
+  "value": {
+    "id": "msg_011ChNgcoMDKddJ9TX4VFCCf",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "```json\n{\"chain_holds\": true, \"structure_verdict\": \"progression_logique\", \"reasoning\": \"Les prémisses (effet dissuasif sur les crimes les plus graves et réduction du risque d'erreur par l'ADN) appuient la conclusion de maintien, mais le lien repose sur une prémisse implicite non démontrée, à savoir que l'efficacité dissuasive l'emporte sur le risque résiduel d'erreur.\"}\n```",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565784,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 760,
+      "prompt_tokens": 725,
+      "total_tokens": 1485,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

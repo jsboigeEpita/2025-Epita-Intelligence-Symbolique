@@ -1,0 +1,36 @@
+{
+  "key": "4d1e846560865f9fc9e084c35b5ce69ec7862a18a9332a9eb4ef8c63ff19fba0",
+  "value": {
+    "id": "msg_011ChNgDSM1TWY76uTSHnsAM",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_semantic_redundancy\": true, \"redundancy_verdict\": \"redondance_sémantique\", \"located_redundancy\": \"La description de l'option C (format hybride, 1000 € pour un tournoi réduit et 1000 € pour le matériel pédagogique, compromis entre visibilité et pédagogie) apparaît deux fois en substance quasi identique : une fois comme point 1 et une fois dans la phrase 'Option C' du texte de l'argument complet. Le point 2 (option B) n'apporte pas de redondance avec le point 1.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565467,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 745,
+      "prompt_tokens": 717,
+      "total_tokens": 1462,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

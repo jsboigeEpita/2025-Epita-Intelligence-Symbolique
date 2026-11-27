@@ -1,0 +1,36 @@
+{
+  "key": "5f9c42b88dbaac3d0298b59a33398265419724ab58b2041337c651b789b70b1d",
+  "value": {
+    "id": "msg_011ChNfUJDB8oh4UzXF3fwmT",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_clarity_obstacle\": true, \"obstacles\": \"Jargon technique non défini : « sophisme naturaliste » (terme de théorie de l'argumentation, sans explication) et « homme de paille » (expression rhétorique spécialisée, sans explication). Aucune anaphore ambiguë ni phrase trop emboîtée n'a été relevée.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795564882,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 740,
+      "prompt_tokens": 603,
+      "total_tokens": 1343,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

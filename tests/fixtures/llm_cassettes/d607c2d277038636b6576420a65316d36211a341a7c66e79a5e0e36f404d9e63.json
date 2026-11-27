@@ -1,0 +1,36 @@
+{
+  "key": "d607c2d277038636b6576420a65316d36211a341a7c66e79a5e0e36f404d9e63",
+  "value": {
+    "id": "msg_011ChNgCrnuzBFYx2RwxoEf8",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"engages_real_claim\": false, \"engagement_verdict\": \"pas_de_refutation\", \"reasoning\": \"Aucun texte de réfutation n'est fourni dans l'entrée : seuls la position adverse (Option B, échiquiers usés) et l'argument initial (Option A, tournoi et visibilité) sont présentés, donc aucun engagement envers la position adverse ne peut être vérifié.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565457,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 280,
+      "prompt_tokens": 644,
+      "total_tokens": 924,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

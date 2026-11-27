@@ -1,0 +1,36 @@
+{
+  "key": "5c51aa0df1568593b67ffa92e0ff2b35121f2da0900f8e3aaa8e0ad9c9fd9c31",
+  "value": {
+    "id": "msg_011ChNfUSTWS1FXojdeeAR4j",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_thesis\": true, \"thesis\": \"L'argument « pensez à vos enfants » est un appel à l'émotion qui détourne le débat des questions techniques de financement.\", \"digressions\": \"La phrase « L'opposition dénonce un homme de paille : personne n'a proposé de supprimer les retraites, seulement de les réformer différemment. » ne sert pas la thèse. Elle porte sur une autre faute (l'homme de paille) attribuée à l'opposition et ne démontre pas que l'appel à l'émotion détourne le débat.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795564882,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 479,
+      "prompt_tokens": 456,
+      "total_tokens": 935,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

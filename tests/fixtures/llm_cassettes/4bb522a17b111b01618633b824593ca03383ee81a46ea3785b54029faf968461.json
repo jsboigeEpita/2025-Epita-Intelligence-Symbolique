@@ -1,0 +1,36 @@
+{
+  "key": "4bb522a17b111b01618633b824593ca03383ee81a46ea3785b54029faf968461",
+  "value": {
+    "id": "msg_011ChNfXutMkZmse6dhn2Bq4",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "```json\n{\"chain_holds\": false, \"structure_verdict\": \"saut_logique\", \"reasoning\": \"La prémisse décrit une intention rhétorique (la menace « vise à provoquer » la peur), alors que la conclusion juge la validité de la raison d'agir ; or qualifier une menace d'appel à la peur n'établit pas qu'elle est fausse, et l'effondrement pourrait être réel.\"}\n```",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795564930,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 483,
+      "prompt_tokens": 622,
+      "total_tokens": 1105,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

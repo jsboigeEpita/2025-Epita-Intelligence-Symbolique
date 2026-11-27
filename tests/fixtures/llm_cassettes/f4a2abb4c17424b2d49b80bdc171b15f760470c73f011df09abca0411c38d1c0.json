@@ -1,0 +1,36 @@
+{
+  "key": "f4a2abb4c17424b2d49b80bdc171b15f760470c73f011df09abca0411c38d1c0",
+  "value": {
+    "id": "msg_011ChNgXQMTyKjXSVZEoxz53",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "```json\n{\"score\": 0.5, \"exhibit\": \"Points distincts : (1) la dissimulation des effets secondaires par les laboratoires pharmaceutiques est présentée comme une théorie du complot sans fondement ; (2) les affirmations sur la dangerosité des vaccins ignorent des décennies de recherche clinique ; (3) amorce tronquée (« Des taux de vaccination »), non évaluable. Redondance localisée : les points 1 et 2 rejettent tous deux les inquiétudes de sécurité vaccinale comme infondées, avec deux angles différents (intention de dissimulation versus base de preuves). Ce recouvrement est partiel et apporte une clarification, sans martèlement de la même idée.\"}\n```",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565711,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 764,
+      "prompt_tokens": 441,
+      "total_tokens": 1205,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

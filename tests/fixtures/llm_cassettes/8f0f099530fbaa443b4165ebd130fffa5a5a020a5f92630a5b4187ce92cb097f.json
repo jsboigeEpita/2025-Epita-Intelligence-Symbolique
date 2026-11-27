@@ -1,0 +1,36 @@
+{
+  "key": "8f0f099530fbaa443b4165ebd130fffa5a5a020a5f92630a5b4187ce92cb097f",
+  "value": {
+    "id": "msg_011ChNgVcQhHWqPN8vhormNN",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_thesis\": true, \"thesis\": \"Les personnes qui affirment que les vaccins sont dangereux ont tort, car elles ignorent la recherche clinique accumulée sur plusieurs décennies, ce qui affaiblit leur position.\", \"digressions\": \"La phrase « L'argument selon lequel les produits pharmaceutiques cachent les effets secondaires est une théorie du complot sans fondement. » est une digression : elle porte sur les intentions supposées de l'industrie pharmaceutique et non sur la sécurité des vaccins ou la recherche clinique, qui sont l'objet de la thèse, et elle n'est appuyée par aucune preuve. La phrase répétée « Ceux qui affirment que les vaccins sont dangereux ignorent les decades de recherche clinique. » est une redondance, non une digression.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565686,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 705,
+      "prompt_tokens": 491,
+      "total_tokens": 1196,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

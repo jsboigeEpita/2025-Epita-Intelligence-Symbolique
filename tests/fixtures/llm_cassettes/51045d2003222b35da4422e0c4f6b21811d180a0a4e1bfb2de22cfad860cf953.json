@@ -1,0 +1,36 @@
+{
+  "key": "51045d2003222b35da4422e0c4f6b21811d180a0a4e1bfb2de22cfad860cf953",
+  "value": {
+    "id": "msg_011ChNfVWT9raKD3jNfFbaCE",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"engages_real_claim\": true, \"engagement_verdict\": \"engagement_réel\", \"reasoning\": \"La réfutation vise directement le raisonnement du Premier ministre, à savoir que l'exemple des autres pays européens justifie la réforme, en contestant la pertinence de cette comparaison par l'absence de prise en compte des différences structurelles entre les systèmes.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795564897,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 375,
+      "prompt_tokens": 586,
+      "total_tokens": 961,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

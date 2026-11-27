@@ -1,0 +1,36 @@
+{
+  "key": "ee28c6993549463b0d25d2c723c94a2f0377dc0147bcf11aecbd2009fd8aa2c5",
+  "value": {
+    "id": "msg_011ChNfVPo3jZZZt57jr4aZv",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_opposing_claim\": true, \"opposing_claim\": \"La projection du ministre des finances selon laquelle le déficit atteindra 2.3% du PIB d'ici 2030\", \"main_thesis\": \"La projection de déficit du ministre des finances est fragilisée par des hypothèses de croissance optimistes (1.8% par an), ce qui affaiblit la fiabilité de ses chiffres.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795564896,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 541,
+      "prompt_tokens": 596,
+      "total_tokens": 1137,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

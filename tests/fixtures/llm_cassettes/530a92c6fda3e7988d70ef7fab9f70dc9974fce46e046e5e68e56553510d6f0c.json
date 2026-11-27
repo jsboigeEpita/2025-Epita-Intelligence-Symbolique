@@ -1,0 +1,36 @@
+{
+  "key": "530a92c6fda3e7988d70ef7fab9f70dc9974fce46e046e5e68e56553510d6f0c",
+  "value": {
+    "id": "msg_011ChNgDdXDXn9EyyWdw9rYQ",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "```json\n{\"distinct_points\": \"1) L'option A (tournoi inter-villes avec buffet et prix de 2000 €) est justifiée par une hausse attendue de la visibilité du club.\\n2) L'option A est justifiée par le recrutement attendu de nouveaux membres.\\n3) L'option B consiste à investir les 2000 € en matériel pédagogique (échiquiers neufs, horloges, supports de cours).\\n4) L'option B est justifiée par l'usure des échiquiers actuels.\"}\n```",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565470,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 717,
+      "prompt_tokens": 464,
+      "total_tokens": 1181,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

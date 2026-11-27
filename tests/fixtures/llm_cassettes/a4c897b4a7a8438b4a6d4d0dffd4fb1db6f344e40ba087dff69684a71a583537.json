@@ -1,0 +1,36 @@
+{
+  "key": "a4c897b4a7a8438b4a6d4d0dffd4fb1db6f344e40ba087dff69684a71a583537",
+  "value": {
+    "id": "msg_011ChNfUiApQbGnDx47KVacz",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "```json\n{\"score\": 0.5, \"exhibit\": \"Obstacles localisés : deux termes techniques non définis, « sophisme naturaliste » (terme de théorie de l'argumentation, sans explication) et « homme de paille » (expression rhétorique spécialisée, sans explication). Le passage est également tronqué dans la liste d'obstacles (« Aucune anap… »), ce qui ne permet pas de vérifier l'éventuelle absence d'anaphore. Verdict d'opacité : résolvable_contexte. Les termes restent compréhensibles grâce au contexte argumentatif environnant, le sens général est donc globalement accessible, ce qui correspond à une clarté partielle.\"}\n```",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795564886,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 404,
+      "prompt_tokens": 420,
+      "total_tokens": 824,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

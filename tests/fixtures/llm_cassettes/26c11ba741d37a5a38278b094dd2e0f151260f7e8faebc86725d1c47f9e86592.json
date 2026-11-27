@@ -1,0 +1,36 @@
+{
+  "key": "26c11ba741d37a5a38278b094dd2e0f151260f7e8faebc86725d1c47f9e86592",
+  "value": {
+    "id": "msg_011ChNgDZoV8DWRC9dj3QAsi",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "```json\n{\"has_semantic_redundancy\": true, \"redundancy_verdict\": \"redondance_sémantique\", \"located_redundancy\": \"L'option B (investir les 2000 euros en matériel pédagogique : échiquiers neufs, horloges, supports de cours) est énoncée deux fois avec le même contenu, dans la première phrase et dans la phrase 'Option B : investir les 2000 euros...'. L'option A (tournoi inter-villes avec buffet et prix pour 2000 euros) est aussi reformulée à l'identique dans le texte. Les points 2 (visibilité) et 3 (recrutement) apportent en revanche un contenu distinct.\"}\n```",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565470,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 1090,
+      "prompt_tokens": 776,
+      "total_tokens": 1866,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

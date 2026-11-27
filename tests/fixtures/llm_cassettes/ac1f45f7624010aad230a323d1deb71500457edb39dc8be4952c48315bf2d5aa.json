@@ -1,0 +1,36 @@
+{
+  "key": "ac1f45f7624010aad230a323d1deb71500457edb39dc8be4952c48315bf2d5aa",
+  "value": {
+    "id": "msg_011ChNgdYhvTqdHhViV6xhgz",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\": 1.0, \"exhibit\": \"Position adverse identifiée : la peine de mort est économiquement avantageuse, car elle coûte moins cher que l'emprisonnement à vie (argument financier en faveur de la peine de mort). Verdict d'engagement : engagement réel sur cette thèse adverse, donc réfutation constructive pleinement démontrée au sens de l'échelle (1.0).\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565792,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 342,
+      "prompt_tokens": 436,
+      "total_tokens": 778,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

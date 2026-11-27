@@ -1,0 +1,36 @@
+{
+  "key": "8ad33efce0745e13f44bfce50b82383e9f669a2b2efec3899e1f527b2f04c387",
+  "value": {
+    "id": "msg_011ChNgiQhrVY7fg9dhqC5r4",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_thesis\": true, \"thesis\": \"Le changement climatique actuel se distingue du passé par sa vitesse sans précédent, ce que le raisonnement sceptique omet en affirmant que le climat a toujours changé.\", \"digressions\": \"La dernière phrase, « Les modèles prédictifs sont unanimes sur l'impact des activités humaines. », porte sur la cause du changement et non sur sa vitesse, qui est l'objet de la thèse.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565859,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 422,
+      "prompt_tokens": 472,
+      "total_tokens": 894,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

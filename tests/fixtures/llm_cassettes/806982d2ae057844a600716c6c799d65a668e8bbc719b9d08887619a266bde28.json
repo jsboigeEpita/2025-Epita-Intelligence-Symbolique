@@ -1,0 +1,36 @@
+{
+  "key": "806982d2ae057844a600716c6c799d65a668e8bbc719b9d08887619a266bde28",
+  "value": {
+    "id": "msg_011ChNgigZLkmP9yEdcmw9Ms",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\": 1.0, \"exhibit\": \"Thèse : le changement climatique actuel est anormal, car il présente une vitesse sans précédent et résulte des activités humaines, par opposition à l'argument sce (tronqué dans l'entrée). Aucune digression identifiée ; toutes les propositions servent la thèse.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565861,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 250,
+      "prompt_tokens": 398,
+      "total_tokens": 648,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

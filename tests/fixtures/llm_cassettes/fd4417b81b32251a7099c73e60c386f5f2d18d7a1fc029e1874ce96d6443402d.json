@@ -1,0 +1,36 @@
+{
+  "key": "fd4417b81b32251a7099c73e60c386f5f2d18d7a1fc029e1874ce96d6443402d",
+  "value": {
+    "id": "msg_011ChNgbdgGNrtDBodAnC3yA",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\": 1.0, \"exhibit\": \"Position adverse identifiée : le système judiciaire peut se tromper et exécuter un innocent. Verdict d'engagement : engagement réel sur cette thèse adverse, ce qui satisfait le critère de réfutation constructive pleinement démontrée.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565766,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 327,
+      "prompt_tokens": 394,
+      "total_tokens": 721,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

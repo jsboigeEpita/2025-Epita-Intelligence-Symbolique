@@ -1,0 +1,36 @@
+{
+  "key": "9e956452f0e61a70486f9abc6991d8b05941a0c921a6ac2b72d6f706eaef9945",
+  "value": {
+    "id": "msg_011ChNgjX57kjXa5TMeqk1GC",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"chain_holds\": false, \"structure_verdict\": \"saut_logique\", \"reasoning\": \"La réfutation de l'objection sceptique (« le climat a toujours changé ») par la vitesse du changement peut justifier le caractère anormal, mais l'imputation aux activités humaines ne découle pas des prémisses, qui se limitent à affirmer un accord des modèles sans en exposer la base, et la prémisse sur la vitesse est tronquée.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565877,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 886,
+      "prompt_tokens": 700,
+      "total_tokens": 1586,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

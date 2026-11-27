@@ -1,0 +1,36 @@
+{
+  "key": "1a7873c751a1ed9c40c3611680f2f53d85255dbcd213026b6cb00f665f39ff1c",
+  "value": {
+    "id": "msg_011ChNgiSAA3og7bjtZyJnQa",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_thesis\": true, \"thesis\": \"Le changement climatique actuel est anormal : il présente une vitesse sans précédent et résulte des activités humaines, contrairement à l'argument sceptique selon lequel le climat a toujours changé.\", \"digressions\": \"\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565859,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 364,
+      "prompt_tokens": 447,
+      "total_tokens": 811,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

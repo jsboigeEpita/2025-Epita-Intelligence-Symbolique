@@ -1,0 +1,36 @@
+{
+  "key": "681e4889e0e1c5d2c3138f878411930d46799549f813228c9f3487964f797a7f",
+  "value": {
+    "id": "msg_011ChNgixUJJutZhp8VN1Lnx",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "```json\n{\"has_opposing_claim\": true, \"opposing_claim\": \"Le climat a toujours changé, donc le changement climatique actuel ne justifie pas de le considérer comme une crise d'origine humaine (position des sceptiques qui minimisent la crise climatique).\", \"main_thesis\": \"Les activités humaines sont à l'origine du changement climatique actuel, et la vitesse de ce changement est sans précédent.\"}\n```",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565866,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 441,
+      "prompt_tokens": 501,
+      "total_tokens": 942,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

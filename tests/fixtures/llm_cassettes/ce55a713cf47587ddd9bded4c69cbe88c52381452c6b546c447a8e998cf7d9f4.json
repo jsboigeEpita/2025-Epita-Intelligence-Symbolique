@@ -1,0 +1,36 @@
+{
+  "key": "ce55a713cf47587ddd9bded4c69cbe88c52381452c6b546c447a8e998cf7d9f4",
+  "value": {
+    "id": "msg_011ChNgiQZfKBa9Gh1vfQTEm",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "```json\n{\"has_thesis\": true, \"thesis\": \"Les activités humaines jouent un rôle déterminant dans le changement climatique actuel, qui constitue une crise réelle.\", \"digressions\": \"La dernière phrase : « Ceux qui minimisent la crise climatique utilisent souvent des données sélectives pour soutenir leur position. » Elle attaque les contradicteurs sans apporter de preuve supplémentaire en faveur de la thèse sur le rôle des activités humaines.\"}\n```",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565860,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 626,
+      "prompt_tokens": 449,
+      "total_tokens": 1075,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

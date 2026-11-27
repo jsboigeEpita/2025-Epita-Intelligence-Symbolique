@@ -1,0 +1,36 @@
+{
+  "key": "08289ba8d827a6f417b0d258f11ca6d4f1ca3ef94785e57dd1578558b69a6531",
+  "value": {
+    "id": "msg_011ChNfcta7NkSQ4KVUcduvJ",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\": 1.0, \"exhibit\": \"Thèse : « Il fait beau ». Digressions identifiées : aucune. Verdict de l'étape 2 : toutes les propositions sont pertinentes et servent la thèse.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795564996,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 177,
+      "prompt_tokens": 354,
+      "total_tokens": 531,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "key": "62d50a70e9f357b14455cf458c9dbb022d9611313b899a629f894fc091be4942",
+  "value": {
+    "id": "msg_011ChNfqmV66CEYyyzajccz8",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\": 1.0, \"exhibit\": \"Thèse : « La politique économique est un succès incontestable. » Aucune digression identifiée (digressions vides). Verdict de l'étape 2 : toutes les propositions sont pertinentes et servent la thèse.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565171,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 238,
+      "prompt_tokens": 362,
+      "total_tokens": 600,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

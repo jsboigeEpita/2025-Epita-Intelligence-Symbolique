@@ -1,0 +1,36 @@
+{
+  "key": "1e9bc52a9da1ddd4f0437ff58bc44310ade0bfd33e5d4b4d718391cf2d5c860c",
+  "value": {
+    "id": "msg_011ChNgbwhxvUUvFd6bxXAke",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\": 1.0, \"exhibit\": \"Thèse : La peine de mort (peine capitale) est justifiée : elle dissuade les crimes les plus graves, et le risque d'erreur judiciaire est réduit par les avancées (formulation tronquée dans l'entrée). Digressions identifiées : aucune. Verdict de l'étape 2 : toutes les propositions sont pertinentes et servent la thèse.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565771,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 499,
+      "prompt_tokens": 406,
+      "total_tokens": 905,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

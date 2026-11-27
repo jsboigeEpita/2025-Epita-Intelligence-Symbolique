@@ -1,0 +1,36 @@
+{
+  "key": "8a0dbaba3acbd5bc8ad635691b0f14ed9c8c72e2b84205f7f507efdefeb617d7",
+  "value": {
+    "id": "msg_011ChNgVuA1EQgU6MM6d6gfB",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "```json\n{\"score\": 0.5, \"exhibit\": \"Thèse : un taux de vaccination élevé protège aussi les personnes non vaccinables, grâce à l'immunité collective. Digression localisée : une phrase qualifie de théorie du complot l'argument selon lequel les produits pharmaceutiques cachent leurs effets secondaires, sujet qui ne sert pas la thèse. Le reste de l'argumentation reste centré sur la thèse.\"}\n```",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565688,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 318,
+      "prompt_tokens": 463,
+      "total_tokens": 781,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "key": "ffbf9e34a52003d48298cdad6840f5dc4f7ff0fd7f842bcdc7ad849c96ed2c7e",
+  "value": {
+    "id": "msg_011ChNgiq44U53knE6qrsCUh",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\": 0.5, \"exhibit\": \"Thèse : les activités humaines jouent un rôle déterminant dans le changement climatique actuel, qui constitue une crise réelle. Digression localisée (dernière phrase) : « Ceux qui minimisent la crise climatique utilisent souvent des données sélectives » ; elle attaque les contradicteurs sans apporter de preuve supplémentaire. Digression mineure et isolée, l'argumentation principale reste centrée sur la thèse.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565864,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 358,
+      "prompt_tokens": 462,
+      "total_tokens": 820,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

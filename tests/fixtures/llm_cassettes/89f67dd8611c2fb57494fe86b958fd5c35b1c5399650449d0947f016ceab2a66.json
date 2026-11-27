@@ -1,0 +1,36 @@
+{
+  "key": "89f67dd8611c2fb57494fe86b958fd5c35b1c5399650449d0947f016ceab2a66",
+  "value": {
+    "id": "msg_011ChNgbvzJfaj8LsPGD8Rrt",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"engages_real_claim\": true, \"engagement_verdict\": \"engagement_réel\", \"reasoning\": \"La réfutation cible directement le risque d'erreur judiciaire en affirmant que les avancées en ADN le réduisent, ce qui correspond à la position adverse réelle, même si l'argument concède ensuite que toute erreur serait irréversible.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565771,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 405,
+      "prompt_tokens": 593,
+      "total_tokens": 998,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "key": "abba6d5339b00d6bee4897fa8b9d9dee268951c50d9fb165a0433aff674856a9",
+  "value": {
+    "id": "msg_011ChNfWG6ykJ25ggRbpQHRv",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"distinct_points\": \"1. Le gouvernement commet un sophisme naturaliste en présentant le fait de travailler plus longtemps comme « dans l'ordre des choses ».\\n2. L'affirmation « si nous n'agissons pas maintenant, le système s'effondrera dans cinq ans » constitue un appel à la peur.\\n3. La projection d'un déficit de 2,3 % du PIB d'ici 2030 repose sur des hypothèses de croissance optimistes (1,8 % par an).\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795564907,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 422,
+      "prompt_tokens": 534,
+      "total_tokens": 956,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

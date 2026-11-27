@@ -1,0 +1,36 @@
+{
+  "key": "22172259d106efd4744f7c0415880f1dd6a4df77cccbcdc198e85e13bdcf1821",
+  "value": {
+    "id": "msg_011ChNfVEmavuQ1mYgm56grD",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "```json\n{\"engages_real_claim\": true, \"engagement_verdict\": \"engagement_réel\", \"reasoning\": \"La critique reprend la prémisse exacte du Premier ministre (la nécessité de la réforme fondée sur l'exemple de tous les pays européens) et en conteste la validité inférentielle en invoquant les différences structurelles entre systèmes, sans déformer la position adverse.\"}\n```",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795564893,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 323,
+      "prompt_tokens": 619,
+      "total_tokens": 942,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

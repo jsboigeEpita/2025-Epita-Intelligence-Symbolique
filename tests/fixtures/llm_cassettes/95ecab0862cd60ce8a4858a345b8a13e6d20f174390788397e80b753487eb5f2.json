@@ -1,0 +1,36 @@
+{
+  "key": "95ecab0862cd60ce8a4858a345b8a13e6d20f174390788397e80b753487eb5f2",
+  "value": {
+    "id": "msg_011ChNgVqk8TebQGwqCYA8gq",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_opposing_claim\": false, \"opposing_claim\": \"\", \"main_thesis\": \"Les vaccins sont indispensables à la santé publique.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565687,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 154,
+      "prompt_tokens": 428,
+      "total_tokens": 582,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

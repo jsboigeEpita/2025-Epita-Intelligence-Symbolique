@@ -1,0 +1,36 @@
+{
+  "key": "03855003f38c7d9ce4e9ab158f1cf9f0983619e420d8e3ff67502947dba22f2f",
+  "value": {
+    "id": "msg_011ChNgmY1U44ytCVVJaGMB6",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"engages_real_claim\": false, \"engagement_verdict\": \"homme_de_paille\", \"reasoning\": \"La réfutation déplace la position de la gravité de la crise vers l'attribution causale aux activités humaines, sans répondre à la thèse de la sévérité, et ajoute un argument économique sur la transition qui ne traite pas de cette question.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565902,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 549,
+      "prompt_tokens": 553,
+      "total_tokens": 1102,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

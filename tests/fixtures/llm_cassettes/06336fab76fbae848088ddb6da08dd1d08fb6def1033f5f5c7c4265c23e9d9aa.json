@@ -1,0 +1,36 @@
+{
+  "key": "06336fab76fbae848088ddb6da08dd1d08fb6def1033f5f5c7c4265c23e9d9aa",
+  "value": {
+    "id": "msg_011ChNgbvS4u9HVG81wYNfZE",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\": 0.5, \"exhibit\": \"Thèse : le risque d'erreur judiciaire est considérablement réduit par les progrès de l'analyse ADN, ce qui répond à l'objection des opposants. Digressions localisées : « Elle sert de dissuasion contre les crimes les plus graves comme le meurtre de masse » et « De plus, certains criminels sont irrécupérables et représentent un danger permanent pour la société ». Ces phrases s'écartent du propos sur la fiabilité de l'ADN, mais l'argumentation principale reste centrée sur la thèse.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565770,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 422,
+      "prompt_tokens": 471,
+      "total_tokens": 893,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

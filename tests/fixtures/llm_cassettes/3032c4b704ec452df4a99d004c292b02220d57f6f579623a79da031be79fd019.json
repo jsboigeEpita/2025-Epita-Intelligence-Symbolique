@@ -1,0 +1,36 @@
+{
+  "key": "3032c4b704ec452df4a99d004c292b02220d57f6f579623a79da031be79fd019",
+  "value": {
+    "id": "msg_011ChNgimuJpkM5C4zrJ1N9n",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "```json\n{\"has_chain\": true, \"premises\": \"Les mesures de température globale montrent une augmentation de 1,1 degré depuis l'ère préindustrielle.\", \"conclusion\": \"Le changement climatique est une réalité scientifique incontestable.\"}\n```",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565864,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 561,
+      "prompt_tokens": 428,
+      "total_tokens": 989,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

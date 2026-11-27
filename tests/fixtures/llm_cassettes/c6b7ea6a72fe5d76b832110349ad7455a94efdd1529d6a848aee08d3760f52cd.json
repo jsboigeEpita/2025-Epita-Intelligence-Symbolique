@@ -1,0 +1,36 @@
+{
+  "key": "c6b7ea6a72fe5d76b832110349ad7455a94efdd1529d6a848aee08d3760f52cd",
+  "value": {
+    "id": "msg_011ChNfWaR3fEyG3pubsM5Yr",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\": 1.0, \"exhibit\": \"Deux points distincts : (1) un sophisme naturaliste, qui tire une norme de l'idée que travailler plus longtemps relève de « l'ordre des choses » ; (2) un appel à la peur (ou à l'urgence) fondé sur l'effondrement annoncé du système dans cinq ans si l'on n'agit pas maintenant. Ces deux points relèvent de types d'erreurs différents et ne se répètent pas en substance. Aucune redondance localisée. Remarque : le point 2 est tronqué (« appel à ») et son type exact n'est pas identifiable, ce qui n'affecte pas l'évaluation de la redondance.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795564911,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 443,
+      "prompt_tokens": 440,
+      "total_tokens": 883,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

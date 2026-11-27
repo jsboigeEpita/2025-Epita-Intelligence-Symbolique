@@ -1,0 +1,36 @@
+{
+  "key": "c4b5edbcfa45e212f14a55246bf4513bbbfeb0f6b92608f51962794ac5427635",
+  "value": {
+    "id": "msg_011ChNgdUEY24x2GrPBVnQ5h",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_semantic_redundancy\": true, \"redundancy_verdict\": \"redondance_sémantique\", \"located_redundancy\": \"Le point 1 (les progrès de l'analyse ADN réduisent considérablement le risque d'erreur judiciaire, ce qui répond à l'objection des opposants) apparaît deux fois en substance : dans la première phrase (« Le risque d'erreur judiciaire est considérablement réduit par les progrès de l'analyse ADN, ce qui répond à l'objection des opposants ») et dans la phrase centrale (« Les opposants argumentent que le système judiciaire peut se tromper, mais les avancées en ADN réduisent considérablement ce risque »). Même contenu, formulations différentes.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565793,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 722,
+      "prompt_tokens": 697,
+      "total_tokens": 1419,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

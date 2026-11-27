@@ -1,0 +1,36 @@
+{
+  "key": "4826ac238abdb2e4cf79d5ced6f7061b357440b9023d654c28e819a0d093f2c3",
+  "value": {
+    "id": "msg_011ChNfV2i3mHcG4BS6JLPtC",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "```json\n{\"has_opposing_claim\": true, \"opposing_claim\": \"La réforme des retraites est nécessaire, car tous les pays européens l'ont déjà faite (position du Premier ministre).\", \"main_thesis\": \"L'argumentaire du Premier ministre en faveur de la réforme des retraites est fallacieux : l'argument d'autorité sur l'exemple européen ignore les différences structurelles entre les systèmes, et l'avertissement d'un effondrement dans cinq ans relève de l'appel à la peur.\"}\n```",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795564891,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 612,
+      "prompt_tokens": 537,
+      "total_tokens": 1149,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

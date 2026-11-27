@@ -1,0 +1,36 @@
+{
+  "key": "fee2e917070cfd537381ac6094d7270998504afdc4316d69fe4e6ffda3efdc93",
+  "value": {
+    "id": "msg_011ChNfW8fzSp8zgFUVQKown",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\": 1.0, \"exhibit\": \"Chaîne reconstruite : prémisse = la projection de déficit du ministre des finances repose sur des hypothèses de croissance optimistes de 1,8 % par an ; conclusion = les chiffres du ministre (déficit atteignant 2,3 % du PIB d'ici 2030) sont fragilisés. Le verdict de structure est « progression_logique ». La structure démontrée est une inférence directe : si la projection dépend d'hypothèses de croissance jugées optimistes, alors ses résultats chiffrés (le déficit de 2,3 % du PIB en 2030) perdent en fiabilité.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795564906,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 567,
+      "prompt_tokens": 451,
+      "total_tokens": 1018,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

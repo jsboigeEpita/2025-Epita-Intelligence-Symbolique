@@ -1,0 +1,36 @@
+{
+  "key": "2ffd40d6a41cb63c01ff80beb74b69f882f4751b6106e1649eddccc3b42c14e5",
+  "value": {
+    "id": "msg_011ChNgCyMo1yRbJLpwug3R3",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\": 0.0, \"exhibit\": \"Position adverse identifiée : Option B, investir les 2000 euros en matériel pédagogique (échiquiers neufs, horloges, supports de cours), au motif que les échiquiers actuels sont usés. Verdict d'engagement : pas_de_refutation. Aucune réfutation constructive de cette position n'est démontrée.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565459,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 259,
+      "prompt_tokens": 428,
+      "total_tokens": 687,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

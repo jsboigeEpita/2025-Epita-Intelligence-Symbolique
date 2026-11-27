@@ -1,0 +1,36 @@
+{
+  "key": "9389e352184bd34d9a72bbd599bb7d1e6ec81de7b71d4c875dfbb340d7e5eece",
+  "value": {
+    "id": "msg_011ChNfcEJF9GVutgkx1hT3Z",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"formulas\": [\"Shines(sun)\"], \"predicates\": {\"Shines\": [\"Thing\"]}, \"sorts\": {\"Thing\": [\"sun\"]}, \"constants\": {\"sun\": \"the Sun (le soleil)\"}, \"confidence\": 0.9}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795564987,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 226,
+      "prompt_tokens": 456,
+      "total_tokens": 682,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

@@ -1159,6 +1159,13 @@ _RAW_CACHE_KEY_FIELDS = (
     # in the key, two efforts shared one cassette. An unset effort never
     # creates the field, so pre-existing cassettes keep their keys.
     "extra_body",
+    # #3679 ask 3: the completion cap under its reasoning-model spelling
+    # (the first reading, the personas and the shield validator send this
+    # one). Only ``max_tokens`` was in the key, so a call capped at 200 read
+    # the cassette of the same call capped at 1024 (measured on main
+    # de05227f3: uncapped and capped at 64 hashed to one key). Same rule as
+    # extra_body: unset adds nothing.
+    "max_completion_tokens",
 )
 
 

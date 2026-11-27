@@ -1,0 +1,36 @@
+{
+  "key": "8aeb8e9902c5352a81fd28eb9954fd217ea89b63b0ac2d13c300fc729ba01ff2",
+  "value": {
+    "id": "msg_011ChNgDxWEWev6rMrgCB6vj",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\": 1.0, \"exhibit\": \"Quatre points distincts : (1) proposition d'un tournoi inter-villes avec buffet et prix pour 2000 € (Option A) ; (2) ce tournoi augmentera la visibilité du club (bénéfice A, idée de notoriété) ; (3) ce tournoi recrutera de nouveaux membres (bénéfice A, idée de recrutement, distincte de la visibilité) ; (4) alternative Option B : investir les 2000 € en mat (texte tronqué, contenu non vérifiable). Aucune reprise en substance entre les points 1 à 3 : visibilité et recrutement sont deux effets différents. Le verdict fourni 'redondance_sémantique' n'est pas étayé par les points listés ; le point 4 étant incomplet, une redondance éventuelle ne peut être exclue pour ce point seulement.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565474,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 636,
+      "prompt_tokens": 450,
+      "total_tokens": 1086,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

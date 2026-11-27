@@ -1,0 +1,21 @@
+{
+  "key": "68844164a08c36368290f28e578c17c538eed2ee91e82bc0222fe1a2a4653827",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "{\"query_ideas\": [\"alice_succeeds\", \"alice_studies\"]}",
+      "metadata": {
+        "logprobs": null,
+        "id": "msg_011ChNgUKgbaEkyLoboAfwNd",
+        "created": 1795565666,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 819,
+          "prompt_tokens_details": null,
+          "completion_tokens": 29,
+          "completion_tokens_details": null
+        }
+      }
+    }
+  ]
+}

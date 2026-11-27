@@ -1,0 +1,36 @@
+{
+  "key": "d9af504020b6152dd566c4680cb0640f6e7444848b04784ab4fe631e2b941cf3",
+  "value": {
+    "id": "msg_011ChNfv1X44xS7K7ygyULJF",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"distinct_points\": \"1. Les experts sont unanimes, donc la thèse est vraie (l'unanimité des experts garantit la vérité). 2. Si l'on n'est pas expert, son avis ne compte pas (seuls les avis d'experts ont une valeur dans le débat).\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565229,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 311,
+      "prompt_tokens": 288,
+      "total_tokens": 599,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

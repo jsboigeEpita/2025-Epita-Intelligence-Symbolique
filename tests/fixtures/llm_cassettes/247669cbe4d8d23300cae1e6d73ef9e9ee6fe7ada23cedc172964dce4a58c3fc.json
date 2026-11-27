@@ -1,0 +1,36 @@
+{
+  "key": "247669cbe4d8d23300cae1e6d73ef9e9ee6fe7ada23cedc172964dce4a58c3fc",
+  "value": {
+    "id": "msg_011ChNfUtVSFrBMp1hD9PnNN",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\": 0.5, \"exhibit\": \"Thèse : l'argument du Premier ministre selon lequel la réforme des retraites est nécessaire parce que tous les pays européens l'ont déjà faite est un argument. Digression localisée : la phrase « si nous n'agissons pas maintenant, le système s'effondrera dans cinq ans » et son qualificatif d'appel à la peur ne portent pas sur l'exemple européen et constituent une critique distincte. L'ensemble reste centré sur la thèse.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795564888,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 434,
+      "prompt_tokens": 480,
+      "total_tokens": 914,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

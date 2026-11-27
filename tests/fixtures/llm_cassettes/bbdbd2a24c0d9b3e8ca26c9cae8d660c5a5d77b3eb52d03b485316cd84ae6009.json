@@ -1,0 +1,36 @@
+{
+  "key": "bbdbd2a24c0d9b3e8ca26c9cae8d660c5a5d77b3eb52d03b485316cd84ae6009",
+  "value": {
+    "id": "msg_011ChNgjhkZXiofSijFQjzUi",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "```json\n{\"chain_holds\": true, \"structure_verdict\": \"progression_logique\", \"reasoning\": \"La prémisse sur le consensus des modèles soutient l'attribution du changement climatique aux activités humaines, et celle sur la vitesse sans précédent du changement soutient le caractère réel et grave de la crise, chaque partie de la conclusion étant ainsi appuyée par une prémisse distincte, même si « cause principale » est légèrement plus fort que « impact ».\"}\n```",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565877,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 505,
+      "prompt_tokens": 699,
+      "total_tokens": 1204,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

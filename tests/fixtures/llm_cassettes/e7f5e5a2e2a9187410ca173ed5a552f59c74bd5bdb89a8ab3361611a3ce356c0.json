@@ -1,0 +1,36 @@
+{
+  "key": "e7f5e5a2e2a9187410ca173ed5a552f59c74bd5bdb89a8ab3361611a3ce356c0",
+  "value": {
+    "id": "msg_011ChNgb1J13W9ecN2Hxmq1e",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_thesis\": true, \"thesis\": \"La peine de mort est une sanction nécessaire, notamment parce qu'elle a un effet dissuasif contre les crimes les plus graves.\", \"digressions\": \"\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565758,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 400,
+      "prompt_tokens": 447,
+      "total_tokens": 847,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

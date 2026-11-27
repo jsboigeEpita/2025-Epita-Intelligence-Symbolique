@@ -34,6 +34,10 @@ on:
         #    (#1603 constat A) — these tests record through the raw path
         #    (_guarded_chat_completion), which is exactly what the band
         #    replays.
+        #    #3679: `python scripts/cassettes/band_record_argv.py` prints
+        #    both values, read from the band workflow itself. The record
+        #    step compares what it received with that recipe and stops
+        #    before billing when the two differ.
         # 2. GENERAL HARVEST (default) — 'not slow and not requires_api' raw
         #    path consumers for cassette coverage beyond the band.
         default: 'not slow and not requires_api'
@@ -105,11 +109,53 @@ jobs:
         shell: pwsh
         timeout-minutes: ${{ fromJson(inputs.max_minutes) }}
         env:
+          # #3679: the recorder takes the route the live band takes (#3660) —
+          # the named Anthropic route, Haiku. The model id is part of every
+          # cache key, and the replay-band job of requires_api_band.yml
+          # resolves this same route with a dummy key. The OpenAI secret
+          # stays: tests that build their own OpenAI client read it.
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          ANTHROPIC_CHAT_MODEL_ID: claude-haiku-5-5
           TEXT_CONFIG_PASSPHRASE: ${{ secrets.TEXT_CONFIG_PASSPHRASE }}
           LLM_CACHE_MODE: record
           LLM_CACHE_DIR: ${{ inputs.record_db }}
+          # The two inputs of the dispatch, as this step received them: its
+          # population check reads them (#3679).
+          RECORD_LANE: ${{ inputs.lane }}
+          RECORD_EXTRA_ARGS: ${{ inputs.extra_args }}
         run: |
+          # #3679: a record of the band population must select exactly what
+          # the replay job replays (#2323). The recipe is read from the band
+          # workflow itself; a dispatch that differs stops here, before the
+          # billable command. The check answers in three ways, and each one is
+          # read right below (#3679 item 40c): 0 a verified band record; 1 a
+          # dispatch that would not select the replay population (the step
+          # stops on its own red); 3 another lane (the general harvest), let
+          # through as before.
+          conda run -n projet-is --no-capture-output python scripts/cassettes/band_record_argv.py --check-env
+          if ($LASTEXITCODE -ne 0 -and $LASTEXITCODE -ne 3) { exit $LASTEXITCODE }
+          # A verified band record runs WITHOUT the dataset passphrase. The band
+          # population never decrypts the corpus, and a runner's only copy of it
+          # is the encrypted file: without the passphrase no prompt of this run
+          # can carry corpus prose. The export step then reports its
+          # historical-year hints instead of refusing them (privacy.py). Another
+          # lane keeps the passphrase: its unit tests read the dataset. The word
+          # is written only once the passphrase is seen GONE: a record that kept
+          # it must not be read as one that ran without it.
+          if ($LASTEXITCODE -eq 0) {
+            # #3019: neutralise by VALUE, not by removal. `env_loader` fills any
+            # name the process lacks from a root `.env`, and protects only the
+            # names the caller set — even to "". Removing the name left this
+            # guarantee resting on the runner having no `.env`; an empty value
+            # makes the loader's own rule hold it, and the carrier
+            # `CALLER_EMPTY_NAMES` re-asserts that emptiness in a child process
+            # whose environment was restored (#2472).
+            $env:TEXT_CONFIG_PASSPHRASE = ""
+            if (-not (Test-Path Env:TEXT_CONFIG_PASSPHRASE)) { Write-Host "FAIL-LOUD: the dataset passphrase is ABSENT, not empty — a loader would refill it from .env. Nothing was billed."; exit 1 }
+            if ($env:TEXT_CONFIG_PASSPHRASE) { Write-Host "FAIL-LOUD: the dataset passphrase survived the record step — nothing was billed."; exit 1 }
+            echo "dataset_passphrase=withheld" >> $env:GITHUB_OUTPUT
+          }
           # Deselected — env-shape mismatch of the RECORD lane (not LLM work):
           # test_create_llm_service_openai_authentic asserts isinstance
           # OpenAIChatCompletion, but record mode wraps the service in
@@ -133,6 +179,13 @@ jobs:
       - name: Export cassettes + blocking privacy audit
         if: always()
         shell: pwsh
+        env:
+          # #3679 item 40c: what the record step said about the dataset
+          # passphrase — `withheld` when it ran a verified band record without
+          # it. It says nothing for any other record (another lane, a dispatch
+          # the check refused, a step that never reached its check): the export
+          # then runs the full audit.
+          RECORD_DATASET_PASSPHRASE: ${{ steps.record.outputs.dataset_passphrase || 'given' }}
         run: |
           python scripts/cassettes/export.py ${{ inputs.record_db }} staging_cassettes
           # import.py --verify-run reads this line as the job's cassette count

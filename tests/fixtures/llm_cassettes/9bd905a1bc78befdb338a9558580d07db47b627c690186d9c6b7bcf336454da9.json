@@ -1,0 +1,36 @@
+{
+  "key": "9bd905a1bc78befdb338a9558580d07db47b627c690186d9c6b7bcf336454da9",
+  "value": {
+    "id": "msg_011ChNgigVNoXYL9bz3DBXb5",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\": 1.0, \"exhibit\": \"Thèse : « Le changement climatique est une réalité scientifique incontestable. » Aucune digression identifiée ; toutes les propositions sont jugées pertinentes et servent directement la thèse.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565861,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 182,
+      "prompt_tokens": 369,
+      "total_tokens": 551,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

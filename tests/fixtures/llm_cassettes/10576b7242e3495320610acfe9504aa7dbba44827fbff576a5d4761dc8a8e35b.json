@@ -1,0 +1,36 @@
+{
+  "key": "10576b7242e3495320610acfe9504aa7dbba44827fbff576a5d4761dc8a8e35b",
+  "value": {
+    "id": "msg_011ChNgatBs4gygopwkKZ9MY",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "```json\n{\"has_clarity_obstacle\": true, \"obstacles\": \"Anaphore non résolvable : le pronom « Elle » (dans « Elle sert de dissuasion contre les crimes les plus graves ») n'a aucun antécédent dans le texte. Aucun nom féminin singulier qui le précéderait n'est présent, de sorte que le lecteur ne peut pas savoir à quoi il renvoie.\"}\n```",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565757,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 477,
+      "prompt_tokens": 516,
+      "total_tokens": 993,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

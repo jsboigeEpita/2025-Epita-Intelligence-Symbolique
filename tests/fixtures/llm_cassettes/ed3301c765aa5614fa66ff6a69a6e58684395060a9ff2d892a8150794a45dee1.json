@@ -1,0 +1,36 @@
+{
+  "key": "ed3301c765aa5614fa66ff6a69a6e58684395060a9ff2d892a8150794a45dee1",
+  "value": {
+    "id": "msg_011ChNfYM8esM4Rs5SUR8tSR",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"distinct_points\": \"1. La menace d'un effondrement du système dans cinq ans, si l'on n'agit pas maintenant, constitue un appel à la peur (sophisme émotionnel).\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795564936,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 542,
+      "prompt_tokens": 328,
+      "total_tokens": 870,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

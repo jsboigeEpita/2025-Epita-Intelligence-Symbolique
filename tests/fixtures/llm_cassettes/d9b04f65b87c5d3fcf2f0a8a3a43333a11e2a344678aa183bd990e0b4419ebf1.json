@@ -1,0 +1,36 @@
+{
+  "key": "d9b04f65b87c5d3fcf2f0a8a3a43333a11e2a344678aa183bd990e0b4419ebf1",
+  "value": {
+    "id": "msg_011ChNfY79XHRW9LAi8MvKrm",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\": 0.0, \"exhibit\": \"Chaîne reconstruite : prémisse = « La menace d'un effondrement du système dans cinq ans, présentée comme conséquence de l'inaction (« si nous n'agissons pas maintenant »), vise à provoquer [la peur] » ; conclusion = « Cette menace relève de l'appel à la peur (sophisme), et ne constitue donc pas une raison valable d'agir maintenant. » Verdict de structure : saut_logique. Le fait qu'une menace vise à provoquer la peur ne suffit pas à établir qu'elle relève du sophisme de l'appel à la peur, ni qu'elle soit invalide comme raison d'agir : la conclusion ne découle pas des prémisses.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795564932,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 520,
+      "prompt_tokens": 470,
+      "total_tokens": 990,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "key": "a7cb87fe70de779e9fca0f14da8c6a91dee38babc1dd0e8737febccaf2610045",
+  "value": {
+    "id": "msg_011ChNgmKdq9AkEppnV9eXuz",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"engages_real_claim\": false, \"engagement_verdict\": \"non_sequitur\", \"reasoning\": \"La réfutation affirme la nécessité de la transition et accuse les minimisateurs d'utiliser des données sélectives, sans contester le passage de la minimisation de la crise à la non-nécessité de la transition, ni fournir de données qui réfuteraient la prémisse adverse.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565900,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 854,
+      "prompt_tokens": 545,
+      "total_tokens": 1399,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

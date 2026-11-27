@@ -1,0 +1,36 @@
+{
+  "key": "9faa9315810926b3f2e84ef6089dc1d1ea10f29ac7a47c5cf1565dd1b722eb5e",
+  "value": {
+    "id": "msg_011ChNg3Nu7bSjNi51ZGo4HR",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_chain\": true, \"premises\": \"Réduire la fracture numérique du quartier (justification donnée pour l'option B)\", \"conclusion\": \"Créer un espace numérique avec des ordinateurs en libre accès (option B)\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565329,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 411,
+      "prompt_tokens": 533,
+      "total_tokens": 944,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

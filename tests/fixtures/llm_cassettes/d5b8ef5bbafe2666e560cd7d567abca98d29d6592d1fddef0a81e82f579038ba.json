@@ -1,0 +1,36 @@
+{
+  "key": "d5b8ef5bbafe2666e560cd7d567abca98d29d6592d1fddef0a81e82f579038ba",
+  "value": {
+    "id": "msg_011ChNgcKUAeMbnX3tGBv1Kx",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\": 1.0, \"exhibit\": \"Position adverse identifiée : la peine de mort est justifiée pour protéger la société contre les criminels irrécupérables qui représentent un danger permanent. Verdict d'engagement : engagement_réel, c'est-à-dire que la réfutation s'attaque directement à cette thèse adverse plutôt qu'à une version simplifiée ou déformée de celle-ci.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565776,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 430,
+      "prompt_tokens": 412,
+      "total_tokens": 842,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

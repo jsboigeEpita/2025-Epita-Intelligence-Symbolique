@@ -1,0 +1,36 @@
+{
+  "key": "f0925eefd1c84c99f892bfef21eec28e0ceb9d0cbe7338e127d5f526654976b8",
+  "value": {
+    "id": "msg_011ChNgmudj7L5J7kzhRUzWY",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\": 0.0, \"exhibit\": \"Position adverse identifiée à l'étape 1 : « La crise climatique ne serait pas aussi grave qu'on le dit. » Verdict d'engagement à l'étape 2 : homme_de_paille. La réfutation s'attaque à une version déformée ou caricaturale de cette thèse et non à la thèse elle-même, ce qui ne constitue pas une réfutation constructive selon le barème.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565905,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 258,
+      "prompt_tokens": 396,
+      "total_tokens": 654,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

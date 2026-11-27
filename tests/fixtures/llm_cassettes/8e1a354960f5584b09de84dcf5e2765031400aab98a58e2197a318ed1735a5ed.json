@@ -1,0 +1,36 @@
+{
+  "key": "8e1a354960f5584b09de84dcf5e2765031400aab98a58e2197a318ed1735a5ed",
+  "value": {
+    "id": "msg_011ChNgd9FY1rqAbd9ABugFy",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\": 1.0, \"exhibit\": \"Trois points distincts sont visibles : (1) l'irréversibilité de la peine de mort rend toute erreur judiciaire fatale ; (2) certains criminels sont irrécupérables et constituent un danger permanent ; (3) le coût des appels et des procédures est souvent supérieur (texte tronqué). Aucune reprise en substance n'apparaît entre ces points. Le verdict fourni « redondance_sémantique » n'est pas étayé par le contenu visible et pourrait concerner une partie du texte absente ou tronquée.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565788,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 539,
+      "prompt_tokens": 434,
+      "total_tokens": 973,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

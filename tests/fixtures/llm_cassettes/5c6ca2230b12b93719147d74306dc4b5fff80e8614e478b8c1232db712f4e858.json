@@ -1,0 +1,36 @@
+{
+  "key": "5c6ca2230b12b93719147d74306dc4b5fff80e8614e478b8c1232db712f4e858",
+  "value": {
+    "id": "msg_011ChNfwyvcrqFUkq3ZXEzXD",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\": 0.5, \"exhibit\": \"Thèse : l'option A (tournoi inter-villes avec buffet et prix pour 2000 euros) accroît la visibilité du club. Digressions localisées : la phrase « Option B : investir les 2000 euros en matériel pédagogique et échiquiers neufs », qui présente une alternative sans défendre la thèse, et la mention « Trois options divergentes s'affrontent », dont le texte fourni est tronqué. L'ensemble du raisonnement reste centré sur la thèse.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565256,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 413,
+      "prompt_tokens": 466,
+      "total_tokens": 879,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "key": "f862051095a9d2e5361f0ddc68dcf224fd4f2017bd750bb2c5cb0648011cb242",
+  "value": {
+    "id": "msg_011ChNgWaA2zvD1LZFSHNWch",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\": 0.0, \"exhibit\": \"Position adverse identifiée : « Les vaccins sont dangereux ». Verdict d'engagement : non_sequitur. La réfutation proposée ne s'engage pas sur la thèse adverse : elle conclut à partir de prémisses qui n'impliquent pas logiquement la conclusion visée, donc aucune réfutation constructive n'est démontrée.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565697,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 142,
+      "prompt_tokens": 382,
+      "total_tokens": 524,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "key": "bbaf3b59302fe4eb19696e04f4a9e4d6b64f45319c1760c9a2ee77c885a43ca2",
+  "value": {
+    "id": "msg_011ChNfUcBQvTJeEBHWDK4dp",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_digression\": true, \"relevance_verdict\": \"digression_localisée\", \"located_digression\": \"L'opposition dénonce un homme de paille : personne n'a proposé de supprimer les retraites, seulement de les réformer différemment.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795564884,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 345,
+      "prompt_tokens": 670,
+      "total_tokens": 1015,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

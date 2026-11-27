@@ -1,0 +1,36 @@
+{
+  "key": "1904d451fb48be86becb9f5cb380485ad75cb1dbe0da35fa63774b5f7d0d0deb",
+  "value": {
+    "id": "msg_011ChNfbno5UUQ8nu5KDeRsp",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"arguments\": [], \"claims\": [{\"text\": \"The sun is shining.\", \"source_quote\": \"Le soleil brille.\"}, {\"text\": \"The weather is good (it is nice out).\", \"source_quote\": \"Il fait beau.\"}], \"summary\": \"The text is two short declarative sentences with no argumentative structure: no premises, conclusion, or opposing position. It asserts two simple, easily verifiable observations about the current weather (sunshine and fine weather). Because it contains no argument, no argument items or move attribution are extracted.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795564981,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 293,
+      "prompt_tokens": 765,
+      "total_tokens": 1058,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

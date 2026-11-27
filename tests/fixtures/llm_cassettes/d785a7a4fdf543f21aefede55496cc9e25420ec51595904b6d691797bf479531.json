@@ -1,0 +1,36 @@
+{
+  "key": "d785a7a4fdf543f21aefede55496cc9e25420ec51595904b6d691797bf479531",
+  "value": {
+    "id": "msg_011ChNfUSp6npdY19xyqEaw3",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_thesis\": true, \"thesis\": \"Le gouvernement attaque un homme de paille : personne au sein de l'opposition n'a proposé de supprimer les retraites, seulement de les réformer différemment.\", \"digressions\": \"1) « le ministre des finances a présenté des chiffres montrant que le déficit atteindra 2.3% du PIB d'ici 2030, mais cette projection repose sur des hypothèses de croissance optimistes de 1.8% par an » : critique de la projection budgétaire, sans lien avec la thèse de l'homme de paille. 2) « le recours à l'argument « pensez à vos enfants » constitue un appel à l'émotion qui détourne le débat des questions techniques de financement » : critique d'un autre procédé rhétorique du gouvernement, hors du sujet de la caricature de position.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795564883,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 634,
+      "prompt_tokens": 547,
+      "total_tokens": 1181,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

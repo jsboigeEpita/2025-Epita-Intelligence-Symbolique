@@ -1,0 +1,36 @@
+{
+  "key": "51dc6eefd44f889d47ed760ee47c65d0d401a971744d3297761277b67cb6b673",
+  "value": {
+    "id": "msg_011ChNfwnQ5FN6bHCnhGs21V",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_digression\": true, \"relevance_verdict\": \"digression_localisée\", \"located_digression\": \"Option B : investir les 2000 euros en matériel pédagogique et échiquiers neufs.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565254,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 497,
+      "prompt_tokens": 675,
+      "total_tokens": 1172,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

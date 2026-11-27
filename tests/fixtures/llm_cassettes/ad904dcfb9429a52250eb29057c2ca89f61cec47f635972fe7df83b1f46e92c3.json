@@ -1,0 +1,36 @@
+{
+  "key": "ad904dcfb9429a52250eb29057c2ca89f61cec47f635972fe7df83b1f46e92c3",
+  "value": {
+    "id": "msg_011ChNgX95T825DqyUHgxzsU",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\": 0.5, \"exhibit\": \"Point 1 (immunité collective protégeant les personnes non vaccinables) est affirmé deux fois, sous forme de citation puis de phrase reformulée, et compte comme un seul point : reprise localisée en substance. Point 2 (argument sur les produits...) est tronqué dans la soumission, donc non évaluable. Le verdict fourni est redondance_sémantique, mais une seule reprise identifiée ne suffit pas à conclure à plusieurs points répétés (score 0.2) : score 0.5 retenu, faute de données complètes sur les points suivants.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565707,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 559,
+      "prompt_tokens": 441,
+      "total_tokens": 1000,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "key": "d6fb38bf4cc73f10feb79336907280aea39cd415e4975c24c257a229b7da5650",
+  "value": {
+    "id": "msg_011ChNgisygRVd61y11aNau4",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_opposing_claim\": true, \"opposing_claim\": \"Le climat a toujours changé, donc le changement climatique actuel n'a rien d'exceptionnel (thèse sceptique).\", \"main_thesis\": \"Le changement climatique actuel est sans précédent par sa vitesse et résulte des activités humaines.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565864,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 247,
+      "prompt_tokens": 524,
+      "total_tokens": 771,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

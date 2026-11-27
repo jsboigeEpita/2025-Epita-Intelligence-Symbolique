@@ -1,0 +1,36 @@
+{
+  "key": "5dce732391553b92add582e80d9eaac100fd7b9c9937572dcce72556672b854d",
+  "value": {
+    "id": "msg_011ChNfeVPuFRnV1rPoASdwP",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"arguments\": [{\"text\": \"Le président soutient que la politique économique est un succès incontestable (position attribuée au président, relayée par le texte).\", \"source_quote\": \"Le president affirme que la politique economique est un succes incontestable.\", \"move_author\": \"reported\"}], \"claims\": [{\"text\": \"La politique économique du gouvernement est un succès (affirmation évaluative attribuée au président ; le caractère « incontestable » n'est étayé par aucun fait dans le texte).\", \"source_quote\": \"la politique economique est un succes incontestable\"}, {\"text\": \"Le président a fait cette affirmation publiquement ou explicitement (fait vérifiable : l'existence de la déclaration).\", \"source_quote\": \"Le president affirme que la politique economique est un succes incontestable.\"}], \"summary\": \"Le texte est une phrase unique rapportant une affirmation du président : la politique économique serait un succès incontestable. Il ne présente ni argument justificatif, ni position adverse citée, ni données à l'appui. La seule affirmation vérifiable est l'existence de la déclaration ; le jugement de succès reste évaluatif et non étayé.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565019,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 580,
+      "prompt_tokens": 847,
+      "total_tokens": 1427,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

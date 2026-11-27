@@ -1,0 +1,36 @@
+{
+  "key": "4dd589104cb7de3b905473ea714ebeaae9bde6c7b64601f42bb1347b90d04b1c",
+  "value": {
+    "id": "msg_011ChNgDDEUKgmPMsBgv5uh5",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "```json\n{\"chain_holds\": false, \"structure_verdict\": \"saut_logique\", \"reasoning\": \"La prémisse décrit un effet attendu (hausse de visibilité et recrutement) sans établir que cet effet est désirable au regard du coût de 2000 €, ni qu'il l'emporte sur l'Option B (matériel pédagogique, échiquiers usés), donc la conclusion normative « il faut organiser le tournoi » ne découle pas directement de la prémisse.\"}\n```",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565463,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 468,
+      "prompt_tokens": 735,
+      "total_tokens": 1203,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

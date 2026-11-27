@@ -1,0 +1,36 @@
+{
+  "key": "b1095f0da139381461637eea4784df6134b0f9dbf44e7a173175ebfae5948d41",
+  "value": {
+    "id": "msg_011ChNg4BEBXBu4sfFQe1h99",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_semantic_redundancy\": true, \"redundancy_verdict\": \"redondance_sémantique\", \"located_redundancy\": \"L'Option B (espace numérique en libre accès pour réduire la fracture numérique) est énoncée deux fois dans l'argument, en tête puis dans le paragraphe, avec le même contenu. L'Option A n'est pas répétée. L'Option C apporte une progression réelle, car c'est une synthèse qui répartit la somme entre A et B.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565342,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 906,
+      "prompt_tokens": 735,
+      "total_tokens": 1641,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

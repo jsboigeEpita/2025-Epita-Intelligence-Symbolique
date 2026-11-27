@@ -1,0 +1,36 @@
+{
+  "key": "9f1e4299c4fba73c2164246f4036c7eccfef010326596e22638afe9c553d4b62",
+  "value": {
+    "id": "msg_011ChNgimU2ESEZSaRLEdA6p",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_digression\": true, \"relevance_verdict\": \"digression_localisée\", \"located_digression\": \"La transition énergétique est non seulement nécessaire mais aussi économiquement avantageuse à long terme.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565863,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 408,
+      "prompt_tokens": 661,
+      "total_tokens": 1069,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "key": "a9f85a8a6c13876b2a458835fdc6f03701eef82cc6e8cae2ace8ca7285dc5745",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "```json\n{\n  \"query_ideas\": [\n    \"rue_mouillee\",\n    \"pluie\"\n  ]\n}\n```",
+      "metadata": {
+        "logprobs": null,
+        "id": "msg_011ChNgU8k2EWuugubbYge6X",
+        "created": 1795565664,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 778,
+          "prompt_tokens_details": null,
+          "completion_tokens": 106,
+          "completion_tokens_details": null
+        }
+      }
+    }
+  ]
+}

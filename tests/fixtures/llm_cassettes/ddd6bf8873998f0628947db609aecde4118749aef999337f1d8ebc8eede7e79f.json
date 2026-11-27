@@ -1,0 +1,36 @@
+{
+  "key": "ddd6bf8873998f0628947db609aecde4118749aef999337f1d8ebc8eede7e79f",
+  "value": {
+    "id": "msg_011ChNgdgWUmnPe2RN1ZY1jT",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_chain\": true, \"premises\": \"Le coût des appels et des procédures est souvent supérieur à celui de l'emprisonnement à vie.\", \"conclusion\": \"L'argument financier en faveur de la peine de mort est affaibli.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565796,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 795,
+      "prompt_tokens": 483,
+      "total_tokens": 1278,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

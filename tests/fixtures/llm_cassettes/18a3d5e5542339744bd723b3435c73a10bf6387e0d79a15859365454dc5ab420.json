@@ -1,0 +1,36 @@
+{
+  "key": "18a3d5e5542339744bd723b3435c73a10bf6387e0d79a15859365454dc5ab420",
+  "value": {
+    "id": "msg_011ChNfwYtxgq4fD863x5vwP",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_semantic_redundancy\": true, \"redundancy_verdict\": \"redondance_sémantique\", \"located_redundancy\": \"L'option B (investir les 2000 euros en matériel pédagogique et échiquiers neufs) apparaît deux fois dans l'argument, quasiment à l'identique : d'abord en citation, puis dans le corps du texte. Il s'agit de la même idée répétée, sans apport nouveau.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565251,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 695,
+      "prompt_tokens": 697,
+      "total_tokens": 1392,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

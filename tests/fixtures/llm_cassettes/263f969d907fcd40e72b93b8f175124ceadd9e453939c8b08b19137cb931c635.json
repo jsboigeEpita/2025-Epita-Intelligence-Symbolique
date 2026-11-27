@@ -1,0 +1,36 @@
+{
+  "key": "263f969d907fcd40e72b93b8f175124ceadd9e453939c8b08b19137cb931c635",
+  "value": {
+    "id": "msg_011ChNgBvytxHKzixS6t2sm1",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "```json\n{\"has_thesis\": true, \"thesis\": \"Investir les 2000 € en matériel pédagogique (échiquiers neufs, horloges, supports de cours) se justifie par l'état usé des échiquiers actuels.\", \"digressions\": \"Option A : organiser un tournoi inter-villes avec buffet et prix pour 2000 euros, ce qui augmentera la visibilité du club et recrutera de nouveaux membres. Option C : un format hybride, 1000 euros pour un tournoi réduit et 1000 euros pour le matériel pédagogique, équilibré entre visibilité et pédagogie.\"}\n```",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565446,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 705,
+      "prompt_tokens": 527,
+      "total_tokens": 1232,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

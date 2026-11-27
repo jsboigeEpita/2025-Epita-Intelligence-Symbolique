@@ -1,0 +1,36 @@
+{
+  "key": "5025440350b5fde6d3fc304d95db88cd895e54b63f071f792b0bcb6fbb047d53",
+  "value": {
+    "id": "msg_011ChNfXQmQG2HvUcaouxpnH",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\": 1.0, \"exhibit\": \"Position adverse identifiée : « Si nous n'agissons pas maintenant, le système s'effondrera dans cinq ans. » Verdict d'engagement : engagement_réel. Structure démontrée : la thèse adverse (effondrement du système dans cinq ans en cas d'inaction) est explicitement identifiée et réellement adressée, ce qui correspond au critère de réfutation constructive pleinement démontrée.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795564923,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 425,
+      "prompt_tokens": 402,
+      "total_tokens": 827,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

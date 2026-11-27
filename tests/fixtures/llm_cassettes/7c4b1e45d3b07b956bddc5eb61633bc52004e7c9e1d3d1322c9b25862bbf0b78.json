@@ -1,0 +1,36 @@
+{
+  "key": "7c4b1e45d3b07b956bddc5eb61633bc52004e7c9e1d3d1322c9b25862bbf0b78",
+  "value": {
+    "id": "msg_011ChNgd58Ugc9qSQ6Tbs7br",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\": 0.5, \"exhibit\": \"Thèse : l'argument financier en faveur de la peine de mort est affaibli, car les coûts des appels et procédures dépassent souvent ceux de l'emprisonnement à vie. Digression localisée : la phrase « il faut reconnaître que la peine de mort est irréversible, ce qui rend toute erreur fatale » (introduite par « Cependant »), qui relève d'un argument moral/judiciaire et ne sert pas la thèse économique. Le reste de l'argumentation reste centré sur la thèse.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565786,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 402,
+      "prompt_tokens": 477,
+      "total_tokens": 879,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

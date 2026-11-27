@@ -1,0 +1,36 @@
+{
+  "key": "5a4576dd7153bdc425e5f340b32d67810c32942bb16baf9752e4221d378a04ac",
+  "value": {
+    "id": "msg_011ChNfukGXCceEdkj35mv95",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "```json\n{\"chain_holds\": false, \"structure_verdict\": \"saut_logique\", \"reasoning\": \"Le fait que les experts soient unanimes ne garantit pas logiquement que la conclusion soit vraie, car des experts unanimes peuvent se tromper, et le « donc » n'établit qu'un appui d'autorité, non une inférence valide.\"}\n```",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565225,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 352,
+      "prompt_tokens": 493,
+      "total_tokens": 845,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

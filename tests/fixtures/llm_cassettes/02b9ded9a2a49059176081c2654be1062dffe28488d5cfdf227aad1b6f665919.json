@@ -1,0 +1,36 @@
+{
+  "key": "02b9ded9a2a49059176081c2654be1062dffe28488d5cfdf227aad1b6f665919",
+  "value": {
+    "id": "msg_011ChNfcV6z59nWa88DHy2Ua",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"formulas\": [\"NiceWeather()\"], \"predicates\": {\"NiceWeather\": []}, \"sorts\": {}, \"constants\": {}, \"confidence\": 0.8}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795564991,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 356,
+      "prompt_tokens": 662,
+      "total_tokens": 1018,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

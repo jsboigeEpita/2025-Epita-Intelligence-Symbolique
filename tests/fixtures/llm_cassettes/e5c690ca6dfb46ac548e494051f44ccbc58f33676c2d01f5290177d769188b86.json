@@ -1,0 +1,36 @@
+{
+  "key": "e5c690ca6dfb46ac548e494051f44ccbc58f33676c2d01f5290177d769188b86",
+  "value": {
+    "id": "msg_011ChNgjCcbmUKJSd4iBEJJS",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_chain\": true, \"premises\": \"Les mesures de température globale montrent une augmentation de 1,1 degré depuis l'ère préindustrielle ; le changement actuel se produit à une vitesse sans précédent, ce que les sceptiques omettent en invoquant les changements climatiques passés ; les modèles prédictifs sont unanimes sur l'impact des activités humaines.\", \"conclusion\": \"Le changement climatique actuel est anormal et imputable aux activités humaines ; le fait que le climat ait toujours changé ne permet pas de conclure qu'il n'est pas anormal.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565871,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 888,
+      "prompt_tokens": 488,
+      "total_tokens": 1376,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

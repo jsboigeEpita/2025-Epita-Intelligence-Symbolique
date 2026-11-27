@@ -1,0 +1,36 @@
+{
+  "key": "fc2fc90d3dadbe16dcb0e006af94c23d118df5bc72bcd96c3e3cb276772a8051",
+  "value": {
+    "id": "msg_011ChNgbEGMHrMPEWQGC9PUr",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\": 0.5, \"exhibit\": \"Obstacle localisé : le pronom « Elle » (dans « Elle sert de dissuasion contre les crimes les plus graves ») n'a aucun antécédent féminin singulier dans le texte, ce qui constitue une anaphore non résolvable au sens strict. Verdict d'opacité (étape 2) : résolvable_contexte. Le verdict retient que le référent peut être reconstruit à partir du contexte global de l'argument, de sorte que le sens reste globalement accessible, ce qui correspond au niveau de clarté partielle (0.5). Remarque : la description de l'obstacle (« non résolvable ») et le verdict (« résolvable_contexte ») sont en tension ; le score suit le verdict.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565762,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 647,
+      "prompt_tokens": 432,
+      "total_tokens": 1079,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

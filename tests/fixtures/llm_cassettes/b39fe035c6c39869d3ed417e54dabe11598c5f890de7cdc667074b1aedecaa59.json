@@ -1,0 +1,36 @@
+{
+  "key": "b39fe035c6c39869d3ed417e54dabe11598c5f890de7cdc667074b1aedecaa59",
+  "value": {
+    "id": "msg_011ChNgXEj2BJp5vBdFfdc7k",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "```json\n{\"has_semantic_redundancy\": true, \"redundancy_verdict\": \"redondance_sémantique\", \"located_redundancy\": \"Le point 1 (les laboratoires pharmaceutiques dissimulent les effets secondaires, présenté comme une théorie du complot sans fondement) apparaît deux fois dans l'argument, en substance identique : une fois dans la première phrase, puis à nouveau dans la troisième phrase du second paragraphe. Les points 2 et 3 apportent une progression réelle.\"}\n```",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565707,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 454,
+      "prompt_tokens": 724,
+      "total_tokens": 1178,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "key": "d77405e74f9fc7eb2e5161544f54beb12f928c6207fcb47b053e193310adf13b",
+  "value": {
+    "id": "msg_011ChNg3w6d4dNvjo2G8QE2v",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "```json\n{\"has_semantic_redundancy\": true, \"redundancy_verdict\": \"redondance_sémantique\", \"located_redundancy\": \"Le point 1 (l'option C est justifiée parce qu'elle sert les deux publics sans en favoriser un) est repris à l'identique dans la phrase « Option C : repartir la somme, moitié fonds livre, moitié espace numérique, afin de servir les deux publics sans en favoriser un » qui clôt l'argument. Cette seconde occurrence n'apporte aucun élément nouveau.\"}\n```",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565337,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 503,
+      "prompt_tokens": 695,
+      "total_tokens": 1198,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

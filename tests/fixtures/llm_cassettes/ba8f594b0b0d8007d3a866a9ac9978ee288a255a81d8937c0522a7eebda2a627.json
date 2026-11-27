@@ -1,0 +1,36 @@
+{
+  "key": "ba8f594b0b0d8007d3a866a9ac9978ee288a255a81d8937c0522a7eebda2a627",
+  "value": {
+    "id": "msg_011ChNfwWYabBrfq3pkLjJkX",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "```json\n{\"has_semantic_redundancy\": true, \"redundancy_verdict\": \"redondance_sémantique\", \"located_redundancy\": \"L'énoncé de l'Option C (format hybride, 1000 euros pour un tournoi réduit et 1000 euros pour le matériel) apparaît deux fois dans l'argument, presque mot pour mot.\"}\n```",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565254,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 1228,
+      "prompt_tokens": 650,
+      "total_tokens": 1878,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

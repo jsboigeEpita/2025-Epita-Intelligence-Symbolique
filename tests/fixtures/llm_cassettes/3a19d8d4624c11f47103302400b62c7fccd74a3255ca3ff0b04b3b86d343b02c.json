@@ -1,0 +1,36 @@
+{
+  "key": "3a19d8d4624c11f47103302400b62c7fccd74a3255ca3ff0b04b3b86d343b02c",
+  "value": {
+    "id": "msg_011ChNfUrLTZq22X2qKKAYS7",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "```json\n{\"has_opposing_claim\": true, \"opposing_claim\": \"L'opposition soutient que la réforme équivaut à la suppression des retraites et invoque l'intérêt des enfants (« pensez à vos enfants ») pour s'y opposer.\", \"main_thesis\": \"Les arguments de l'opposition sont fallacieux : elle attaque un homme de paille (la suppression des retraites) et use d'un appel à l'émotion (« pensez à vos enfants ») qui détourne le débat des questions techniques de financement.\"}\n```",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795564889,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 554,
+      "prompt_tokens": 508,
+      "total_tokens": 1062,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

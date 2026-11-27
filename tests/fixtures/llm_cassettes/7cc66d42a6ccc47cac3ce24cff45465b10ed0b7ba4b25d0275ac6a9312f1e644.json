@@ -1,0 +1,36 @@
+{
+  "key": "7cc66d42a6ccc47cac3ce24cff45465b10ed0b7ba4b25d0275ac6a9312f1e644",
+  "value": {
+    "id": "msg_011ChNge8pkkqaH5McHLGBsR",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "```json\n{\"score\": 1.0, \"exhibit\": \"Chaîne reconstruite : prémisse « Le coût des appels et des procédures est souvent supérieur à celui de l'emprisonnement à vie » → conclusion « L'argument financier en faveur de la peine de mort est affaibli ». Si la peine capitale coûte souvent plus cher que la détention à perpétuité, l'avantage économique invoqué en sa faveur est réduit : il existe une inférence réelle, et la nuance « souvent » correspond à la nuance « affaibli ». Verdict de structure : progression_logique.\"}\n```",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565801,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 532,
+      "prompt_tokens": 424,
+      "total_tokens": 956,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

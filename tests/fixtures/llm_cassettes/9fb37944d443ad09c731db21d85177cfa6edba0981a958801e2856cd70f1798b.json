@@ -1,0 +1,21 @@
+{
+  "key": "9fb37944d443ad09c731db21d85177cfa6edba0981a958801e2856cd70f1798b",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "```json\n{\n  \"formulas\": [\n    \"alice_studies => alice_succeeds\",\n    \"alice_studies\",\n    \"alice_succeeds\"\n  ]\n}\n```",
+      "metadata": {
+        "logprobs": null,
+        "id": "msg_011ChNgUEK8sn9or8yybZoZk",
+        "created": 1795565665,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 638,
+          "prompt_tokens_details": null,
+          "completion_tokens": 234,
+          "completion_tokens_details": null
+        }
+      }
+    }
+  ]
+}

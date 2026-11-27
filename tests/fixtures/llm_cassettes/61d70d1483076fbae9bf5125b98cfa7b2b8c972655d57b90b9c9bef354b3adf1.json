@@ -1,0 +1,36 @@
+{
+  "key": "61d70d1483076fbae9bf5125b98cfa7b2b8c972655d57b90b9c9bef354b3adf1",
+  "value": {
+    "id": "msg_011ChNfWcLPsN4ezZ1zCLTrH",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_semantic_redundancy\": true, \"redundancy_verdict\": \"redondance_sémantique\", \"located_redundancy\": \"Le point 1 (hypothèses de croissance optimistes de 1,8 % par an fragilisant la projection de déficit du ministre) apparaît deux fois : une fois dans la phrase d'ouverture « Critique : ... » et une fois dans la phrase « Par ailleurs... », où la même projection et les mêmes hypothèses sont repris sans apport nouveau.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795564912,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 530,
+      "prompt_tokens": 789,
+      "total_tokens": 1319,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

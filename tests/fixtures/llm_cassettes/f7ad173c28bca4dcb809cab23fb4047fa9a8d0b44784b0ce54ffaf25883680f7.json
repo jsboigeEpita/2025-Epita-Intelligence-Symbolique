@@ -3,29 +3,17 @@
   "value": [
     {
       "role": "assistant",
-      "content": "{\n  \"formulas\": [\n    \"forall X: (Test(X) => Important(X))\"\n  ],\n  \"predicates\": {\n    \"Test\": \"est un test\",\n    \"Important\": \"est important\"\n  },\n  \"variables\": {\n    \"X\": \"thing\"\n  },\n  \"reasoning\": \"La phrase « Tous les tests sont importants » se traduit par : pour tout objet X, si X est un test, alors X est important. « Test mémoire numéro 7 » est interprété comme un titre ou un identifiant du test, et non comme une proposition logique supplémentaire.\"\n}",
+      "content": "```json\n{\n    \"formulas\": [\n        \"forall X: (Test(X) => Important(X))\",\n        \"Test(test7)\",\n        \"Memoire(test7)\"\n    ],\n    \"predicates\": {\n        \"Test\": \"est un test\",\n        \"Important\": \"est important\",\n        \"Memoire\": \"est un test de mémoire\"\n    },\n    \"variables\": {\n        \"X\": \"un objet quelconque du domaine\"\n    },\n    \"reasoning\": \"La phrase « Tous les tests sont importants » est une affirmation universelle : pour tout objet X, si X est un test, alors X est important, d'où forall X: (Test(X) => Important(X)). La phrase « Test mémoire numéro 7 » désigne un individu particulier, nommé ici test7 (constante en minuscules). Elle est donc traduite par deux faits : Test(test7), qui indique que c'est un test, et Memoire(test7), qui précise qu'il s'agit d'un test de mémoire. Le numéro 7 est encodé dans le nom de la constante ; il n'est pas modélisé par un prédicat distinct, ce qui simplifie la formalisation sans perte pour l'inférence visée.\"\n}\n```",
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EkNx3zgVwyBnpVOodh1qLYc11jBdm",
-        "created": 1794723865,
+        "id": "msg_011ChNgAAxitzCPN7Z1vEdXk",
+        "created": 1795565423,
         "system_fingerprint": null,
         "usage": {
-          "prompt_tokens": 285,
-          "prompt_tokens_details": {
-            "audio_tokens": 0,
-            "cache_write_tokens": 0,
-            "cached_tokens": 0,
-            "image_tokens": null,
-            "text_tokens": null
-          },
-          "completion_tokens": 304,
-          "completion_tokens_details": {
-            "accepted_prediction_tokens": 0,
-            "audio_tokens": 0,
-            "reasoning_tokens": 169,
-            "rejected_prediction_tokens": 0,
-            "text_tokens": null
-          }
+          "prompt_tokens": 459,
+          "prompt_tokens_details": null,
+          "completion_tokens": 933,
+          "completion_tokens_details": null
         }
       }
     }

@@ -1,0 +1,36 @@
+{
+  "key": "17f8cae14545948552bfcc6238a03a26135e432f46b39c9cb9bf5e46e23e0439",
+  "value": {
+    "id": "msg_011ChNgjtmqXa327nynPZfgm",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "```json\n{\"score\": 0.0, \"exhibit\": \"Chaîne reconstruite : prémisses = « Les mesures de température globale montrent une augmentation de 1,1 degré depuis l'ère préindustrielle ; le changement actuel se produit à une vitesse… » ; conclusion = « Le changement climatique actuel est anormal et imputable aux activités humaines ; le fait que le climat ait toujours cha… ». Verdict de structure : saut_logique. La conclusion (caractère anormal et origine humaine du changement) ne découle pas des prémisses (hausse observée de 1,1 °C et vitesse du changement), qui ne suffisent pas à établir l'attribution causale. Aucune inférence valide n'est démontrée : saut logique net, donc score 0.0.\"}\n```",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565879,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 426,
+      "prompt_tokens": 461,
+      "total_tokens": 887,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

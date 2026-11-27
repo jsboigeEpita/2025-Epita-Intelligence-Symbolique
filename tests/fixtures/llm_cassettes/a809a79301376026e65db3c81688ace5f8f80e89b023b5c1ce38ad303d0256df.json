@@ -1,0 +1,36 @@
+{
+  "key": "a809a79301376026e65db3c81688ace5f8f80e89b023b5c1ce38ad303d0256df",
+  "value": {
+    "id": "msg_011ChNffWCoPxPbrWcZ7a439",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"formulas\": [\"Claims(president, economicPolicy, undeniableSuccess)\", \"Policy(economicPolicy)\", \"Politician(president)\", \"Property(undeniableSuccess)\"], \"predicates\": {\"Claims\": [\"Person\", \"Policy\", \"Property\"], \"Policy\": [\"Policy\"], \"Politician\": [\"Person\"], \"Property\": [\"Property\"]}, \"sorts\": {\"Person\": [\"president\"], \"Policy\": [\"economicPolicy\"], \"Property\": [\"undeniableSuccess\"]}, \"constants\": {\"president\": \"the president (the speaker's political leader, the claimant)\", \"economicPolicy\": \"the economic policy under discussion\", \"undeniableSuccess\": \"the property of being an undeniable success\"}, \"confidence\": 0.7}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565035,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 966,
+      "prompt_tokens": 470,
+      "total_tokens": 1436,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

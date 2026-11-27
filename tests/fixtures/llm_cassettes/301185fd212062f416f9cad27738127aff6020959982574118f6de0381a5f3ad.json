@@ -1,0 +1,36 @@
+{
+  "key": "301185fd212062f416f9cad27738127aff6020959982574118f6de0381a5f3ad",
+  "value": {
+    "id": "msg_011ChNfxt98Q7a935t76GFak",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "```json\n{\"score\": 1.0, \"exhibit\": \"Deux points distincts sont identifiés : (1) l'option A, un tournoi inter-villes avec buffet et prix pour 2000 euros, présentée comme un moyen d'accroître la visibilité du club ; (2) l'option B, investir les 2000 euros en matériel pédagogique et en échiquiers neufs. Chaque point apporte une idée nouvelle et aucune reprise en substance n'est relevée. Le verdict de redondance est « points_distincts ». Réserve : la note sur le texte est tronquée, donc l'évaluation ne couvre que les éléments fournis.\"}\n```",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565268,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 354,
+      "prompt_tokens": 441,
+      "total_tokens": 795,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

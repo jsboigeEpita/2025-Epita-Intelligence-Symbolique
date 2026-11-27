@@ -1,0 +1,36 @@
+{
+  "key": "62400fedbdb36d5cecf395f5ea64c03bbacf9ee6938f0dfa4a25073b89839d7f",
+  "value": {
+    "id": "msg_011ChNgjuFNAmUU1jRCJ8DrC",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\": 0.5, \"exhibit\": \"Chaîne reconstruite : prémisses « Les modèles prédictifs sont unanimes sur l'impact des activités humaines » et « les sceptiques omettent la vitesse sans précédent du changement climatique ». Conclusion : « Les activités humaines sont la cause principale du changement climatique actuel, et la crise climatique est réelle » (texte tronqué). Verdict de structure : progression_logique. Une inférence est présente : le consensus des modèles est invoqué pour conclure à la cause humaine, et l'omission de la vitesse du changement par les sceptiques pour conclure à la réalité de la crise. Elle reste imparfaite : l'unanimité des modèles n'établit pas à elle seule que la cause est « principale », et l'omission reprochée aux sceptiques n'implique pas logiquement que la crise est réelle.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565879,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 535,
+      "prompt_tokens": 458,
+      "total_tokens": 993,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

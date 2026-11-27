@@ -1,0 +1,36 @@
+{
+  "key": "cfd912c37aa0bccaa7979221d247023a4307e4b790844c45687f502b016cc8ae",
+  "value": {
+    "id": "msg_011ChNfWTQ7yVFr7AyaLi9ue",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\": 1.0, \"exhibit\": \"Trois points distincts : (1) thèse selon laquelle la réforme des retraites est nécessaire ; (2) justification par argument d'autorité, à savoir que tous les pays européens ont déjà fait cette réforme ; (3) critique de cet argument, qui ne tient pas. Le point 3 évalue le point 2 sans le reformuler, et aucun point ne reprend la substance d'un autre. Aucune redondance localisée.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795564910,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 373,
+      "prompt_tokens": 439,
+      "total_tokens": 812,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

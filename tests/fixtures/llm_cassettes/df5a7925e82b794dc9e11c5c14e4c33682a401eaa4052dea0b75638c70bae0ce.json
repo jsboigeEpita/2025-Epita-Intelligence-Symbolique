@@ -1,0 +1,36 @@
+{
+  "key": "df5a7925e82b794dc9e11c5c14e4c33682a401eaa4052dea0b75638c70bae0ce",
+  "value": {
+    "id": "msg_011ChNgcaMc3Y3N6RhzxW2pN",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "```json\n{\"has_chain\": true, \"premises\": \"1) Elle (la peine capitale) sert de dissuasion contre les crimes les plus graves, comme le meurtre de masse. 2) Le risque d'erreur judiciaire est considérablement réduit par les progrès de l'analyse ADN, ce qui répond à l'objection selon laquelle le système judiciaire peut se tromper. 3) Certains criminels sont irrécupérables et représentent un danger permanent pour la société.\", \"conclusion\": \"La peine capitale (« elle ») est justifiée et doit être maintenue. Cette conclusion n'est pas formulée explicitement dans le texte mais est défendue par les trois prémisses.\"}\n```",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565780,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 636,
+      "prompt_tokens": 498,
+      "total_tokens": 1134,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

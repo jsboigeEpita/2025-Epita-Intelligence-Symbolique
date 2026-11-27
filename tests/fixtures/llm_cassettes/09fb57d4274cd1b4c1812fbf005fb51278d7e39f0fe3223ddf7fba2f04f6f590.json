@@ -1,0 +1,36 @@
+{
+  "key": "09fb57d4274cd1b4c1812fbf005fb51278d7e39f0fe3223ddf7fba2f04f6f590",
+  "value": {
+    "id": "msg_011ChNgW5zNxPx8qetoLekY3",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"chain_holds\": true, \"structure_verdict\": \"progression_logique\", \"reasoning\": \"Les preuves d'efficacité (éradication de la variole, forte réduction de la polio) soutiennent raisonnablement que les vaccins sont importants pour la santé publique, même si le terme « indispensables » est plus fort que ce que les seules prémisses établissent.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565692,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 500,
+      "prompt_tokens": 591,
+      "total_tokens": 1091,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

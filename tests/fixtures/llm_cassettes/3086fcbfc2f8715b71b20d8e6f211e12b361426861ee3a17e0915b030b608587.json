@@ -1,0 +1,36 @@
+{
+  "key": "3086fcbfc2f8715b71b20d8e6f211e12b361426861ee3a17e0915b030b608587",
+  "value": {
+    "id": "msg_011ChNgb1EGu4mkmfVssXbhF",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_thesis\": true, \"thesis\": \"La peine de mort doit être rejetée, car son caractère irréversible rend toute erreur judiciaire fatale et irrémédiable, et son coût en procédures d'appel est supérieur à celui de l'emprisonnement à vie.\", \"digressions\": \"« De plus, certains criminels sont irrécupérables et représentent un danger permanent pour la société. » Cette proposition ne sert pas la thèse abolitionniste : elle avance un argument en faveur de la mise hors d'état de nuire définitive des criminels, sans être reliée à la conclusion et sans être réfutée. Elle est introduite par « De plus », puis suivie d'un « Cependant » qui revient à l'argument de l'irréversibilité, ce qui la laisse sans fonction dans l'argumentation.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565761,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 908,
+      "prompt_tokens": 451,
+      "total_tokens": 1359,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

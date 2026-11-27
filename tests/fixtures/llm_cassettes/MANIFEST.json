@@ -1,10 +1,10 @@
 {
   "schema": 1,
-  "record_run_id": "43684055967",
-  "record_sha": "9ed8edfbcbf485d13abae0dc307c99ca8ada3c39",
+  "record_run_id": "45513278355",
+  "record_sha": "360eed08a35e6f10fca1b90598cf7cf05d8edb70",
   "recorded_at": "",
-  "cassette_count": 625,
-  "keys_sha256": "0e391387d24cbd21fd26f40fa61bbe6e2a3e5dbf963965224956afa6c2912777",
+  "cassette_count": 587,
+  "keys_sha256": "901066b477c76fe98d074d947f6c97587ff59b6447d8e110dcc7134ec748949f",
   "env_signature": {
     "spacy": "3.8.14",
     "thinc": "8.3.13",
@@ -13,104 +13,8 @@
     "openai": "3.3.0",
     "numpy": "1.25.0"
   },
-  "sk_patches": [
-    {
-      "note": "rekey: descent phase cap #3658 item 36c (moved 4)",
-      "at": "2026-11-23T06:06:05Z",
-      "recorded_env": {
-        "spacy": "3.8.14",
-        "thinc": "8.3.13",
-        "srsly": "2.5.3",
-        "fr-core-news-sm": "3.8.0",
-        "openai": "3.3.0",
-        "numpy": "1.25.0"
-      },
-      "cassette_count": 629,
-      "keys_sha256": "3a826cd492ccb59b33e8480eedd80a571a5dfabeba126912bc544c39f1cff6f5"
-    },
-    {
-      "note": "rekey: descent phase cap #3658 item 36c (moved 14)",
-      "at": "2026-11-23T06:07:38Z",
-      "recorded_env": {
-        "spacy": "3.8.14",
-        "thinc": "8.3.13",
-        "srsly": "2.5.3",
-        "fr-core-news-sm": "3.8.0",
-        "openai": "3.3.0",
-        "numpy": "1.25.0"
-      },
-      "cassette_count": 643,
-      "keys_sha256": "a7295c8e9dfc0d9cea69aa3ec2d8d90291a79259ca1cf3e7f0aa816b4ef7b376"
-    },
-    {
-      "note": "rekey: descent phase cap #3658 item 36c (moved 9)",
-      "at": "2026-11-23T06:09:17Z",
-      "recorded_env": {
-        "spacy": "3.8.14",
-        "thinc": "8.3.13",
-        "srsly": "2.5.3",
-        "fr-core-news-sm": "3.8.0",
-        "openai": "3.3.0",
-        "numpy": "1.25.0"
-      },
-      "cassette_count": 652,
-      "keys_sha256": "f2c2dd38661fd179a77c5590407603f5056716b1cc650125442d92a602c0e95d"
-    },
-    {
-      "note": "rekey: descent phase cap #3658 item 36c (moved 11)",
-      "at": "2026-11-23T06:10:50Z",
-      "recorded_env": {
-        "spacy": "3.8.14",
-        "thinc": "8.3.13",
-        "srsly": "2.5.3",
-        "fr-core-news-sm": "3.8.0",
-        "openai": "3.3.0",
-        "numpy": "1.25.0"
-      },
-      "cassette_count": 663,
-      "keys_sha256": "da75a5f52de0e894a5036460cf942d9328a0dd39de725e6124a483e9936e6bb9"
-    },
-    {
-      "note": "rekey: descent phase cap #3658 item 36c (moved 15)",
-      "at": "2026-11-23T06:12:07Z",
-      "recorded_env": {
-        "spacy": "3.8.14",
-        "thinc": "8.3.13",
-        "srsly": "2.5.3",
-        "fr-core-news-sm": "3.8.0",
-        "openai": "3.3.0",
-        "numpy": "1.25.0"
-      },
-      "cassette_count": 678,
-      "keys_sha256": "55913c72613dcef1521147e8347f7c83b9ec97f4bb9b26b1101c5339bcb7ea91"
-    },
-    {
-      "note": "rekey: descent phase cap #3658 item 36c (moved 3)",
-      "at": "2026-11-23T06:12:47Z",
-      "recorded_env": {
-        "spacy": "3.8.14",
-        "thinc": "8.3.13",
-        "srsly": "2.5.3",
-        "fr-core-news-sm": "3.8.0",
-        "openai": "3.3.0",
-        "numpy": "1.25.0"
-      },
-      "cassette_count": 681,
-      "keys_sha256": "575e9f88b93a93597ef93621f1f2e0f292950132e6d9b74495249d61dcec980e"
-    },
-    {
-      "note": "rekey: descent phase cap #3658 item 36c (old keys pruned, 56 moved)",
-      "at": "2026-11-23T06:14:09Z",
-      "recorded_env": {
-        "spacy": "3.8.14",
-        "thinc": "8.3.13",
-        "srsly": "2.5.3",
-        "fr-core-news-sm": "3.8.0",
-        "openai": "3.3.0",
-        "numpy": "1.25.0"
-      },
-      "cassette_count": 625,
-      "keys_sha256": "0e391387d24cbd21fd26f40fa61bbe6e2a3e5dbf963965224956afa6c2912777"
-    }
+  "record_dataset_passphrase": "withheld",
+  "year_hint_cassettes": [
+    "03df64a80697d97d"
   ]
 }

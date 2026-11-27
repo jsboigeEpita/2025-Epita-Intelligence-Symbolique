@@ -1,0 +1,36 @@
+{
+  "key": "47346037d1771fa01c09fe785756460ed685d58d61a0d9b34ed52e2d108e0281",
+  "value": {
+    "id": "msg_011ChNgmxi2DUMhJhSK6MFr7",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"distinct_points\": \"1. La transition énergétique est nécessaire. 2. La transition énergétique est économiquement avantageuse à long terme. 3. Ceux qui minimisent la crise climatique utilisent souvent des données sélectives pour soutenir leur position.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565906,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 380,
+      "prompt_tokens": 390,
+      "total_tokens": 770,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

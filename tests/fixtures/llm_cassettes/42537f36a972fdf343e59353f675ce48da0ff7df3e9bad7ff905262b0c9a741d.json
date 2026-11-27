@@ -1,0 +1,36 @@
+{
+  "key": "42537f36a972fdf343e59353f675ce48da0ff7df3e9bad7ff905262b0c9a741d",
+  "value": {
+    "id": "msg_011ChNfWoQ9YGTFvANcCXAjB",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\": 0.5, \"exhibit\": \"Point 1 : les hypothèses de croissance optimistes (1,8 % par an) sous-tendant la projection de déficit du ministre des finances fragilisent ses chiffres. Ce point est formulé deux fois dans l'argument, sans apport nouveau à la seconde occurrence : redondance localisée sur l'idée des hypothèses de croissance. Point 2 : les syndicats accusent le [texte tronqué, contenu non évaluable]. Le verdict d'étape 2 (redondance_sémantique) est retenu. Une seule répétition est documentée dans les points fournis ; la liste étant tronquée, l'évaluation de la couverture des points suivants reste incomplète.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795564916,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 756,
+      "prompt_tokens": 446,
+      "total_tokens": 1202,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

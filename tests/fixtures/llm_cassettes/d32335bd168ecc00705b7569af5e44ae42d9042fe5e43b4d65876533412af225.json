@@ -1,0 +1,36 @@
+{
+  "key": "d32335bd168ecc00705b7569af5e44ae42d9042fe5e43b4d65876533412af225",
+  "value": {
+    "id": "msg_011ChNgW7FHUnZCvb8pZ8pd5",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\": 0.5, \"exhibit\": \"Thèse : l'idée que les laboratoires pharmaceutiques dissimulent les effets secondaires est une théorie du complot sans fondement. Digression localisée : la phrase « Ceux qui affirment que les vaccins sont dangereux ignorent les décennies de recherche clinique. » porte sur la dangerosité des vaccins et non sur la dissimulation des effets secondaires. Digression unique et mineure ; l'ensemble de l'argumentation reste centré sur la thèse.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565691,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 274,
+      "prompt_tokens": 468,
+      "total_tokens": 742,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

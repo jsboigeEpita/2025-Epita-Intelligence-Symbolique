@@ -1,0 +1,36 @@
+{
+  "key": "2aea57dd1dd52008ef4345646df8bd0ad14ec58b945afabbdb3e65f715c6a8fc",
+  "value": {
+    "id": "msg_011ChNgjRKLVqJWL8CuSsUYf",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"chain_holds\": false, \"structure_verdict\": \"saut_logique\", \"reasoning\": \"La hausse observée de 1,1 °C établit un changement climatique, mais elle ne justifie pas le caractère « incontestable » de la conclusion, et la réfutation de l'objection sceptique (la vitesse sans précédent) s'appuie sur une prémisse absente de la chaîne reconstruite.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565874,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 663,
+      "prompt_tokens": 687,
+      "total_tokens": 1350,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

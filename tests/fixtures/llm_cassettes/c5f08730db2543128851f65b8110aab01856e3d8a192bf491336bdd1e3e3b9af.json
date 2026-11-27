@@ -1,0 +1,36 @@
+{
+  "key": "c5f08730db2543128851f65b8110aab01856e3d8a192bf491336bdd1e3e3b9af",
+  "value": {
+    "id": "msg_011ChNg3b4roTtcTfPrj9RzC",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\": 1.0, \"exhibit\": \"Chaîne reconstruite : prémisse = « L'option C permet de servir les deux publics (fonds livre et espace numérique) sans en favoriser un. » → conclusion = « L'option C (répartir la somme moitié fonds livre, moitié espace numérique) est justifiée. » Inférence : l'option C satisfait l'équité entre les deux publics, ce qui fonde sa justification. Verdict de structure : progression_logique.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565332,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 495,
+      "prompt_tokens": 436,
+      "total_tokens": 931,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

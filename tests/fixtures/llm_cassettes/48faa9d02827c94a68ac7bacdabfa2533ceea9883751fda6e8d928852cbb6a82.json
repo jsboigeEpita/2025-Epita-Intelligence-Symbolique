@@ -1,0 +1,36 @@
+{
+  "key": "48faa9d02827c94a68ac7bacdabfa2533ceea9883751fda6e8d928852cbb6a82",
+  "value": {
+    "id": "msg_011ChNgE3jWJSGYksfjh4C1p",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\": 1.0, \"exhibit\": \"Trois points distincts : (1) hausse attendue de la visibilité du club grâce au tournoi inter-villes, (2) recrutement attendu de nouveaux membres, idée différente de la visibilité, et (3) comparaison avec l'option B, qui consiste à investir les 2000 €. Aucune reprise en substance entre les points. Le point 3 est tronqué dans l'extrait, son contenu ne peut donc être évalué que partiellement.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565474,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 471,
+      "prompt_tokens": 440,
+      "total_tokens": 911,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "key": "22c7559bc12767e68eb8075161970de10307a8c0d7324a03f092b4c750dbaf83",
+  "value": {
+    "id": "msg_011ChNfV53BqWQfX2S7cybAG",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "```json\n{\"engages_real_claim\": true, \"engagement_verdict\": \"engagement_réel\", \"reasoning\": \"La réfutation vise directement la thèse adverse (assimiler réforme et suppression des retraites) en niant cette équivalence, et critique explicitement l'appel « pensez à vos enfants », sans déformer la position de l'opposition, même si elle ne réfute pas le fond de cet appel.\"}\n```",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795564893,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 956,
+      "prompt_tokens": 610,
+      "total_tokens": 1566,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

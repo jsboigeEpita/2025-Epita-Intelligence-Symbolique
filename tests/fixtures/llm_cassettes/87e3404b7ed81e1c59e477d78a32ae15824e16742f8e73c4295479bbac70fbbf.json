@@ -1,0 +1,36 @@
+{
+  "key": "87e3404b7ed81e1c59e477d78a32ae15824e16742f8e73c4295479bbac70fbbf",
+  "value": {
+    "id": "msg_011ChNgbQs5aUwr8LWjCYdcd",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_thesis\": true, \"thesis\": \"La peine de mort (peine capitale) est justifiée : elle dissuade les crimes les plus graves, et le risque d'erreur judiciaire est réduit par les avancées de l'ADN.\", \"digressions\": \"\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565765,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 755,
+      "prompt_tokens": 438,
+      "total_tokens": 1193,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

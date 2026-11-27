@@ -3,29 +3,17 @@
   "value": [
     {
       "role": "assistant",
-      "content": "{\"fallacy_name\":\"Lapalissade\",\"taxonomy_pk\":\"31\",\"explanation\":\"Le texte énonce des évidences triviales (« Le soleil brille. Il fait beau. ») sans apporter de raisonnement substantiel.\",\"confidence\":0.82}",
+      "content": "```json\n{\"fallacy_name\": \"Preuve par assertion\", \"taxonomy_pk\": \"1297\", \"explanation\": \"The text contains no fallacy. It is two short, uncontroversial factual statements about the weather, with no argument, inference, or conclusion that could be flawed. The closest node is 'Preuve par assertion' (bare assertion offered without support), but that label fits poorly because nothing is disputed or argued, so the match is weak and the confidence is correspondingly low.\", \"confidence\": 0.05}\n```",
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EkNs1AfaILU8oaU9AOsc5EyBR7sUp",
-        "created": 1794723553,
+        "id": "msg_011ChNfc1dzUsi1gsBRExruq",
+        "created": 1795564986,
         "system_fingerprint": null,
         "usage": {
-          "prompt_tokens": 23156,
-          "prompt_tokens_details": {
-            "audio_tokens": 0,
-            "cache_write_tokens": 23153,
-            "cached_tokens": 0,
-            "image_tokens": null,
-            "text_tokens": null
-          },
-          "completion_tokens": 204,
-          "completion_tokens_details": {
-            "accepted_prediction_tokens": 0,
-            "audio_tokens": 0,
-            "reasoning_tokens": 142,
-            "rejected_prediction_tokens": 0,
-            "text_tokens": null
-          }
+          "prompt_tokens": 29414,
+          "prompt_tokens_details": null,
+          "completion_tokens": 532,
+          "completion_tokens_details": null
         }
       }
     }

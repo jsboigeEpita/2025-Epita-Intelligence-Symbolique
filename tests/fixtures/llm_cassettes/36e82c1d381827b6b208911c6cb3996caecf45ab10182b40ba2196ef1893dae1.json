@@ -1,0 +1,36 @@
+{
+  "key": "36e82c1d381827b6b208911c6cb3996caecf45ab10182b40ba2196ef1893dae1",
+  "value": {
+    "id": "msg_011ChNfW2dbq2Dmwc79GAZ7N",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "```json\n{\"score\": 0.0, \"exhibit\": \"Chaîne reconstruite : prémisse : « Personne n'a proposé de supprimer les retraites, seulement de les réformer différemment (l'opposition attaque un homme de paille) » ; conclusion : « L'argumentation de l'opposition est fallacieuse et détourne le débat, qui doit donc porter sur les questions techniques ». Verdict de structure : saut_logique. Le constat d'un homme de paille peut étayer que l'argument de l'opposition est fallacieux, mais la conclusion normative selon laquelle le débat doit porter sur les questions techniques ne découle pas des prémisses. Il y a donc un saut logique net, ce qui correspond à 0.0.\"}\n```",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795564904,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 481,
+      "prompt_tokens": 463,
+      "total_tokens": 944,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

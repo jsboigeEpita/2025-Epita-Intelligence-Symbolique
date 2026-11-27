@@ -1,0 +1,36 @@
+{
+  "key": "45d1b2dff3feebc9883ce524e01f7df686503ddd992154c2696cdf2f2cecf892",
+  "value": {
+    "id": "msg_011ChNg2cNDAmGocR6Fwcwhf",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "```json\n{\"obstacle_genuinely_opaque\": true, \"clarity_verdict\": \"opaque_réel\", \"reasoning\": \"L'antécédent de « trois usages » n'est nulle part dans le texte (seules les options A et B sont données), donc le troisième usage visé ne peut être reconstitué à partir du contexte.\"}\n```",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565320,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 694,
+      "prompt_tokens": 647,
+      "total_tokens": 1341,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

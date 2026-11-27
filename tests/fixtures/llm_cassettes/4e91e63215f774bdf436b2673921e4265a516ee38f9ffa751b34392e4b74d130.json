@@ -1,0 +1,36 @@
+{
+  "key": "4e91e63215f774bdf436b2673921e4265a516ee38f9ffa751b34392e4b74d130",
+  "value": {
+    "id": "msg_011ChNg4VwJwYcgJWB54dHDe",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\": 1.0, \"exhibit\": \"Deux points distincts sont identifiés : (1) élargir le fonds de livres jeunesse, motivé par le vieillissement du fonds et le nombre élevé de jeunes lecteurs ; (2) créer un espace numérique en libre accès pour réduire la fracture numérique du quartier. Les deux idées ne se recouvrent pas en substance, et aucune reprise n'est localisée. Le verdict d'entrée « redondance_sémantique » n'est pas étayé par les points listés, et l'argument est tronqué après le point B, ce qui limite l'évaluation.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565345,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 484,
+      "prompt_tokens": 444,
+      "total_tokens": 928,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

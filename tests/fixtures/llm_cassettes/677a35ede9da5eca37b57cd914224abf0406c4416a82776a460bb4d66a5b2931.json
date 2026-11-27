@@ -1,0 +1,36 @@
+{
+  "key": "677a35ede9da5eca37b57cd914224abf0406c4416a82776a460bb4d66a5b2931",
+  "value": {
+    "id": "msg_011ChNgVnXQCAW1LYQc59yJ9",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "```json\n{\"has_digression\": true, \"relevance_verdict\": \"digression_localisée\", \"located_digression\": \"L'argument selon lequel les produits pharmaceutiques cachent les effets secondaires est une théorie du complot sans fondement.\"}\n```",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565687,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 299,
+      "prompt_tokens": 665,
+      "total_tokens": 964,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

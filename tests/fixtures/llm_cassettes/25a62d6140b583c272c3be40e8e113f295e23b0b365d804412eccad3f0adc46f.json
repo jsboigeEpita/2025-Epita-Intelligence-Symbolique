@@ -1,0 +1,36 @@
+{
+  "key": "25a62d6140b583c272c3be40e8e113f295e23b0b365d804412eccad3f0adc46f",
+  "value": {
+    "id": "msg_011ChNgVySVEi7DT268oPhAS",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "```json\n{\"has_opposing_claim\": true, \"opposing_claim\": \"Les vaccins sont dangereux (position attribuée à ceux qui affirment que les vaccins sont dangereux et qui ignorent la recherche clinique)\", \"main_thesis\": \"Les vaccins sont indispensables pour la santé publique, et leur valeur est étayée par des études scientifiques démontrant leurs effets sur des maladies précises (éradication de la variole, réduction considérable de la polio).\"}\n```",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565689,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 277,
+      "prompt_tokens": 492,
+      "total_tokens": 769,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

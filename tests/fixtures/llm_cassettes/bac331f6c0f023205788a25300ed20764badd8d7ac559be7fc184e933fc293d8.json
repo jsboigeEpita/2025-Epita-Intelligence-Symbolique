@@ -1,0 +1,36 @@
+{
+  "key": "bac331f6c0f023205788a25300ed20764badd8d7ac559be7fc184e933fc293d8",
+  "value": {
+    "id": "msg_011ChNgdMYhfqNFtiygWEjim",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"distinct_points\": \"1. Les progrès de l'analyse ADN réduisent considérablement le risque d'erreur judiciaire, ce qui répond à l'objection des opposants (selon laquelle le système judiciaire peut se tromper). 2. La peine (implicitement capitale) sert de dissuasion contre les crimes les plus graves, comme le meurtre de masse. 3. Certains criminels sont irrécupérables et représentent un danger permanent pour la société.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565789,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 311,
+      "prompt_tokens": 425,
+      "total_tokens": 736,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "key": "c9e138c97d719b676f150a0dc1515c2809b4ec3d4655e99583e9e47f35fc84dc",
+  "value": {
+    "id": "msg_011ChNgjF3huLtetcreUtT7x",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\": 1.0, \"exhibit\": \"Chaîne reconstruite : prémisse « Les mesures de température globale montrent une augmentation de 1,1 degré depuis l'ère préindustrielle » → conclusion « Le changement climatique est une réalité scientifique incontestable ». Un lien d'inférence réel relie des données de mesure observées à la conclusion sur la réalité du changement climatique. Verdict de structure : progression_logique.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565871,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 537,
+      "prompt_tokens": 425,
+      "total_tokens": 962,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

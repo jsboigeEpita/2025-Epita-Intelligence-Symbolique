@@ -1,0 +1,36 @@
+{
+  "key": "d7539b937f5016f73386e1bff2320af563dbbfe19723222a5b3844da840ec2d6",
+  "value": {
+    "id": "msg_011ChNgWTedHKCHKCWRpZ215",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_chain\": true, \"premises\": \"La vaccination a éradiqué la variole et réduit considérablement la polio, comme le montrent les études scientifiques. Ceux qui affirment que les vaccins sont dangereux ignorent des décennies de recherche clinique.\", \"conclusion\": \"Les vaccins sont indispensables pour la santé publique.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565697,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 435,
+      "prompt_tokens": 481,
+      "total_tokens": 916,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

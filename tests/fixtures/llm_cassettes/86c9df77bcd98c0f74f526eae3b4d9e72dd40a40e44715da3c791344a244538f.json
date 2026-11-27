@@ -1,0 +1,36 @@
+{
+  "key": "86c9df77bcd98c0f74f526eae3b4d9e72dd40a40e44715da3c791344a244538f",
+  "value": {
+    "id": "msg_011ChNgnH841FKzmTpVM5r38",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"distinct_points\": \"1. Position adverse attribuée (non défendue par l'auteur) : la crise climatique ne serait pas aussi grave qu'on le dit.\\n2. Les modèles prédictifs sont unanimes sur l'impact des activités humaines.\\n3. Ceux qui minimisent la crise climatique utilisent souvent des données sélectives pour soutenir leur position.\\n4. La transition énergétique est nécessaire.\\n5. La transition énergétique est économiquement avantageuse à long terme.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565912,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 732,
+      "prompt_tokens": 404,
+      "total_tokens": 1136,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

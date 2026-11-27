@@ -1,0 +1,36 @@
+{
+  "key": "e34a1df54bcaa4085db419d0959ac6149ba484b18b1de735913f3e211b12b4b8",
+  "value": {
+    "id": "msg_011ChNgDiqCa8d345wKM2oZA",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "```json\n{\"score\": 0.5, \"exhibit\": \"Points distincts visibles : (1) l'option C, format hybride de 1000 € pour un tournoi réduit et 1000 € pour du matériel pédagogique, présentée comme compromis entre visibilité et pédagogie ; (2) l'option B, 2000 € investis entièrement en matériel pédagogique (texte tronqué). Redondance localisée : le matériel pédagogique revient dans les deux points, avec une même logique d'arbitrage pédagogie/visibilité, sans répétition substantielle au-delà de la comparaison des options. Le texte est tronqué, donc la structure complète ne peut être vérifiée ; le verdict de redondance sémantique fourni suggère des reprises au-delà de ce qui est visible.\"}\n```",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565471,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 710,
+      "prompt_tokens": 445,
+      "total_tokens": 1155,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

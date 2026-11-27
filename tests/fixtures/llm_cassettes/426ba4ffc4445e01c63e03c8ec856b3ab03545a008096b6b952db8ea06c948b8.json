@@ -1,0 +1,36 @@
+{
+  "key": "426ba4ffc4445e01c63e03c8ec856b3ab03545a008096b6b952db8ea06c948b8",
+  "value": {
+    "id": "msg_011ChNgC2waddFHEggJqQnaq",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "```json\n{\"has_thesis\": true, \"thesis\": \"L'Option A, un tournoi inter-villes avec buffet et prix pour 2000 €, est justifiée par la hausse attendue de la visibilité du club et le recrutement de nouveaux membres.\", \"digressions\": \"La proposition « Option B : investir les 2000 euros en matériel pédagogique, échiquiers neufs, horloges et supports de cours, car les échiquiers actuels sont usés. » ne sert pas la thèse : elle présente une alternative concurrente et ne soutient pas l'Option A. La mention de « trois options divergentes » n'est suivie que de deux options décrites, ce qui est une incohérence de formulation, sans lien direct avec la thèse.\"}\n```",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565447,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 551,
+      "prompt_tokens": 496,
+      "total_tokens": 1047,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

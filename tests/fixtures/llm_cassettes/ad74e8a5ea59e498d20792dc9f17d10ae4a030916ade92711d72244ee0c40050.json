@@ -1,0 +1,36 @@
+{
+  "key": "ad74e8a5ea59e498d20792dc9f17d10ae4a030916ade92711d72244ee0c40050",
+  "value": {
+    "id": "msg_011ChNg4NTc4Rr3e6Z4mnGrm",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"distinct_points\": \"1. Le fonds actuel de livres jeunesse vieillit (raison avancée en faveur de l'option A : élargir le fonds jeunesse).\\n2. Les plus jeunes lecteurs sont les plus nombreux (raison avancée en faveur de l'option A).\\n3. Créer un espace numérique avec ordinateurs en libre accès réduirait la fracture numérique du quartier (justification de l'option B).\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565343,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 532,
+      "prompt_tokens": 456,
+      "total_tokens": 988,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

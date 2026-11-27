@@ -1,0 +1,36 @@
+{
+  "key": "dc9ba8e210d9287f77547b63b5acc841ee8fd7fe39022394dac7ef547c74c86f",
+  "value": {
+    "id": "msg_011ChNg3Nwbx7SSXuiAWmAqf",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"chain_holds\": true, \"structure_verdict\": \"progression_logique\", \"reasoning\": \"La prémisse fournit une raison directe (servir les deux publics sans en favoriser un) qui soutient l'évaluation de l'option C, même si elle ne compare pas explicitement C à l'option B, ce qui laisse une lacune justificative sans constituer un saut logique.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565330,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 485,
+      "prompt_tokens": 682,
+      "total_tokens": 1167,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

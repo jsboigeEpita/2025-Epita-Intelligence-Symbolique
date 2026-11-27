@@ -1,0 +1,36 @@
+{
+  "key": "d8cbd8500cdc69d573b58116d8d1cbbfa532b60c6b8f6aeafa839a72457a3977",
+  "value": {
+    "id": "msg_011ChNgWbCo63rwkiWXs2vtg",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\": 1.0, \"exhibit\": \"Position adverse identifiée : les laboratoires pharmaceutiques dissimulent les effets secondaires des produits, et les vaccins sont dangereux. Verdict d'engagement : engagement_réel, la réfutation s'attaque effectivement à cette thèse adverse.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565698,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 331,
+      "prompt_tokens": 414,
+      "total_tokens": 745,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

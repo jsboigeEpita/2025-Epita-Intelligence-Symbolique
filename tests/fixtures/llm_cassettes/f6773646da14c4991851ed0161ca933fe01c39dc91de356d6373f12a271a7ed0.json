@@ -1,0 +1,36 @@
+{
+  "key": "f6773646da14c4991851ed0161ca933fe01c39dc91de356d6373f12a271a7ed0",
+  "value": {
+    "id": "msg_011ChNfYfTDnK1Gm251RFadp",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "```json\n{\"score\": 1.0, \"exhibit\": \"Un seul point distinct identifié : la menace d'un effondrement du système dans cinq ans, si l'on n'agit pas maintenant, est présentée comme un appel à la peur (sophisme émotionnel). Aucune reprise ni redondance localisée, puisque l'argument ne comporte qu'une seule idée.\"}\n```",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795564939,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 242,
+      "prompt_tokens": 397,
+      "total_tokens": 639,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

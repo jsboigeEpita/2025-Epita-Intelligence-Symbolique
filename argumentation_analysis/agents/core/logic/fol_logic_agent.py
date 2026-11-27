@@ -19,6 +19,8 @@ Fonctionnalités :
 import logging
 import asyncio
 import inspect
+import json
+import re
 from typing import Dict, List, Any, Iterable, Optional, Union, Tuple, Set
 from dataclasses import dataclass, field
 from pydantic import PrivateAttr
@@ -414,6 +416,43 @@ RÉPONDS EN FORMAT JSON :
                 setup_failures=self.setup_failures,
             )
 
+    @staticmethod
+    def _extract_json_block(text: str) -> str:
+        """Isole le bloc JSON d'une réponse LLM qui peut l'entourer de texte.
+
+        #3679 item 40b : la route n'envoie pas de JSON mode (famille
+        #3600/#3096), donc rien n'oblige le modèle à rendre un objet nu. Le
+        ``json.loads(str(result))`` brut de ``_convert_to_fol`` mourait sur le
+        premier caractère d'une réponse mise en balises ```json ou précédée
+        d'une phrase — mesuré sur la bande (run 45351057154) : le repli
+        heuristique prenait le relais et l'appelant rapportait « échec de
+        conversion » au lieu de la réponse.
+
+        C'est le **socle commun** des deux extracteurs frères
+        (``modal_logic_agent._extract_json_block`` et
+        ``propositional_logic_agent._extract_json_block``) : un bloc
+        ```json, sinon la première ``{`` jusqu'à la dernière ``}``, sinon la
+        chaîne entière. Les frères ne sont **pas** équivalents et ne sont pas
+        fusionnés ici : le modal **répare les troncatures** (comptage
+        d'accolades, complétion d'un tableau ``modal_formulas`` non fermé),
+        le propositionnel non. Ce socle ne répare rien : il extrait, et
+        ``json.loads`` reste seul à décider de la validité.
+        """
+        match = re.search(r"```json\s*(\{.*?\})\s*```", text, re.DOTALL)
+        if match:
+            return match.group(1)
+
+        start_index = text.find("{")
+        end_index = text.rfind("}")
+        if start_index != -1 and end_index != -1 and end_index > start_index:
+            return text[start_index : end_index + 1]
+
+        logger.warning(
+            "Aucun bloc JSON isolable : parsing de la chaîne complète, "
+            "json.loads rapportera l'erreur."
+        )
+        return text
+
     async def _convert_to_fol(
         self, text: str, context: Optional[Dict[str, Any]] = None
     ) -> Tuple[List[str], Optional[str]]:
@@ -443,10 +482,9 @@ RÉPONDS EN FORMAT JSON :
                     arguments=KernelArguments(**conversion_args),
                 )
 
-                # Parsing du JSON résultat
-                import json
-
-                parsed = json.loads(str(result))
+                # Parsing du JSON résultat (#3679 item 40b : extraction du
+                # bloc, même socle que les agents modal et propositionnel)
+                parsed = json.loads(self._extract_json_block(str(result)))
                 formulas = parsed.get("formulas", [])
 
                 # Convert any Unicode FOL to ASCII for Tweety compatibility
@@ -988,10 +1026,9 @@ RÉPONDS EN FORMAT JSON :
                 arguments=KernelArguments(**analysis_args),
             )
 
-            # Parsing et intégration des résultats LLM
-            import json
-
-            parsed = json.loads(str(llm_result))
+            # Parsing et intégration des résultats LLM (#3679 item 40b : même
+            # extraction du bloc que la conversion)
+            parsed = json.loads(self._extract_json_block(str(llm_result)))
 
             # #2447: nothing the model answers here was computed by a solver.
             # Its answer is kept as it came, in ``llm_assessment``, with one

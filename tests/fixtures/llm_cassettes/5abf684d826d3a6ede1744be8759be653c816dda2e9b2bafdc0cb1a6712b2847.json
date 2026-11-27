@@ -1,0 +1,36 @@
+{
+  "key": "5abf684d826d3a6ede1744be8759be653c816dda2e9b2bafdc0cb1a6712b2847",
+  "value": {
+    "id": "msg_011ChNgViPchD1mz9JfCYtYE",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "```json\n{\"has_thesis\": true, \"thesis\": \"L'idée que les laboratoires pharmaceutiques dissimulent les effets secondaires est une théorie du complot sans fondement.\", \"digressions\": \"Phrase « Ceux qui affirment que les vaccins sont dangereux ignorent les décennies de recherche clinique. » : elle porte sur la dangerosité des vaccins, non sur la dissimulation des effets secondaires par les laboratoires. Phrase « Les taux de vaccination élevés protègent aussi ceux qui ne peuvent pas être vaccinés grâce à l'immunité collective. » : hors-sujet, elle traite de l'immunité collective et ne sert pas la thèse.\"}\n```",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565687,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 598,
+      "prompt_tokens": 484,
+      "total_tokens": 1082,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

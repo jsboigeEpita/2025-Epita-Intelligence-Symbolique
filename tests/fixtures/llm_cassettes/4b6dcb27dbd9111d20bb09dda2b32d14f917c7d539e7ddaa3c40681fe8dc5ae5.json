@@ -1,0 +1,36 @@
+{
+  "key": "4b6dcb27dbd9111d20bb09dda2b32d14f917c7d539e7ddaa3c40681fe8dc5ae5",
+  "value": {
+    "id": "msg_011ChNgksZgkY5j5fVJhxtUb",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "```json\n{\"has_digression\": true, \"relevance_verdict\": \"digression_localisée\", \"located_digression\": \"Ceux qui minimisent la crise climatique utilisent souvent des donnees selectives pour soutenir leur position.\"}\n```",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565892,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 374,
+      "prompt_tokens": 620,
+      "total_tokens": 994,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "key": "01f300d79702651c355cb61573e4ca2c90685f1fa8e8843d27ee5f481663a8d9",
+  "value": {
+    "id": "msg_011ChNgdzGKX72Ru3HULuGTu",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\": 0.5, \"exhibit\": \"Trois points identifiés (le 3e est tronqué dans l'entrée) : (1) l'objection des opposants selon laquelle le système judiciaire peut condamner des innocents ; (2) la dissuasion comme justification de la peine capitale pour les crimes les plus graves ; (3) les avancées de l'ADN, qui réduisent le risque d'erreur judiciaire. Le point 3 reprend en partie la préoccupation du point 1 (erreur judiciaire), mais il y répond en apportant un élément nouveau (une solution technique), ce qui fait progresser l'argument. Le point 2 est distinct. Redondance localisée : chevauchement entre les points 1 et 3 sur le thème de l'erreur judiciaire, reformulation utile plutôt que répétition.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565799,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 552,
+      "prompt_tokens": 436,
+      "total_tokens": 988,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "key": "78d41a2bf7fe58a224064af22b472c0ddf513e225a83cb53c3770f94b743f9cf",
+  "value": {
+    "id": "msg_011ChNgb3qJ7m835LWzQaNXH",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"obstacle_genuinely_opaque\": false, \"clarity_verdict\": \"résolvable_contexte\", \"reasoning\": \"Le pronom « Elle » n'a pas d'antécédent explicite, mais le contexte (dissuasion contre les crimes les plus graves, argument des opposants sur les erreurs judiciaires) permet d'inférer sans ambiguïté qu'il désigne la peine de mort.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565759,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 441,
+      "prompt_tokens": 609,
+      "total_tokens": 1050,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

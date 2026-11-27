@@ -1,0 +1,36 @@
+{
+  "key": "21e30f490ab353a10425c403b71cedd0401bf4a4367412a797f39978fa78e785",
+  "value": {
+    "id": "msg_011ChNgX6JWihxfo3TH3iLKM",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"distinct_points\": \"1. L'idée que les laboratoires pharmaceutiques dissimulent les effets secondaires est une théorie du complot sans fondement. 2. Ceux qui affirment que les vaccins sont dangereux ignorent des décennies de recherche clinique. 3. Des taux de vaccination élevés protègent aussi ceux qui ne peuvent pas être vaccinés, grâce à l'immunité collective.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565705,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 451,
+      "prompt_tokens": 452,
+      "total_tokens": 903,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

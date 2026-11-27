@@ -1,0 +1,36 @@
+{
+  "key": "60fc0fb384ccb0f338a8a84674fad84e738b00c88a0ec059b7e41b68d7fadc8e",
+  "value": {
+    "id": "msg_011ChNgcrHp1zCAr7F8dQdTi",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "```json\n{\"distinct_points\": \"1. Certains criminels sont irrécupérables et constituent un danger permanent pour la société, ce qui justifie la peine capitale.\\n2. L'objection selon laquelle le système judiciaire peut se tromper est atténuée par les avancées de l'ADN, qui réduisent considérablement ce risque.\\n3. La peine de mort est irréversible, ce qui rend toute erreur judiciaire fatale.\"}\n```",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565784,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 650,
+      "prompt_tokens": 431,
+      "total_tokens": 1081,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

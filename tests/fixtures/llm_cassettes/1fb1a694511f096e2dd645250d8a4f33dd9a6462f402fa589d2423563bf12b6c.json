@@ -1,0 +1,36 @@
+{
+  "key": "1fb1a694511f096e2dd645250d8a4f33dd9a6462f402fa589d2423563bf12b6c",
+  "value": {
+    "id": "msg_011ChNgWZPQWLrXFBX2a4evx",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "```json\n{\"distinct_points\": \"1. Les vaccins sont indispensables à la santé publique (thèse centrale, répétée deux fois sous forme identique : une seule idée).\\n2. Les études scientifiques montrent que la vaccination a éradiqué la variole et réduit considérablement la polio (argument factuel appuyant la thèse).\"}\n```",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565697,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 298,
+      "prompt_tokens": 344,
+      "total_tokens": 642,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

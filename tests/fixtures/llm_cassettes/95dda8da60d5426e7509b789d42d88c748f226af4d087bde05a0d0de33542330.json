@@ -1,0 +1,36 @@
+{
+  "key": "95dda8da60d5426e7509b789d42d88c748f226af4d087bde05a0d0de33542330",
+  "value": {
+    "id": "msg_011ChNgkAD2GXgkCn1L65bAV",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_semantic_redundancy\": true, \"redundancy_verdict\": \"redondance_sémantique\", \"located_redundancy\": \"Les points 1 et 2 affirment tous deux la réalité du changement climatique (« réalité scientifique incontestable » / « preuve que le changement climatique est réel »), le point 2 ne faisant qu'étayer le point 1 sans apport nouveau. La mesure « +1,1 °C depuis l'ère préindustrielle » est en outre énoncée deux fois dans l'argument, en citation initiale puis dans le corps du texte.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565885,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 900,
+      "prompt_tokens": 690,
+      "total_tokens": 1590,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

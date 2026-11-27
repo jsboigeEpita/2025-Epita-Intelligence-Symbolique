@@ -1,0 +1,36 @@
+{
+  "key": "943ba1af39bbf051c5fba81f4b244c0185667342723049d7642efa42bed8736e",
+  "value": {
+    "id": "msg_011ChNgcX2gUfPB3h52i4BVf",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "```json\n{\"has_chain\": true, \"premises\": \"Elle (la peine, implicitement capitale) sert de dissuasion contre les crimes les plus graves comme le meurtre de masse ; les avancées en ADN réduisent considérablement le risque d'erreur judiciaire, objection des opposants ; certains criminels sont irrécupérables et représentent un danger permanent pour la société.\", \"conclusion\": \"La peine (implicitement capitale) est justifiée et doit être maintenue, malgré le risque qu'un système judiciaire se trompe et condamne des innocents.\"}\n```",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565780,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 736,
+      "prompt_tokens": 479,
+      "total_tokens": 1215,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

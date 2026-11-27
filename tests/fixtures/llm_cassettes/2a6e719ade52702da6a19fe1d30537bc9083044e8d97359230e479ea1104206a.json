@@ -1,0 +1,36 @@
+{
+  "key": "2a6e719ade52702da6a19fe1d30537bc9083044e8d97359230e479ea1104206a",
+  "value": {
+    "id": "msg_011ChNg3XgxgAufEgx2kMmDR",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "```json\n{\"chain_holds\": true, \"structure_verdict\": \"progression_logique\", \"reasoning\": \"La conclusion (créer un espace numérique en libre accès) est justifiée par sa finalité déclarée (réduire la fracture numérique), ce qui constitue un raisonnement moyen-fin valide, bien que la prémisse suppose implicitement que cet espace atteindra effectivement ce but.\"}\n```",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565331,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 390,
+      "prompt_tokens": 704,
+      "total_tokens": 1094,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

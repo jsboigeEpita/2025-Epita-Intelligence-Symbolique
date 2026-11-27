@@ -73,3 +73,43 @@ class TestDemocratechDemo:
             low = (text or "").lower()
             for marker in forbidden:
                 assert marker not in low, f"{pid}: forbidden marker {marker!r}"
+
+    def test_the_demo_propositions_argue_3679_40d(self):
+        """#3679 item 40d — a proposition that only enumerates uses is not
+        argumentative, and the demo then has nothing to decide.
+
+        Decision, taken on the recorded evidence of record run 45351057154
+        (Haiku route): the second proposition was read ``non_argumentative``
+        (0 argument, 5 claims) and the #1909 gate skipped 8 of the 10 phases.
+        The reading was CORRECT on the text as written — it named three
+        possible uses of a grant and gave no reason to prefer any of them —
+        so the FIXTURE is the defect, not the extraction prompt. prop_A, which
+        carries a stated benefit, extracted 3 arguments on the same route.
+
+        Keyless witness of the fixture half of that decision: each option of
+        the proposition that came back empty now states its reason. This does
+        not assert what a model will answer; the band's re-record is the
+        measurement of that half.
+        """
+        from synthetic_proposals import get_propositions
+
+        # A reason marker has to FOLLOW the option it justifies, in the same
+        # sentence — a reason glued to the option list at large would not tell
+        # an extractor why this option should be chosen. Only the proposition
+        # whose recorded answer came back empty is asserted here: prop_A's
+        # recorded answer carried 3 arguments, so its wording is the control
+        # and stays as measured, not re-shaped by this test.
+        reason_markers = (" pour ", " car ", " afin ", " parce ")
+        text = get_propositions()["prop_B"]["text"]
+        for option in ("Option A", "Option B", "Option C"):
+            start = text.index(option)
+            ends = [
+                text.find(other, start + 1)
+                for other in ("Option A", "Option B", "Option C")
+            ]
+            ends = [e for e in ends if e != -1]
+            segment = text[start : min(ends) if ends else len(text)]
+            assert any(marker in segment for marker in reason_markers), (
+                f"prop_B {option}: no reason given for the option — a bare "
+                f"enumeration reads as non-argumentative (#1909 gate)"
+            )

@@ -1,0 +1,36 @@
+{
+  "key": "50dfc2a3172fbe3bab4d97962ff90caf522f0c1e276811e406d55e196c176c84",
+  "value": {
+    "id": "msg_011ChNgbYafhvKXTWs9J9uNn",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\": 0.5, \"exhibit\": \"Thèse : la peine capitale est justifiée, car certains criminels sont irrécupérables et constituent un danger permanent pour la société. Les propositions d'appui portent sur l'irrécupérabilité et la dangerosité permanente de ces criminels, ce qui sert la thèse. Digression localisée : « Cependant, il faut reconnaître que la peine de mort est irréversible, ce qui rend toute erreur fatale. » Cette phrase formule une objection sans la réfuter et n'appuie pas la thèse. Une seule digression, donc l'ensemble reste centré. Incohérence signalée : le verdict d'étape 2 (« toutes_pertinentes ») contredit l'identification de cette digression en étape 1 ; le score retient l'étape 1.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565766,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 573,
+      "prompt_tokens": 470,
+      "total_tokens": 1043,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

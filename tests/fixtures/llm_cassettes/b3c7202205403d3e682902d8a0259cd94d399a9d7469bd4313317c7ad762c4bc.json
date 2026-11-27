@@ -1,0 +1,36 @@
+{
+  "key": "b3c7202205403d3e682902d8a0259cd94d399a9d7469bd4313317c7ad762c4bc",
+  "value": {
+    "id": "msg_011ChNgjz2MFVxk6JfXgLzng",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_clarity_obstacle\": true, \"obstacles\": \"Première phrase : « Position opposée » n'a pas d'antécédent explicite, car l'argument ne dit pas à quelle position l'opposition se fait. Le fragment nominal « Position opposée attribuée à ceux qui minimisent la crise » reste donc incomplet, et le lecteur doit deviner la thèse de référence. La mention « [quote: ...] » est une annotation parasite qui brouille la lecture.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565883,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 919,
+      "prompt_tokens": 495,
+      "total_tokens": 1414,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

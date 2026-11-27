@@ -1,0 +1,36 @@
+{
+  "key": "282581aae8605b889b1aac4829186a99716e7ed09cc20de1485f1c087e90e324",
+  "value": {
+    "id": "msg_011ChNgXkf663Dwj73czev7J",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\": 0.2, \"exhibit\": \"Points distincts : (1) les partisans de la dangerosité des vaccins ignorent la recherche clinique accumulée sur plusieurs décennies ; (2) cette omission affaiblit leur position ; (3) énoncé tronqué (« Les études scientifiques montrent que la vac… »). Redondances localisées : le point 3 reprend en substance le point 1 (la preuve scientifique existante, ici opposée à l'omission), et le point 2 n'est qu'une conséquence reformulée du point 1 sans idée nouvelle. Seuls environ deux des trois points apportent une idée distincte, d'où une couverture effective faible. Le point 3 étant incomplet, l'évaluation reste partielle.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565716,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 845,
+      "prompt_tokens": 439,
+      "total_tokens": 1284,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

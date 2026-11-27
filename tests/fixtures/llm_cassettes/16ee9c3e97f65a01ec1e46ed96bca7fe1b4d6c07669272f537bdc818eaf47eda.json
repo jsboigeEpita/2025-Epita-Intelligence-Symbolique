@@ -1,0 +1,36 @@
+{
+  "key": "16ee9c3e97f65a01ec1e46ed96bca7fe1b4d6c07669272f537bdc818eaf47eda",
+  "value": {
+    "id": "msg_011ChNgWv47yt6oQ4ipN29Aj",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "```json\n{\"has_semantic_redundancy\": true, \"redundancy_verdict\": \"redondance_sémantique\", \"located_redundancy\": \"L'idée que les taux de vaccination élevés protègent aussi les personnes qui ne peuvent pas être vaccinées grâce à l'immunité collective apparaît deux fois : en première phrase (\\\"Un taux de vaccination élevé protège aussi les personnes qui ne peuvent pas être vaccinées, par l'immunité collective.\\\") et en dernière phrase, où la citation est reformulée (\\\"Les taux de vaccination élevés protègent aussi ceux qui ne peuvent pas être vaccinés grâce à l'immunité collective.\\\"). Même contenu, formulation différente, aucune progression.\"}\n```",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565704,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 675,
+      "prompt_tokens": 693,
+      "total_tokens": 1368,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

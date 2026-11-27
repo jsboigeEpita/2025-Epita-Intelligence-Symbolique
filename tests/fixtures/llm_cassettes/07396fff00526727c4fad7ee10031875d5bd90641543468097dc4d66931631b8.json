@@ -1,0 +1,36 @@
+{
+  "key": "07396fff00526727c4fad7ee10031875d5bd90641543468097dc4d66931631b8",
+  "value": {
+    "id": "msg_011ChNgBvztq2YuDFmYFR7Yk",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_thesis\": true, \"thesis\": \"L'option C, un format hybride (1000 € pour un tournoi réduit et 1000 € pour le matériel pédagogique), constitue un compromis équilibré entre visibilité et pédagogie.\", \"digressions\": \"Le passage sur l'option B (investir les 2000 € dans du matériel pédagogique neuf, car les échiquiers actuels sont usés) s'écarte de la thèse, qui porte sur C. La seconde phrase répète aussi la description de l'option C sans rien ajouter à la thèse.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565447,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 687,
+      "prompt_tokens": 473,
+      "total_tokens": 1160,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

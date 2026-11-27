@@ -1,0 +1,36 @@
+{
+  "key": "18423106a50b90c23a520dc6ecc74bb43ff0ff8ae3bab42bd3519e1a6f2b794c",
+  "value": {
+    "id": "msg_011ChNfdPKkY9fgZc6Satctt",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"distinct_points\": \"1. Le soleil brille (constat sur la présence du soleil). 2. Il fait beau (évaluation du temps qu'il fait).\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565004,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 520,
+      "prompt_tokens": 245,
+      "total_tokens": 765,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

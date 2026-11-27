@@ -1,0 +1,36 @@
+{
+  "key": "a2bbc5e997b38f10c3a39da9830719cf86740737759aa1852aa682b267879bfc",
+  "value": {
+    "id": "msg_011ChNg2s7E8BnA6DWacj5ej",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\": 0.2, \"exhibit\": \"Obstacle localisé : la référence « Trois usages sont en concurrence » ne se résout pas, car seules deux options (Option A et Option B) sont présentées et l'antécédent de « trois usages » est absent ou incomplet. Verdict d'opacité : opaque_réel. L'obstacle opaque est donc identifié et non résolvable par le contexte, mais le sens reste partiellement reconstructible à partir des deux options présentes, ce qui justifie 0.2 plutôt que 0.0.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565322,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 518,
+      "prompt_tokens": 417,
+      "total_tokens": 935,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

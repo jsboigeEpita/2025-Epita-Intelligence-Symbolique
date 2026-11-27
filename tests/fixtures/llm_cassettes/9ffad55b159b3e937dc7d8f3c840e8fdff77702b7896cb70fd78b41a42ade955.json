@@ -1,0 +1,36 @@
+{
+  "key": "9ffad55b159b3e937dc7d8f3c840e8fdff77702b7896cb70fd78b41a42ade955",
+  "value": {
+    "id": "msg_011ChNgWg2kU7dD2XzpcfFYL",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_semantic_redundancy\": true, \"redundancy_verdict\": \"redondance_sémantique\", \"located_redundancy\": \"« Les vaccins sont indispensables à la santé publique » (thèse centrale) apparaît deux fois sous forme identique : la citation entre guillemets puis la phrase reprise à l'identique juste après. Le second énoncé n'apporte aucun contenu nouveau.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565699,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 424,
+      "prompt_tokens": 608,
+      "total_tokens": 1032,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

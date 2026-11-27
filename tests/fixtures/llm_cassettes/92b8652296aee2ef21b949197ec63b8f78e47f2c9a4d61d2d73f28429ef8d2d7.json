@@ -1,0 +1,36 @@
+{
+  "key": "92b8652296aee2ef21b949197ec63b8f78e47f2c9a4d61d2d73f28429ef8d2d7",
+  "value": {
+    "id": "msg_011ChNfvFzCVSutRgHzx8vmE",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\": 1.0, \"exhibit\": \"Deux points distincts : (1) une thèse de vérité fondée sur l'unanimité des experts (consensus d'experts → vérité) ; (2) une thèse de pertinence qui exclut les avis non experts du débat (seuls les avis d'experts comptent). Le point 2 ne reformule pas le point 1 : l'un porte sur les conditions de vérité de la thèse, l'autre sur qui a droit de contribuer au débat. Ils partagent un même appui sur l'autorité experte, mais sans reprise en substance. Aucune redondance localisée.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565234,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 641,
+      "prompt_tokens": 428,
+      "total_tokens": 1069,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

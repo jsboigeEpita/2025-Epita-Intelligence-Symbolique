@@ -1,0 +1,36 @@
+{
+  "key": "813ffb924d56b674ca58b35ed0fa9c7cfe5f5e577f54c343b9b0e00ffaf78ca0",
+  "value": {
+    "id": "msg_011ChNgjrZsi8MHH3V9Sziwt",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"distinct_points\": \"1. Le raisonnement sceptique (« le climat a toujours changé ») omet la vitesse sans précédent du changement climatique actuel, ce qui réfute la thèse sceptique.\\n2. Les mesures de température globale montrent une hausse de 1,1 degré depuis l'ère préindustrielle.\\n3. Les modèles prédictifs sont unanimes sur l'impact des activités humaines.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565880,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 856,
+      "prompt_tokens": 440,
+      "total_tokens": 1296,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

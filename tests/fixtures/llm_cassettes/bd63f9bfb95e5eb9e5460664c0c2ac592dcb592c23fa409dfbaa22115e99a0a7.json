@@ -1,0 +1,36 @@
+{
+  "key": "bd63f9bfb95e5eb9e5460664c0c2ac592dcb592c23fa409dfbaa22115e99a0a7",
+  "value": {
+    "id": "msg_011ChNfutWs4FJucQfy1ivNm",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\": 0.0, \"exhibit\": \"Chaîne reconstruite : prémisse « Les experts sont unanimes » ; conclusion « C'est vrai ». Verdict de structure : saut_logique. La conclusion ne découle pas de la prémisse, car l'unanimité des experts n'établit pas à elle seule la vérité de l'affirmation sans inférence supplémentaire.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565227,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 227,
+      "prompt_tokens": 381,
+      "total_tokens": 608,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

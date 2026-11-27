@@ -1,0 +1,36 @@
+{
+  "key": "8f231d2975f7821102d7a17f7263bc32ad11cec87e3f06b74572f95d64802d2c",
+  "value": {
+    "id": "msg_011ChNgjtaS22vW7dNTSywtE",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "```json\n{\"distinct_points\": \"1. Le changement climatique est une réalité scientifique incontestable.\\n2. Le réchauffement observé (+1,1 °C depuis l'ère préindustrielle) est une preuve que le changement climatique est réel.\\n3. L'objection sceptique selon laquelle le climat a toujours changé est incomplète, car elle omet un élément essentiel.\\n4. La vitesse actuelle du changement climatique est sans précédent.\"}\n```",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565880,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 717,
+      "prompt_tokens": 420,
+      "total_tokens": 1137,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

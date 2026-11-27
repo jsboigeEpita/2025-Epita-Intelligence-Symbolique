@@ -1,0 +1,36 @@
+{
+  "key": "9dcb2f105710acbc62f1eb9279be0d55852e8ce76addf2ead451f870057da769",
+  "value": {
+    "id": "msg_011ChNgcr4fwdMJ1FGvLKhM4",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"distinct_points\": \"1. La peine de mort étant irréversible, toute erreur judiciaire devient fatale et irrémédiable.\\n2. Certains criminels sont irrécupérables et représentent un danger permanent pour la société.\\n3. Le coût des appels et des procédures est souvent supérieur à celui de l'emprisonnement à vie.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565783,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 430,
+      "prompt_tokens": 419,
+      "total_tokens": 849,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "key": "c400dc3aaaf849232df3c68af532c993ad8fad3cc99593921cdbff6380371f4f",
+  "value": {
+    "id": "msg_011ChNgd6Mu1C1Fmuda2r14q",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\": 0.5, \"exhibit\": \"Chaîne reconstruite : prémisse 1 : la peine capitale sert de dissuasion contre les crimes les plus graves, comme le meurtre de masse ; prémisse 2 : le risque d'erreur judiciaire est considéré (formulation tronquée dans la reconstruction) ; conclusion (implicite, non formulée explicitement) : la peine capitale est justifiée et doit être maintenue. Verdict de structure : progression_logique. Une inférence réelle relie la dissuasion à la justification, mais la seconde prémisse est incomplète et n'est pas articulée clairement avec la conclusion, d'où une structure partielle.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565787,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 599,
+      "prompt_tokens": 476,
+      "total_tokens": 1075,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

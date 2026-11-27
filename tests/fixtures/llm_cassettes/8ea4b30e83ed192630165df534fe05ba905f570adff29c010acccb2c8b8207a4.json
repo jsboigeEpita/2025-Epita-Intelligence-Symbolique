@@ -1,0 +1,36 @@
+{
+  "key": "8ea4b30e83ed192630165df534fe05ba905f570adff29c010acccb2c8b8207a4",
+  "value": {
+    "id": "msg_011ChNfVkR2huPaH4djjE5cB",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "```json\n{\"chain_holds\": false, \"structure_verdict\": \"saut_logique\", \"reasoning\": \"Le fait que tous les pays européens aient déjà réformé leurs retraites ne établit pas qu'une réforme soit nécessaire ici, car cela relève d'un argument d'autorité ou d'imitation qui ne prend pas en compte les spécificités des systèmes nationaux, et aucune prémisse ne justifie la nécessité.\"}\n```",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795564899,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 297,
+      "prompt_tokens": 681,
+      "total_tokens": 978,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

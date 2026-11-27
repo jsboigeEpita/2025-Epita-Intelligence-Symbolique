@@ -1,0 +1,36 @@
+{
+  "key": "b10dccc550717710576eaccc90271480ec8825e76478273a300df7c58bcc6d16",
+  "value": {
+    "id": "msg_011ChNgkhLmm4y8AU1uTsoc2",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\": 0.5, \"exhibit\": \"Trois points distincts : (1) hausse globale de 1,1 °C depuis l'ère préindustrielle, établie par les mesures de température ; (2) vitesse sans précédent du changement climatique actuel ; (3) réfutation de l'objection sceptique « le climat a toujours changé », qui omet précisément cette vitesse. Redondance localisée : le point 3 reprend la notion de vitesse du point 2, mais il la mobilise pour répondre à une objection, ce qui fait progresser l'argument sans répéter l'idée. Aucune idée n'est martelée.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565890,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 439,
+      "prompt_tokens": 441,
+      "total_tokens": 880,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

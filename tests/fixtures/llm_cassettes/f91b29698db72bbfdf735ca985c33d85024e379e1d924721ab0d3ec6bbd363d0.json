@@ -1,0 +1,36 @@
+{
+  "key": "f91b29698db72bbfdf735ca985c33d85024e379e1d924721ab0d3ec6bbd363d0",
+  "value": {
+    "id": "msg_011ChNgbEL4sw3B55hqNkjny",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "```json\n{\"has_opposing_claim\": false, \"opposing_claim\": \"\", \"main_thesis\": \"La peine de mort est une sanction nécessaire dans certains cas extrêmes.\"}\n```",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565760,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 242,
+      "prompt_tokens": 432,
+      "total_tokens": 674,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

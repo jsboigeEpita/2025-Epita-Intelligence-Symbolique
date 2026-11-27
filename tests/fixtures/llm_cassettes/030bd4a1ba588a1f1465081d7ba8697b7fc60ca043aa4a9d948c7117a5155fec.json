@@ -1,0 +1,36 @@
+{
+  "key": "030bd4a1ba588a1f1465081d7ba8697b7fc60ca043aa4a9d948c7117a5155fec",
+  "value": {
+    "id": "msg_011ChNfVNWAVR7rZchYFk3hj",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\": 1.0, \"exhibit\": \"Position adverse identifiée : « La réforme des retraites est nécessaire, car tous les pays européens l'ont déjà faite » (position du Premier ministre). Verdict d'engagement : engagement_réel, c'est-à-dire que la thèse adverse est effectivement prise en charge et non seulement mentionnée.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795564895,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 375,
+      "prompt_tokens": 412,
+      "total_tokens": 787,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

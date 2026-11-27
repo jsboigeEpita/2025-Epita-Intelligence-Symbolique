@@ -1,0 +1,21 @@
+{
+  "key": "d3bc97e8843d2c58456473b623f9fb9a83b142efd87e76d21ad70a35737c06b2",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "```json\n{\n  \"propositions\": [\"all_men_mortal\", \"socrates_wise\"],\n  \"modal_formulas\": [\"[](all_men_mortal)\", \"<>(socrates_wise)\"]\n}\n```\n\nLa logique modale propositionnelle ne représente pas les quantificateurs. « Tous les hommes sont mortels » est donc traduit par une proposition atomique unique, `all_men_mortal`.",
+      "metadata": {
+        "logprobs": null,
+        "id": "msg_011ChNgTPeS3ah7zabNhqL7M",
+        "created": 1795565655,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 534,
+          "prompt_tokens_details": null,
+          "completion_tokens": 383,
+          "completion_tokens_details": null
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,36 @@
+{
+  "key": "0d19a1db5c8bf372c0c4ccc31d330fde12abdef17edad24acd2b6bb127ae39a7",
+  "value": {
+    "id": "msg_011ChNfVdGunjxRFtCEtmDWZ",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"engages_real_claim\": true, \"engagement_verdict\": \"engagement_réel\", \"reasoning\": \"La réfutation cite littéralement la formule « dans l'ordre des choses » du gouvernement pour la qualifier de sophisme naturaliste, s'attaque à l'argument de l'effondrement à cinq ans, et conteste la projection de déficit de 2,3 % en pointant son hypothèse de croissance de 1,8 %, soit trois éléments réels de la position adverse.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795564899,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 493,
+      "prompt_tokens": 740,
+      "total_tokens": 1233,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "key": "1459e6ccc89392fdcdf4419038970f55fdea854a9fd077bc8b8477a1673f9718",
+  "value": {
+    "id": "msg_011ChNgj5eAUywLJw1wPaHHL",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\": 1.0, \"exhibit\": \"Position adverse identifiée : « Le climat a toujours changé, donc le changement climatique actuel n'a rien d'exceptionnel » (thèse sceptique). Verdict d'engagement : engagement_réel, la thèse adverse est réellement adressée et non réduite à un homme de paille.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565867,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 300,
+      "prompt_tokens": 414,
+      "total_tokens": 714,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}

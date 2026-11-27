@@ -1,0 +1,36 @@
+{
+  "key": "b70f29884438ba8292a9a5c6db510941bdc02a053a804c88719b5af6c27fa976",
+  "value": {
+    "id": "msg_011ChNfuGRTTjfGNmteT5wTK",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "```json\n{\"score\": 1.0, \"exhibit\": \"Thèse : « Ce que les experts affirment à l'unanimité est vrai. » Digressions localisées : aucune. Verdict de l'étape 2 : toutes les propositions sont pertinentes et servent la thèse.\"}\n```",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1795565218,
+    "model": "claude-haiku-5-5",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 316,
+      "prompt_tokens": 370,
+      "total_tokens": 686,
+      "completion_tokens_details": null,
+      "prompt_tokens_details": null
+    }
+  }
+}
