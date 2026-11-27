@@ -22,6 +22,7 @@ no case pays a model call (``llm_requests`` is 0 on every path).
 
 from __future__ import annotations
 
+import hashlib
 import json
 import subprocess
 import sys
@@ -35,6 +36,7 @@ sys.path.insert(0, str(REPO_ROOT))
 
 from scripts.panel import act_replay_fidelity as w  # noqa: E402
 from scripts.panel import replay_acts as ra  # noqa: E402
+from tests.support.tree_walk import iter_files  # noqa: E402
 
 DOCS = ("doc_s1", "doc_s2")
 MARK = "INVENTED-ACT-launcher-3658"
@@ -51,6 +53,7 @@ wanted = ("scripts.dataset.judge_panel", "scripts.dataset.render_campaign_readin
 print("CHILD " + json.dumps({
     "rc": rc,
     "loaded": sorted(name for name in wanted if name in sys.modules),
+    "live_module": "scripts.panel.act_replay_live" in sys.modules,
 }))
 """
 
@@ -171,7 +174,11 @@ def test_the_same_probe_does_import_the_builders_on_a_whole_cycle(
     assert dest.is_dir()
 
 
-def test_the_live_path_is_refused_by_name(tmp_path: Path) -> None:
+def test_the_live_path_refuses_a_destination_that_is_not_a_tag(
+    tmp_path: Path,
+) -> None:
+    """``--acts live`` runs, and stops before spending: a destination outside
+    the cycles' folder is not a tag the judges stage could open."""
     cycle = _write_cycle(tmp_path)
     dest = tmp_path / "dest"
 
@@ -180,8 +187,35 @@ def test_the_live_path_is_refused_by_name(tmp_path: Path) -> None:
     )
 
     assert child["rc"] == ra.EXIT_USAGE
+    assert child["live_module"] is True
     assert child["loaded"] == []
     assert not dest.exists()
+
+
+def test_the_live_path_reaches_the_live_runner_by_name(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The routing witness: the launcher calls the live module's own ``main``,
+    with the panel it parsed and the arguments it received."""
+    from scripts.panel import act_replay_live as live
+
+    cycle = _write_cycle(tmp_path)
+    dest = tmp_path / "dest"
+    seen: List[Any] = []
+
+    def _recorded(*args: Any, **kwargs: Any) -> int:
+        seen.append((args, kwargs))
+        return 7
+
+    monkeypatch.setattr(live, "main", _recorded)
+
+    rc = ra.main(["--cycle-dir", str(cycle), "--dest", str(dest), "--acts", ra.LIVE])
+
+    assert rc == 7
+    args, kwargs = seen[0]
+    assert args[0] == cycle and args[1] == dest
+    assert args[2] is None and kwargs == {}
+    assert args[3][-2:] == ["--acts", ra.LIVE]
 
 
 # ---------------------------------------------------------------------------
@@ -230,6 +264,154 @@ def test_the_report_never_carries_the_act_text(tmp_path: Path) -> None:
     assert report["provenance"]["llm_requests"] == 0
     instruments = report["provenance"]["code"]["instruments"]
     assert all(instruments[name] for name in instruments), instruments
+
+
+# ---------------------------------------------------------------------------
+# 2b. The report digests the cycle's inputs before and after the measurement
+# ---------------------------------------------------------------------------
+
+
+def _files_on_disk(cycle: Path) -> Dict[str, str]:
+    """What the cycle holds, read independently of the launcher's own reader.
+
+    The walk is the repository's sanctioned one (``iter_files``, #2607), not
+    ``rglob``: an undeclared recursive walk in the test tree reddens
+    ``test_recursive_walk_inventory_2607`` — caught here on the first battery.
+    """
+    return {
+        path.relative_to(cycle)
+        .as_posix(): hashlib.sha256(path.read_bytes())
+        .hexdigest()
+        for path in iter_files(cycle, pattern="*")
+    }
+
+
+def _last_json_object(out: str) -> Dict[str, Any]:
+    """The last JSON object printed on stdout, whatever else the imports said."""
+    lines = out.splitlines()
+    for start in range(len(lines) - 1, -1, -1):
+        if lines[start] != "{":
+            continue
+        try:
+            return json.loads("\n".join(lines[start:]))
+        except ValueError:
+            continue
+    raise AssertionError(f"no JSON object on stdout:\n{out}")
+
+
+def _writing_during_the_run(
+    cycle: Path, monkeypatch: pytest.MonkeyPatch, write
+) -> None:
+    """Break, on purpose, the claim that the replay writes nothing: ``write``
+    runs while the second document is measured."""
+    real = ra.document
+
+    def _then_writes(
+        doc: str, state: Any, signature: Any, fidelity: Any
+    ) -> Dict[str, Any]:
+        if doc == DOCS[1]:
+            write(cycle)
+        return real(doc, state, signature, fidelity)
+
+    monkeypatch.setattr(ra, "document", _then_writes)
+
+
+def test_the_report_digests_every_input_file_before_and_after(tmp_path: Path) -> None:
+    cycle = _write_cycle(tmp_path)
+
+    report = ra.replay(cycle, tmp_path / "dest", list(DOCS))
+
+    on_disk = _files_on_disk(cycle)
+    assert (
+        len(on_disk) == 2 * len(DOCS) + 2
+    )  # state + signature per document, two records
+    assert report["cycle_inputs"] == {
+        "files": len(on_disk),
+        "unchanged": True,
+        "drifted": [],
+        "before": on_disk,
+        "after": on_disk,
+    }
+    assert report["ok"] is True, report["failures"]
+
+
+def test_a_file_rewritten_during_the_run_is_named_and_fails_the_report(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The witness: one byte written into the cycle it reads reddens — and the
+    red is the cycle's, not a render's (the documents still round-trip)."""
+    cycle = _write_cycle(tmp_path)
+    touched = cycle / "states" / f"state_full_{DOCS[0]}.json"
+
+    def _append(cycle: Path) -> None:
+        touched.write_text(touched.read_text(encoding="utf-8") + " ", encoding="utf-8")
+
+    _writing_during_the_run(cycle, monkeypatch, _append)
+
+    report = ra.replay(cycle, tmp_path / "dest", list(DOCS))
+
+    inputs = report["cycle_inputs"]
+    name = f"states/state_full_{DOCS[0]}.json"
+    original = json.dumps(_state(DOCS[0]), ensure_ascii=False).encode("utf-8")
+    assert report["failures"] == {}
+    assert report["ok"] is False
+    assert inputs["unchanged"] is False
+    assert inputs["drifted"] == [name]
+    assert set(inputs["before"]) == set(inputs["after"])
+    assert inputs["before"][name] == hashlib.sha256(original).hexdigest()
+    assert inputs["after"][name] == hashlib.sha256(original + b" ").hexdigest()
+
+
+def test_a_file_added_into_the_cycle_during_the_run_is_named(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A file that was not there before is a write too, not a pass."""
+    cycle = _write_cycle(tmp_path)
+
+    def _add(cycle: Path) -> None:
+        (cycle / "states" / "state_full_extra.json").write_text("{}", encoding="utf-8")
+
+    _writing_during_the_run(cycle, monkeypatch, _add)
+
+    report = ra.replay(cycle, tmp_path / "dest", list(DOCS))
+
+    assert report["ok"] is False
+    assert report["cycle_inputs"]["drifted"] == ["states/state_full_extra.json"]
+    assert (
+        report["cycle_inputs"]["after"]["states/state_full_extra.json"]
+        == hashlib.sha256(b"{}").hexdigest()
+    )
+
+
+def test_the_command_line_summary_names_what_drifted(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Exit 1, and the one-line summary says why without the whole map; the
+    report on disk keeps the map."""
+    cycle = _write_cycle(tmp_path)
+
+    def _rewrite(cycle: Path) -> None:
+        (cycle / "cycle.json").write_text("{}", encoding="utf-8")
+
+    _writing_during_the_run(cycle, monkeypatch, _rewrite)
+    dest = tmp_path / "dest"
+
+    assert ra.main(["--cycle-dir", str(cycle), "--dest", str(dest)]) == ra.EXIT_FAILED
+
+    out = capsys.readouterr().out
+    summary = _last_json_object(out)
+    assert summary["cycle_inputs"] == {
+        "files": 2 * len(DOCS) + 2,
+        "unchanged": False,
+        "drifted": ["cycle.json"],
+    }
+    written = json.loads((dest / ra.REPORT).read_text(encoding="utf-8"))
+    assert (
+        written["cycle_inputs"]["before"]["cycle.json"]
+        != written["cycle_inputs"]["after"]["cycle.json"]
+    )
 
 
 # ---------------------------------------------------------------------------
