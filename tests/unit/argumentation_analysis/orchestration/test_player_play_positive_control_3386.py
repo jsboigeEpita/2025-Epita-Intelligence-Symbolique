@@ -34,6 +34,8 @@ is why the panel's zeros on that field were never read as "nothing moved".
 
 from __future__ import annotations
 
+import json
+from pathlib import Path
 from typing import Any, Dict, List
 from unittest.mock import patch
 
@@ -235,3 +237,92 @@ class TestTheProducerRecordsIt:
         # The flip does not become the verdict: the winner the pipeline
         # renders comes from the virtue aggregate, a different population.
         assert output["governance_verdict"]["winner"] != play["uniform_winner"]
+
+
+# ---------------------------------------------------------------------------
+# The reachable half of the re-open trigger (#3692): the declared winner's own
+# first-place votes, as the counter prints them
+# ---------------------------------------------------------------------------
+
+
+def _write_state(states: Path, doc: str, read: Dict[str, Any]) -> None:
+    """A recorded state as the counter reads it: the read lives under ``state``."""
+    (states / f"state_full_{doc}.json").write_text(
+        json.dumps({"state": {"strategic_read": read}}), encoding="utf-8"
+    )
+
+
+class TestTheDeclaredWinnersFirstPlaceVotes:
+    def test_the_planted_flip_declares_a_winner_nobody_ranks_first(self) -> None:
+        """The signal reads 0 exactly where ``outcome_changed`` can be True."""
+        from scripts.panel.count_player_play_3386 import declared_first_places
+
+        options, ballots, agents = _profile(4, 5)
+        sensitivity = play_sensitivity(
+            agents, options, ballots, _aggregate_governance_votes
+        )
+        assert sensitivity["winner_declared"] == "opt_w"
+        assert declared_first_places(sensitivity["winner_declared"], ballots) == 0
+
+    def test_the_column_follows_the_declared_aggregate_not_the_ballots(
+        self,
+    ) -> None:
+        """The same ballots read 0 and 4 under the two declared winners: the
+        column is a property of who the aggregate declared, not of a fixed
+        ballot statistic. ``opt_w`` wins by Condorcet with no first place;
+        ``opt_x`` wins by majority with four."""
+        from scripts.panel.count_player_play_3386 import declared_first_places
+
+        options, ballots, agents = _profile(4, 5)
+        full = _aggregate_governance_votes(agents, options, ballots)
+        assert full["winner"] == "opt_w"
+        assert declared_first_places(full["winner"], ballots) == 0
+        majority = _aggregate_without_the_condorcet_tier(agents, options, ballots)
+        assert majority["winner"] == "opt_x"
+        assert declared_first_places(majority["winner"], ballots) == 4
+
+    def test_a_first_placed_winner_reads_at_least_one(self) -> None:
+        """The shape the pipeline does produce: the declared winner is some
+        elector's first vote, so the count is at least 1 — the 143 of 143 the
+        25/11 State on #3386 measured."""
+        from scripts.panel.count_player_play_3386 import declared_first_places
+
+        options, ballots, agents = _profile(2, 0)
+        sensitivity = play_sensitivity(
+            agents, options, ballots, _aggregate_governance_votes
+        )
+        firsts = declared_first_places(sensitivity["winner_declared"], ballots)
+        assert firsts is not None and firsts >= 1, firsts
+
+    def test_no_declared_winner_is_not_a_zero(self) -> None:
+        """Honest absence: a 0 would read as "a winner nobody ranks first"."""
+        from scripts.panel.count_player_play_3386 import declared_first_places
+
+        assert declared_first_places(None, [["opt_x"]]) is None
+
+
+class TestTheCounterPrintsTheColumn:
+    def test_the_two_profiles_print_0_and_2_and_the_summary_counts_the_zeros(
+        self, tmp_path, capsys
+    ) -> None:
+        """The column as the production script emits it, on invented states —
+        and it stays a count: no framing label, no player name."""
+        from scripts.panel import count_player_play_3386 as counter
+
+        states = tmp_path / "states"
+        states.mkdir()
+        _write_state(states, "doc_planted", _planted_read(4, 5))
+        _write_state(states, "doc_plain", _planted_read(2, 0))
+        assert counter.main(["--states-dir", str(states)]) == 0
+        out = capsys.readouterr().out
+        assert "doc_planted: 9 player electors over 7 framings" in out
+        assert "declared_winner_firsts=0 " in out
+        assert "doc_plain: 2 player electors over 2 framings" in out
+        assert "declared_winner_firsts=2 " in out
+        assert (
+            "declared winner with 0 first-place votes on 1 of 2 documents "
+            "that declare one" in out
+        ), out
+        assert "(0 without a declared winner)" in out
+        assert "opt_" not in out
+        assert "joueur_" not in out
