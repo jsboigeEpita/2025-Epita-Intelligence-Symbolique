@@ -46,10 +46,16 @@ Three properties, in this order, and the order is the instrument:
    nothing. Nothing is altered on disk; the alteration lives in the returned
    dictionary.
 
-``--acts recorded`` is the only path wired today; ``--acts live`` is refused
-**by name**, because the live path pays one call per act and per document and
-waits for 46a+b (the production act fixes) to land. A refusal that says what
-is missing is worth more than a flag that silently spends.
+``--acts recorded`` (the default) is the free path: it replays the recorded
+acts and proves the render round-trips. ``--acts live`` runs
+:mod:`scripts.panel.act_replay_live`, which **re-runs** the three acts over the
+recorded states — one model call per act and per document, the only paid step
+of the replay — and writes a sibling tag ``run_cycle --stage judges`` accepts.
+That runner is imported only once this launcher's own ``--acts`` dispatch has
+chosen it, and it answers the same preflight before it imports anything that
+could build a prompt; its identity control refuses the run, before a call,
+when the instrument cannot give back the record byte for byte. A refusal that
+says what is missing is worth more than a flag that silently spends.
 
 The cycle's own ``pipeline.json`` is applied as the cycle applies it before a
 paid judge (:func:`run_cycle.pipeline_problem`): a failed batch, a HEAD that
@@ -397,13 +403,17 @@ def replay(
     read as a measurement, ``stage`` says where it stopped.
     """
     if acts != RECORDED:
+        # Not a silent fallback: the paid path is another module with its own
+        # gate, its own budget and its own tag. A caller that asks for it here
+        # is sent to it by name.
         return {
             "ok": False,
             "stage": STAGE_PREFLIGHT,
             "refused": (
-                f"--acts {acts}: the live path is not wired. It pays one model "
-                "call per act and per document and waits for 46a+b; only "
-                f"--acts {RECORDED} runs today."
+                f"--acts {acts}: this launcher replays the recorded acts only. "
+                "The live path is scripts.panel.act_replay_live (it re-runs the "
+                "acts, pays one call per act and per document, and writes a "
+                "judge-readable tag)."
             ),
         }
     verdict = preflight(Path(cycle_dir), Path(destination), panel, repo_root)
@@ -518,7 +528,11 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         "--acts",
         default=RECORDED,
         choices=(RECORDED, LIVE),
-        help=f"{RECORDED} (default) replays the recorded acts; {LIVE} is refused",
+        help=(
+            f"{RECORDED} (default) replays the recorded acts, free; {LIVE} "
+            "re-runs them on the recorded states (one paid call per act and "
+            "per document) and writes a tag the judges stage accepts"
+        ),
     )
     args = parser.parse_args(invoked)
 
@@ -546,6 +560,14 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
                 )
             )
             return EXIT_USAGE
+
+    if args.acts == LIVE:
+        # Imported here, after the panel is parsed and before anything is read:
+        # the live runner answers the same preflight itself, so a cycle that
+        # does not hold still imports no text builder.
+        from scripts.panel.act_replay_live import main as live_main
+
+        return live_main(args.cycle_dir, args.dest, panel, invoked)
 
     report = replay(args.cycle_dir, args.dest, panel, acts=args.acts, argv=invoked)
     if report.get("stage") == STAGE_PREFLIGHT and not report.get("ok"):

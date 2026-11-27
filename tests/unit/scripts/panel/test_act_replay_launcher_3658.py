@@ -51,6 +51,7 @@ wanted = ("scripts.dataset.judge_panel", "scripts.dataset.render_campaign_readin
 print("CHILD " + json.dumps({
     "rc": rc,
     "loaded": sorted(name for name in wanted if name in sys.modules),
+    "live_module": "scripts.panel.act_replay_live" in sys.modules,
 }))
 """
 
@@ -171,7 +172,11 @@ def test_the_same_probe_does_import_the_builders_on_a_whole_cycle(
     assert dest.is_dir()
 
 
-def test_the_live_path_is_refused_by_name(tmp_path: Path) -> None:
+def test_the_live_path_refuses_a_destination_that_is_not_a_tag(
+    tmp_path: Path,
+) -> None:
+    """``--acts live`` runs, and stops before spending: a destination outside
+    the cycles' folder is not a tag the judges stage could open."""
     cycle = _write_cycle(tmp_path)
     dest = tmp_path / "dest"
 
@@ -180,8 +185,35 @@ def test_the_live_path_is_refused_by_name(tmp_path: Path) -> None:
     )
 
     assert child["rc"] == ra.EXIT_USAGE
+    assert child["live_module"] is True
     assert child["loaded"] == []
     assert not dest.exists()
+
+
+def test_the_live_path_reaches_the_live_runner_by_name(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The routing witness: the launcher calls the live module's own ``main``,
+    with the panel it parsed and the arguments it received."""
+    from scripts.panel import act_replay_live as live
+
+    cycle = _write_cycle(tmp_path)
+    dest = tmp_path / "dest"
+    seen: List[Any] = []
+
+    def _recorded(*args: Any, **kwargs: Any) -> int:
+        seen.append((args, kwargs))
+        return 7
+
+    monkeypatch.setattr(live, "main", _recorded)
+
+    rc = ra.main(["--cycle-dir", str(cycle), "--dest", str(dest), "--acts", ra.LIVE])
+
+    assert rc == 7
+    args, kwargs = seen[0]
+    assert args[0] == cycle and args[1] == dest
+    assert args[2] is None and kwargs == {}
+    assert args[3][-2:] == ["--acts", ra.LIVE]
 
 
 # ---------------------------------------------------------------------------
