@@ -494,3 +494,73 @@ class TestTheConsensusKeepsTheFlag:
             },
         )
         assert "**bras pipeline dégradé**" in table
+
+
+# ---------------------------------------------------------------------------
+# #3658 item 46a — a length-stopped act is its own degraded state
+# ---------------------------------------------------------------------------
+#
+# The conjunctive rule above reads an EMPTY act. A capped act is not empty:
+# the cap ended its text, so a truncated render would be graded as a healthy
+# arm (measured: the c22 panel passed a document whose two acts were cut). The
+# producer files the cut under its own CODE in the act's degraded map, and the
+# reader matches that code — never the wording.
+
+CUT_REPORT = {
+    "act2_narrative": {
+        "act2_narrative_cut_length": (
+            "l'appel de l'acte s'est arrêté sur finish_reason=length "
+            "(plafond 16384) : l'acte a été coupé au milieu du texte."
+        )
+    }
+}
+
+
+class TestTheCutArm:
+    def test_a_cut_act_is_a_degraded_arm(self):
+        """The act renders — and the reader's text is still a truncation."""
+        health = jp.arm_health(_state_payload(report=CUT_REPORT))
+        assert health["cut_acts"] == ["act2_narrative"]
+        assert health["empty_acts"] == []
+        assert health["pipeline_degraded"] is True
+
+    def test_a_report_on_rendered_acts_is_still_not_the_signal(self):
+        """Control: the widening is by CODE. The c2 shape — a report whose
+        codes are not cuts — still flags nothing, exactly as before."""
+        health = jp.arm_health(_state_payload(report=DEGRADED_REPORT))
+        assert health["cut_acts"] == []
+        assert health["pipeline_degraded"] is False
+
+    def test_the_cut_code_is_the_producer_s_own_suffix(self):
+        """The reader and the producer cannot drift: the guard imports the
+        suffix, and a code built by the producer's helper is what it sees."""
+        from argumentation_analysis.reporting.restitution.llm_weaving import (
+            cut_code,
+        )
+
+        assert jp.CUT_CODE_SUFFIX == "_cut_length"
+        assert cut_code("act2_narrative").endswith(jp.CUT_CODE_SUFFIX)
+
+    def test_two_cut_documents_refuse_before_the_first_paid_call(self, tmp_path):
+        world = make_world(
+            tmp_path,
+            states={doc: {"report": CUT_REPORT} for doc in PANEL[:2]},
+        )
+        judge = FakeJudge()
+        rc = _run(world, judge)
+        assert rc == 3, "the refusal is a distinct non-zero exit, not a WARN"
+        assert judge.calls == []
+        assert not (world["out"] / "table.md").exists()
+
+    def test_one_cut_document_is_judged_and_its_record_names_the_cut(self, tmp_path):
+        """Below the threshold the pass runs — the flag is a reading, not a
+        silent veto — and the document carries the cut wherever the health is
+        recorded."""
+        world = make_world(tmp_path, states={PANEL[0]: {"report": CUT_REPORT}})
+        judge = FakeJudge()
+        rc = _run(world, judge)
+        assert rc == 0
+        assert judge.calls, "a single cut document is judged, not refused"
+        record = _record(world, PANEL[0])
+        assert record["pipeline_cut_acts"] == ["act2_narrative"]
+        assert record["pipeline_degraded"] is True

@@ -539,6 +539,32 @@ _EXTRACTION_MAX_TOKENS = _env_number("EXTRACTION_MAX_TOKENS", 8192, int)
 # PHASE_MAX_TOKENS; 0 omits the param (the pre-fix behaviour, never advised).
 _PHASE_MAX_TOKENS = _env_number("PHASE_MAX_TOKENS", 8192, int)
 
+# #3658 item 46b — the acts' OWN ceiling, named apart from the shared one.
+# ``PHASE_MAX_TOKENS`` was measured on JSON phases; the acts write prose AFTER
+# a reasoning pass, and on the measured route the reasoning tokens are billed
+# but not returned (#3096 comment 6527232924), so a cap is spent before the
+# act's first word. The c22 panel (Haiku, cycle 22) stopped EVERY act at
+# exactly 8 192: Act II on 9 of its 12 calls, Act III on 9 of its 11, and 7 of
+# 10 documents came out with an empty act.
+#
+# The arithmetic, from measures already in the issue:
+# - c22 rate: 8 192 tokens take 38 to 40 s, so about 210 tokens per second
+#   end-to-end (prompt handling included in those calls).
+# - the acts' phase budget is 180 s each (``workflows.py``: act1_framing,
+#   act2_narrative, act3_conclusion), and the two long acts make up to TWO
+#   calls (the primary and the bounded one retry, #3343).
+# - two calls must fit 180 s → at most ~90 s per call → at most ~18 900
+#   tokens per call at 210 tok/s.
+# 16 384 (2^14) is the value: ~78 s per call, ~156 s for two calls, ~24 s of
+# margin for prompt handling. It is TWICE the cap that failed, and it covers
+# the measures the issue carried: doc_J's Act II spent 26 225 completion
+# tokens over 2 calls (~13.1 k per call), and the Sonnet c21 maximum was
+# 14.4 k per document over 2 calls — both fit under 16 384 with ~20 % headroom.
+#
+# Override via ACT_MAX_TOKENS; 0 omits the param (the pre-fix wire form).
+# Raising the PHASE budget instead is NOT this fix's business: the acts fit it.
+_ACT_MAX_TOKENS = _env_number("ACT_MAX_TOKENS", 16384, int)
+
 
 # The declared fields that can carry the cap, in the order a settings class
 # spells them (OpenAIChatPromptExecutionSettings has max_tokens; some
@@ -558,18 +584,24 @@ def _name_cap_barren_type(type_name: str, reason: Any) -> None:
         )
 
 
-def _with_phase_max_tokens(settings: Any) -> Any:
-    """Pin the shared cap on an act's SK settings — on the DECLARED field (#3658).
+def _with_phase_max_tokens(settings: Any, cap: Optional[int] = None) -> Any:
+    """Pin a cap on an act's SK settings — on the DECLARED field (#3658).
 
     On the real ``OpenAIChatPromptExecutionSettings`` a key added to
     ``extension_data`` after construction is never serialised (measured SK
     1.44, coordinator review R1204): the cap rides the declared
     ``max_tokens`` field — or ``max_completion_tokens`` on a class that
     spells it that way, named once. An explicit per-call cap always wins;
-    ``PHASE_MAX_TOKENS=0`` adds nothing. A settings class carrying neither
-    field is named once and left as it was.
+    a limit of 0 adds nothing. A settings class carrying neither field is
+    named once and left as it was.
+
+    ``cap`` (#3658 item 46b) is the site's OWN ceiling; ``None`` keeps the
+    shared ``PHASE_MAX_TOKENS``. The three acts pass ``_ACT_MAX_TOKENS``, so
+    the value that is sized for prose-after-reasoning is read at the call site
+    rather than inferred from the phase name here.
     """
-    if not _PHASE_MAX_TOKENS or settings is None:
+    limit = _PHASE_MAX_TOKENS if cap is None else cap
+    if not limit or settings is None:
         return settings
     for field in _CAP_FIELDS:
         if getattr(settings, field, None):
@@ -579,12 +611,47 @@ def _with_phase_max_tokens(settings: Any) -> Any:
         if not hasattr(settings, field):
             continue
         try:
-            setattr(settings, field, _PHASE_MAX_TOKENS)
+            setattr(settings, field, limit)
         except (ValueError, AttributeError) as exc:
             _name_cap_barren_type(type_name, exc)
         return settings
     _name_cap_barren_type(type_name, "no declared cap field")
     return settings
+
+
+def _expose_finish_reason(call: Any, result: Any, settings: Any) -> None:
+    """Record the call's OWN finish reason on the callable (#3658 item 46a).
+
+    The three act callables kept only ``str(result)`` — which is
+    ``str(value[0])``, the completion's TEXT (SK's ``FunctionResult.__str__``).
+    The completion OBJECT survives in ``FunctionResult.value``, and with it the
+    service's ``finish_reason``: a ``FinishReason`` str-enum on the OpenAI
+    connector, and Anthropic's ``max_tokens`` mapped to ``length``. Exposed the
+    way the persona callable already does (#3658 item 36d), so
+    ``llm_weaving.weave`` reads ONE seam whether the text came from the SK path
+    or a test double.
+
+    ``last_max_tokens`` is the cap the call actually carried, read from the
+    settings — the reason a reader can tell an 8 192 stop from a larger one.
+    Anything unreadable is ``None``, which names nothing: never a guess.
+    """
+    reason = None
+    try:
+        value = getattr(result, "value", None)
+        first = value[0] if isinstance(value, (list, tuple)) and value else value
+        reason = getattr(first, "finish_reason", None)
+    except Exception:  # pragma: no cover - defensive: an unforeseen shape
+        reason = None
+    cap = None
+    for field in _CAP_FIELDS:
+        cap = getattr(settings, field, None)
+        if cap:
+            break
+    try:
+        call.last_finish_reason = reason
+        call.last_max_tokens = cap
+    except Exception:  # pragma: no cover - a callable that refuses attributes
+        pass
 
 
 # #3511 — the FIRST READING's own completion cap, named apart from the
@@ -15741,7 +15808,8 @@ async def _invoke_act2_narrative(
         if not llm_service_id or kernel is None:
             return ""
         settings = _with_phase_max_tokens(
-            kernel.get_prompt_execution_settings_from_service_id(llm_service_id)
+            kernel.get_prompt_execution_settings_from_service_id(llm_service_id),
+            cap=_ACT_MAX_TOKENS,
         )
         result = await kernel.invoke_prompt(
             function_name="act2_narrative_conducted",
@@ -15749,6 +15817,9 @@ async def _invoke_act2_narrative(
             prompt=prompt,
             settings=settings,
         )
+        # #3658 item 46a - Acte II records its OWN finish reason, so a
+        # length stop names the cut instead of reading as a mute model.
+        _expose_finish_reason(_llm, result, settings)
         return str(result) if result else ""
 
     result: Act2Result = await build_act2_narrative(
@@ -16638,7 +16709,8 @@ async def _invoke_act1_framing(
         if not llm_service_id or kernel is None:
             return ""
         settings = _with_phase_max_tokens(
-            kernel.get_prompt_execution_settings_from_service_id(llm_service_id)
+            kernel.get_prompt_execution_settings_from_service_id(llm_service_id),
+            cap=_ACT_MAX_TOKENS,
         )
         result = await kernel.invoke_prompt(
             function_name="act1_framing_conducted",
@@ -16646,6 +16718,9 @@ async def _invoke_act1_framing(
             prompt=prompt,
             settings=settings,
         )
+        # #3658 item 46a - Acte I records its OWN finish reason, so a
+        # length stop names the cut instead of reading as a mute model.
+        _expose_finish_reason(_llm, result, settings)
         return str(result) if result else ""
 
     result: Act1Result = await build_act1_framing(
@@ -16752,7 +16827,8 @@ async def _invoke_act3_conclusion(
         if not llm_service_id or kernel is None:
             return ""
         settings = _with_phase_max_tokens(
-            kernel.get_prompt_execution_settings_from_service_id(llm_service_id)
+            kernel.get_prompt_execution_settings_from_service_id(llm_service_id),
+            cap=_ACT_MAX_TOKENS,
         )
         result = await kernel.invoke_prompt(
             function_name="act3_conclusion_conducted",
@@ -16760,6 +16836,9 @@ async def _invoke_act3_conclusion(
             prompt=prompt,
             settings=settings,
         )
+        # #3658 item 46a - Acte III records its OWN finish reason, so a
+        # length stop names the cut instead of reading as a mute model.
+        _expose_finish_reason(_llm, result, settings)
         return str(result) if result else ""
 
     result: Act3Result = await build_act3_conclusion(
