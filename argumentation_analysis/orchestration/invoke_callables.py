@@ -590,14 +590,26 @@ def _with_phase_max_tokens(settings: Any) -> Any:
 # #3511 — the FIRST READING's own completion cap, named apart from the
 # extraction constant above: a capacity is an INPUT bound (chars per chunk,
 # ``WHOLE_TEXT_CALL_CAPACITY``); this is an OUTPUT bound on the reading's one
-# answer. The inventory at its ceiling (30 moves + thesis, mechanism and 8
-# pillars) measures ≈ 9 k characters of JSON ≈ 2.8 k tokens; 8192 leaves
-# ~2.9× headroom, so a ``finish_reason == "length"`` can only be a degenerate
-# answer — which the panel witness reports per document. Before #3511 the
-# call carried NO completion cap: the provider's own default decided where
-# the inventory ended, unrecorded. Override via FIRST_READING_MAX_TOKENS
-# (set 0 to omit the parameter entirely).
-_FIRST_READING_MAX_TOKENS = _env_number("FIRST_READING_MAX_TOKENS", 8192, int)
+# answer. Before #3511 the call carried NO completion cap: the provider's own
+# default decided where the inventory ended, unrecorded.
+#
+# Sized from the 24/11 measure (R1211: 15 uncut calls on the panel's long
+# documents), not from the inventory's visible JSON. On those calls completion
+# ran from 4 226 to 11 617 tokens, and 5 of 15 exceeded 8 192. The two
+# premises of the original sizing are both false:
+# - the prompt states 80 entries on these documents, not 30 moves;
+# - on this endpoint the hidden thinking is billed INSIDE the same cap
+#   (#3658), so a cap is spent before the answer's first visible token.
+# At 8 192 the reading stopped on the longest document and kept 7 moves.
+#
+# 24 576 (3 × 8 192) is 2.1× the measured maximum and fits the phase's own
+# 180 s budget (``workflows.py``, the ``first_reading`` phase): the slowest
+# measured call ran 11 617 tokens in 44.0 s — about 264 tokens per second, so
+# 24 576 takes about 93 s — and at c22's slower ~210 tokens per second it
+# takes about 117 s. Override via FIRST_READING_MAX_TOKENS (set 0 to omit the
+# parameter entirely); an override is a measuring tool, the default is what
+# production runs.
+_FIRST_READING_MAX_TOKENS = _env_number("FIRST_READING_MAX_TOKENS", 24576, int)
 
 
 async def _guarded_chat_completion(client: Any, **kwargs: Any) -> Any:
