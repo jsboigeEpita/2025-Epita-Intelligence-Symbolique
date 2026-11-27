@@ -697,11 +697,47 @@ class TestFirstReadingCompletionCap:
             state.raw_text, {"_state_object": state}
         )
         # its OWN cap, named apart from the extraction capacity constant
-        assert ic._FIRST_READING_MAX_TOKENS == 8192
-        assert captured.get("max_completion_tokens") == 8192
+        assert ic._FIRST_READING_MAX_TOKENS == 24576
+        assert captured.get("max_completion_tokens") == 24576
         # the call went through the persona seam (the fake answer "{}" is a
         # parse_error — the witness measures the KWARGS, not the answer)
         assert payload.get("status") == "parse_error"
+
+    def test_the_cap_is_sized_from_the_measure_and_fits_its_phase_budget(self):
+        """#3511 item 46d — the cap's two bounds, on the numbers that set it.
+
+        The 24/11 measure (R1211): on 15 uncut calls completion ran from 4 226
+        to 11 617 tokens, 5 of 15 above 8 192, and the slowest call took
+        44.0 s. The cap must cover that maximum with headroom, and its
+        generation must fit the phase's own budget — read from the workflows,
+        not restated here, so lowering the budget below the cap reddens.
+        """
+        from argumentation_analysis.orchestration import invoke_callables as ic
+        from argumentation_analysis.orchestration import workflows as wf
+
+        measured_max = 11_617  # tokens, the largest measured completion
+        slowest_seconds = 44.0  # that maximum's own call
+        conservative_rate = 210  # tokens per second, the c22 route's rate
+
+        cap = ic._FIRST_READING_MAX_TOKENS
+        assert cap >= 2 * measured_max, cap
+        # the route's slowest measured call is FASTER than the rate used
+        # here, so the budget check below is the conservative one
+        assert measured_max / slowest_seconds > conservative_rate
+
+        budgets = [
+            definition.get_phase("first_reading").timeout_seconds
+            for builder in (
+                wf.build_standard_workflow,
+                wf.build_spectacular_workflow,
+                wf.build_full_workflow,
+            )
+            for definition in (builder(),)
+            if definition.get_phase("first_reading") is not None
+        ]
+        assert budgets, "no workflow carries the first_reading phase"
+        assert all(budget for budget in budgets), budgets
+        assert cap / conservative_rate < min(budgets), (cap, budgets)
 
     async def test_other_personas_send_the_shared_phase_cap(self, monkeypatch):
         """#3658 item 36b supersedes this file's original "no cap" contract:
