@@ -16,14 +16,22 @@ and therefore hashes a different key for the same request. Measured (#3411): one
 hashes to `b7a81cc8…` on the seat (absent from the store) and `91192b98…` with the prefix
 stripped (present).
 
+A second gap adds calls instead of re-keying them. A `.env` that sets
+`SELF_HOSTED_LLM_ENDPOINT` (the first of the two phases below also needs
+`SELF_HOSTED_LLM_MODEL`) switches on the self-hosted phases, `_invoke_camembert_fallacy` and
+`_invoke_local_llm` (`orchestration/invoke_callables.py`), which report "not configured"
+without it. Those phases make SK calls CI never makes, so no cassette holds their keys.
+Measured (#3690) on `main` `df82a458e`: six lookups in two tests, and `miss_replay=6` with
+`hit=1702` — the CI count — so the `hit` check alone cannot see this gap.
+
 ## The recipe (measured)
 
 ```bash
 # 1. Import the committed cassettes into a replay store (once per store).
 python scripts/cassettes/import.py tests/fixtures/llm_cassettes .cache/llm_replay_band --purge --verify-run
 
-# 2. Replay the band's population with the CI route — the two empty vars are the point:
-OPENROUTER_API_KEY="" OPENROUTER_BASE_URL="" \
+# 2. Replay the band's population with the CI route — the three empty vars are the point:
+OPENROUTER_API_KEY="" OPENROUTER_BASE_URL="" SELF_HOSTED_LLM_ENDPOINT="" \
 OPENAI_API_KEY=replay-band-no-live-anti-1019 \
 LLM_CACHE_MODE=replay LLM_CACHE_DIR=.cache/llm_replay_band \
 REPLAY_GATE=1 REPLAY_STATS_OUT=replay_stats.json \
@@ -35,6 +43,10 @@ Measured on `fix/penalty-register-order-3394`: 52 passed, `hit=1856` — the sam
 CI job — and `miss_replay=7`. Without the two empty vars the same run is 23 failed / 28
 passed, `hit=30`, `miss_replay=32`, which is not a measurement of the cassettes.
 
+Measured again on `main` `df82a458e` with the three empty vars and a store holding every
+committed key (#3690): 51 passed, `hit=1702`, `miss_replay=0`. The same seat without
+`SELF_HOSTED_LLM_ENDPOINT=""` reads `miss_replay=6`.
+
 ## Reading the counters
 
 - `hit` should match the CI job's count for the same branch. A large gap means the route is
@@ -44,5 +56,6 @@ passed, `hit=30`, `miss_replay=32`, which is not a measurement of the cassettes.
   invalidates a cassette; the re-record (`record-llm-cassettes.yml`, manual, paid) rides the
   same PR. The miss message now names the model it hashed (#3411).
 - **A fixed family of keys, identical run after run** — a seat `.env` gap (e.g. the
-  SELF_HOSTED keys missing on some seats, R1288). It is not the branch; the CI job is the
-  instrument that decides.
+  SELF_HOSTED keys missing on some seats, R1288; `SELF_HOSTED_LLM_ENDPOINT` set, #3690). It
+  is not the branch; the CI job is the instrument that decides. A family that survives the
+  recipe above names a gap this page does not carry yet.
