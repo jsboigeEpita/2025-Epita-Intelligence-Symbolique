@@ -62,6 +62,15 @@ from argumentation_analysis.reporting.restitution.conclusion_salience import (
 )
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+# #3700 — the panel's ONE parser lives in a module whose top level imports
+# nothing from ``argumentation_analysis``, so an instrument that must stay
+# keyless and model-clientless (the act-replay preflight, #3658 item 46c) can
+# name a panel without loading this file. Imported from there under this
+# module's name, which three call sites still read; a copy would drift (#3375).
+from scripts.dataset.panel_ids import parse_doc_ids  # noqa: E402
+
 DATA_DIR = REPO_ROOT / "argumentation_analysis" / "data"
 ENCRYPTED_PATH = DATA_DIR / "extract_sources.json.gz.enc"
 DEFAULT_KB = REPO_ROOT / "analysis_kb"
@@ -306,52 +315,6 @@ def parse_legacy_label(source_name: str) -> Dict[str, str]:
 # ---------------------------------------------------------------------------
 # Checkpoint-aware per-document processing
 # ---------------------------------------------------------------------------
-
-
-def parse_doc_ids(
-    doc_ids: Optional[str] = None, panel_file: Optional[str] = None
-) -> Optional[List[str]]:
-    """#3375 — the panel's document ids, parsed once for BOTH arms.
-
-    The v1 panel runs the pipeline and the same-model zero-shot on the same
-    ten documents; a re-implementation per arm is how two populations drift
-    apart (#2841's rule 4, which the panel inherits). One parser, one list.
-
-    ``--doc-ids`` is a comma (or whitespace) separated list; a panel file
-    holds one id per line, ``#`` opening a comment, blank lines ignored.
-    Given both, the ids are concatenated in reading order and de-duplicated
-    first-wins, so a document is run at most once.
-
-    ``None`` means "no selection" — the whole corpus, exactly as before.
-    A selection that was ASKED FOR but came out empty raises: running the
-    whole corpus under a panel flag is the silent-difference shape, and a
-    panel of zero documents would report every arm as trivially equal.
-    """
-    ids: List[str] = []
-    if doc_ids:
-        ids.extend(part for part in re.split(r"[,\s]+", doc_ids) if part)
-    if panel_file is not None:
-        path = Path(panel_file)
-        if not path.is_file():
-            raise ValueError(f"--panel-file: {path} is not a file")
-        for line in path.read_text(encoding="utf-8").splitlines():
-            line = line.split("#", 1)[0].strip()
-            if line:
-                ids.append(line)
-    if not ids:
-        if doc_ids is not None or panel_file is not None:
-            raise ValueError(
-                "the panel selection is empty — an empty panel would silently "
-                "run the whole corpus"
-            )
-        return None
-    ordered: List[str] = []
-    seen = set()
-    for item in ids:
-        if item not in seen:
-            seen.add(item)
-            ordered.append(item)
-    return ordered
 
 
 def strip_reader_header(text: str) -> Tuple[str, int]:
