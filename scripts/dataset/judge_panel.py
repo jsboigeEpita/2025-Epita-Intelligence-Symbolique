@@ -67,6 +67,9 @@ from argumentation_analysis.evaluation.model_family import (  # noqa: E402
     assert_judge_differs,
     model_family,
 )
+from argumentation_analysis.reporting.restitution.llm_weaving import (  # noqa: E402
+    CUT_CODE_SUFFIX,
+)
 from argumentation_analysis.reporting.restitution.quote_fidelity import (  # noqa: E402
     normalise_for_citation,
     normalised_quote_in,
@@ -580,10 +583,38 @@ def arm_health(
     enter ``pipeline_degraded``: the refusal threshold is unchanged (a render
     with a missing input is still the pipeline's render), and the table reads
     a change on such a document with its failed input.
+
+    #3658 item 46a — a LENGTH-STOPPED act is a third state, and it does enter
+    ``pipeline_degraded``. The conjunctive rule above cannot see it (the act
+    key is non-empty: the cap cut the text, it did not erase the act), so on
+    the c22 panel a document whose acts were truncated read as healthy and the
+    guard passed it. The producer files the cut under its own CODE in the
+    act's degraded map (``llm_weaving.CUT_CODE_SUFFIX``); ``cut_acts`` names
+    the acts it saw, and the widening is by code, never by wording — the c2
+    note above (a report on documents whose acts rendered whole) still holds,
+    and the test pins that control.
     """
     st = state.get("state") or state
     empty_acts = [key for key in ACT_KEYS if not str(st.get(key) or "").strip()]
     reported = bool(st.get("restitution_acts_degraded"))
+    # #3658 item 46a — a length-stopped act is a CUT arm: the cap ended the
+    # text, so the judge would grade a truncation as a healthy read. The
+    # conjunctive rule above cannot see it (the act key is NOT empty), and the
+    # bare `reported` flag must not be widened to reach it (the c2 panel run
+    # carries reports on documents whose acts rendered whole). The cut is
+    # therefore read by CODE, under its own suffix, on a closed producer
+    # vocabulary: no prose is matched, and the note's wording may drift.
+    _rstd = st.get("restitution_acts_degraded")
+    cut_acts = (
+        sorted(
+            key
+            for key in ACT_KEYS
+            if isinstance(_rstd.get(key), dict)
+            and any(code.endswith(CUT_CODE_SUFFIX) for code in _rstd[key])
+        )
+        if isinstance(_rstd, dict)
+        else []
+    )
     outcome = (signature or {}).get("outcome")
     status = outcome.get("status") if isinstance(outcome, dict) else None
     upstream_failed = (
@@ -596,9 +627,14 @@ def arm_health(
         if _persona_read_failed(st.get(key))
     ]
     return {
-        "pipeline_degraded": (bool(empty_acts) and reported) or upstream_failed,
+        "pipeline_degraded": (
+            (bool(empty_acts) and reported) or bool(cut_acts) or upstream_failed
+        ),
         "empty_acts": empty_acts,
         "acts_degraded_reported": reported,
+        # #3658 item 46a — the acts whose text a length stop ended, named apart
+        # so the row and the report say a CUT arm from a broken one.
+        "cut_acts": cut_acts,
         # #3489 — the death record read from the signature, named so the
         # record and the refusal can tell an upstream death from a broken
         # render.
@@ -2543,8 +2579,15 @@ async def run(
                         # tells an upstream death from a broken render.
                         "(signature status: failed — the run died upstream)"
                         if doc["health"]["upstream_failed"]
-                        else "(an empty act AND a non-empty "
-                        "restitution_acts_degraded)"
+                        else (
+                            # #3658 item 46a — the cut is its own cause: the
+                            # act is NOT empty, so the old wording would have
+                            # described a shape this document does not have.
+                            "(a length-stopped act — the reader's text is cut)"
+                            if doc["health"]["cut_acts"]
+                            else "(an empty act AND a non-empty "
+                            "restitution_acts_degraded)"
+                        )
                     )
                     for doc in documents
                     if doc["health"]["pipeline_degraded"]
@@ -2656,6 +2699,9 @@ async def run(
         # state is never read as a pipeline loss/win without this flag.
         row["pipeline_degraded"] = doc["health"]["pipeline_degraded"]
         row["pipeline_empty_acts"] = doc["health"]["empty_acts"]
+        # #3658 item 46a — the cut acts ride with the flag, so a reader of the
+        # record tells a truncated render from a broken one.
+        row["pipeline_cut_acts"] = list(doc["health"]["cut_acts"])
         # #3489 — which half of the rule fired: a reader of the record
         # tells an upstream death from a broken render.
         row["pipeline_upstream_failed"] = doc["health"]["upstream_failed"]

@@ -708,6 +708,84 @@ class TestWeaveFailLoud:
 # ============================================================================
 
 
+def _length_llm(return_value: str) -> object:
+    """A stub whose call stopped on ``finish_reason=length`` (#3658 item 46a).
+
+    The production callable records the envelope's stop and the cap it spent on
+    itself (``_expose_finish_reason``); this stub exposes the same two names,
+    which is the seam ``weave`` reads.
+    """
+
+    async def _call(_prompt: str) -> str:
+        return return_value
+
+    _call.last_finish_reason = "length"  # type: ignore[attr-defined]
+    _call.last_max_tokens = 16_384  # type: ignore[attr-defined]
+    return _call
+
+
+class TestTheLengthStopIsACut:
+    """#3658 item 46a — a call the cap stopped is recorded as a CUT.
+
+    At the act's own boundary. The cap spent before the act's first word (the
+    shape measured at c22: the stop is billed on reasoning the route never
+    returns) used to be recorded as « le LLM n'a rien produit » — a cause the
+    code had not observed. A call cut mid-text was recorded as nothing at all,
+    so the #3458 guard graded a truncated act as a whole one. Both shapes now
+    file the cut under the act's own code, which is what the guard reads.
+    """
+
+    def test_the_cap_spent_before_any_text_names_the_cut(self):
+        out = asyncio.get_event_loop().run_until_complete(
+            build_act2_narrative(
+                _rich_state(),
+                llm_callable=_length_llm(""),  # type: ignore[arg-type]
+            )
+        )
+        assert out.status == "unavailable"
+        assert out.narrative == ""
+        assert "n'a rien produit" not in out.degraded["act2_narrative"]
+        assert "finish_reason=length" in out.degraded["act2_narrative"]
+        assert (
+            "épuisé avant le premier mot" in out.degraded["act2_narrative_cut_length"]
+        )
+
+    def test_a_truncated_act_is_marked_cut_and_keeps_its_text(self):
+        run = asyncio.get_event_loop().run_until_complete
+        out = run(
+            build_act2_narrative(
+                _rich_state(),
+                llm_callable=_length_llm(_WOVEN_NARRATIVE),  # type: ignore[arg-type]
+            )
+        )
+        assert "act2_narrative_cut_length" in out.degraded
+        assert "coupé au milieu du texte" in out.degraded["act2_narrative_cut_length"]
+        assert out.narrative, "the text written before the cut is kept"
+        # Control: the same text without a length stop carries no cut code —
+        # the mark is the stop's, not the text's.
+        whole = run(
+            build_act2_narrative(_rich_state(), llm_callable=_stub_llm(_WOVEN_NARRATIVE))  # type: ignore[arg-type]
+        )
+        assert "act2_narrative_cut_length" not in whole.degraded
+        # The road the guard reads, on the producer's own writer: the invoker
+        # surfaces ``degraded`` as ``degraded_reasons`` (a dict copy) and the
+        # state writer files the motifs under the act — the state then carries
+        # the code the guard counts.
+        from argumentation_analysis.orchestration.state_writers import (
+            _write_act2_narrative_to_state,
+        )
+
+        state = _rich_state()
+        state.restitution_acts_degraded = {}
+        _write_act2_narrative_to_state(
+            {"degraded_reasons": dict(out.degraded)}, state, {}
+        )
+        assert (
+            "act2_narrative_cut_length"
+            in state.restitution_acts_degraded["act2_narrative"]
+        )
+
+
 class TestBuildNarrative:
     def test_no_llm_is_fail_loud_unavailable(self):
         result = asyncio.get_event_loop().run_until_complete(

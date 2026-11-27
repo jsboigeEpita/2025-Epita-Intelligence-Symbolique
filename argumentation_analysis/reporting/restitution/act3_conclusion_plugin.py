@@ -136,7 +136,7 @@ from .global_projection import (
     _MAX_GATE_FINDINGS,
     project_global_findings,
 )
-from .llm_weaving import LlmCallable, WeaveOutcome, weave
+from .llm_weaving import LlmCallable, WeaveOutcome, cut_code, weave
 from .quote_fidelity import sanitize_act_quotes
 from .readability_gate import GateVerdict, ReadabilityGate
 from .virtuous_identification import VirtuousModeAssessment, detect_virtuous_mode
@@ -5450,9 +5450,14 @@ async def build_act3_conclusion(
                 "act3_conclusion": (
                     f"Conclusion indisponible — {outcome.failure} "
                     "(fail-loud, #1108)."
-                )
+                ),
+                **({cut_code("act3_conclusion"): outcome.cut} if outcome.cut else {}),
             },
         )
+    # #3658 item 46a — the cut of the draft the READER receives, tracked
+    # through the retry exactly as Act II does (a replaced draft's cut is not
+    # the reader's, an unkept retry's cut changes nothing).
+    _cut_motif = outcome.cut
     _dressed = _dress_act3_prose(outcome.narrative, state, evidence)
 
     # #3343 — the bounded ONE retry (#3159's rule was not enough: nothing read
@@ -5520,6 +5525,8 @@ async def build_act3_conclusion(
             )
             if _after_total < _before_total:
                 _dressed = _second
+                # #3658 item 46a — the kept draft is the retry's now.
+                _cut_motif = _retry.cut
             if _first_superlative:
                 _retry_motif = superlative_retry_motif(
                     "Acte III",
@@ -5587,7 +5594,9 @@ async def build_act3_conclusion(
     # scope paragraph is appended when the woven prose did not tie a limitation
     # to a lost axis. Deterministic on purpose: the guarantee cannot depend on
     # the LLM having complied with the prompt directive.
-    degraded: Dict[str, str] = {}
+    degraded: Dict[str, str] = (
+        {cut_code("act3_conclusion"): _cut_motif} if _cut_motif else {}
+    )  # #3658 46a — the truncation of the draft the reader receives
     # #3310 — the prose was CHANGED here, and an auditor must be able to find
     # it: act, motive, count, never the sentence (#3249). Filed under the
     # #2046 fabrication-note keys, so it is archived in the appendix and never

@@ -64,7 +64,7 @@ from .speaker_record import (
     build_speaker_record,
     format_speaker_line,
 )
-from .llm_weaving import LlmCallable, WeaveOutcome, weave
+from .llm_weaving import LlmCallable, WeaveOutcome, cut_code, weave
 from .quote_fidelity import sanitize_act_quotes
 from .readability_gate import GateVerdict, ReadabilityGate
 from .reading_record import (
@@ -1839,6 +1839,11 @@ async def build_act1_framing(
         )
 
     outcome = await weave_act1_framing(evidence, llm_callable)
+    # #3658 item 46a — a length-stopped call is recorded as a CUT, under its
+    # own code, in both shapes: the cap spent before any text (the act is
+    # empty, and the cut is why) and mid-text (the act renders, truncated).
+    # The guard reads this code; the prose never has to be matched.
+    _cut = {cut_code("act1_framing"): outcome.cut} if outcome.cut else {}
     if not outcome.narrative:
         return Act1Result(
             narrative="",
@@ -1846,7 +1851,8 @@ async def build_act1_framing(
             degraded={
                 "act1_framing": (
                     f"Cadrage indisponible — {outcome.failure} (fail-loud, #1108)."
-                )
+                ),
+                **_cut,
             },
         )
     narrative = outcome.narrative
@@ -1896,7 +1902,7 @@ async def build_act1_framing(
 
     gate = ReadabilityGate()
     verdict = gate.check_body(narrative)
-    degraded: Dict[str, str] = {}
+    degraded: Dict[str, str] = dict(_cut)  # #3658 46a — the truncation, if any
     # #3310 — the prose was CHANGED here, and an auditor must be able to find
     # it: act, motive, count, never the sentence (#3249). Filed under the
     # #2046 fabrication-note keys, so it is archived in the appendix and never

@@ -1,10 +1,12 @@
 """#2344 — a numeric knob set in the environment either parses or stops the run.
 
-``invoke_callables`` reads seven numeric knobs from the environment:
+``invoke_callables`` reads eight numeric knobs from the environment:
 ``LLM_CALL_BUDGET``, ``LLM_CALL_TIMEOUT_S``, ``DUNG_TIMEOUT_S``,
 ``EXTRACTION_MAX_ATTEMPTS``, ``EXTRACTION_MAX_TOKENS``,
-``FIRST_READING_MAX_TOKENS`` (#3511 — the reading's own completion cap) and
-``PHASE_MAX_TOKENS`` (#3658 — the shared cap on the uncapped phase calls).
+``FIRST_READING_MAX_TOKENS`` (#3511 — the reading's own completion cap),
+``PHASE_MAX_TOKENS`` (#3658 — the shared cap on the uncapped phase calls) and
+``ACT_MAX_TOKENS`` (#3658 item 46b — the acts' own cap, sized to their
+180 s phase budget).
 Each read caught
 ``ValueError`` and went on with its default, so ``LLM_CALL_TIMEOUT_S=thirty``
 ran with 300 s and nothing said the value had been dropped. The value comes
@@ -37,8 +39,9 @@ KNOBS = {
     "EXTRACTION_MAX_TOKENS",
     "FIRST_READING_MAX_TOKENS",
     "PHASE_MAX_TOKENS",
+    "ACT_MAX_TOKENS",
 }
-# The five the module reads while it is imported; LLM_CALL_BUDGET is read per run.
+# The knobs the module reads while it is imported; LLM_CALL_BUDGET is read per run.
 IMPORT_TIME_KNOBS = sorted(KNOBS - {"LLM_CALL_BUDGET"})
 
 
@@ -84,7 +87,7 @@ class TestLLMCallBudget:
 def test_import_refuses_each_malformed_knob():
     """Import the module with each knob set to a word, then with every knob valid.
 
-    One interpreter for all five imports: a failed import leaves the module out
+    One interpreter for all the imports: a failed import leaves the module out
     of ``sys.modules``, so the next attempt re-runs its body while the heavy
     dependencies it pulled in stay cached. The last import, with valid values,
     is the positive control: it shows the refusals come from the knobs.
@@ -106,11 +109,13 @@ def test_import_refuses_each_malformed_knob():
             LLM_CALL_TIMEOUT_S="30", DUNG_TIMEOUT_S="0",
             EXTRACTION_MAX_ATTEMPTS="2", EXTRACTION_MAX_TOKENS="0",
             FIRST_READING_MAX_TOKENS="0", PHASE_MAX_TOKENS="8192",
+            ACT_MAX_TOKENS="16384",
         )
         m = importlib.import_module(name)
         print("VALUES", m._LLM_CALL_TIMEOUT_S, m._DUNG_TIMEOUT_S,
               m._EXTRACTION_MAX_ATTEMPTS, m._EXTRACTION_MAX_TOKENS,
-              m._FIRST_READING_MAX_TOKENS, m._PHASE_MAX_TOKENS)
+              m._FIRST_READING_MAX_TOKENS, m._PHASE_MAX_TOKENS,
+              m._ACT_MAX_TOKENS)
         """)
     # #3019 carrier: indifferent — the scrubbed knobs are re-set explicitly by
     # the child script itself, and carried provider names never touch the knob
@@ -139,7 +144,7 @@ def test_import_refuses_each_malformed_knob():
         refusal = [line for line in lines if line.startswith(f"REFUSED {key} ")]
         assert refusal, f"{key}=thirty was accepted: {lines}"
         assert f"{key}='thirty'" in refusal[0], refusal[0]
-    assert "VALUES 30.0 0.0 2 0 0 8192" in lines, lines
+    assert "VALUES 30.0 0.0 2 0 0 8192 16384" in lines, lines
 
 
 def _is_env_read(node):
@@ -153,7 +158,7 @@ def _is_env_read(node):
 
 
 def test_every_numeric_knob_goes_through_the_one_reader():
-    """No ``int(...)``/``float(...)`` wraps an env read; the six keys use ``_env_number``."""
+    """No ``int(...)``/``float(...)`` wraps an env read; the keys use ``_env_number``."""
     tree = ast.parse(MODULE_PATH.read_text(encoding="utf-8-sig"))
     bypasses = [
         f"line {node.lineno}: {ast.unparse(node)}"

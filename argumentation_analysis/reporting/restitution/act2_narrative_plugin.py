@@ -115,7 +115,7 @@ from .reading_record import (
     format_reading_block,
 )
 from .global_projection import GlobalFinding, project_global_findings
-from .llm_weaving import LlmCallable, WeaveOutcome, weave
+from .llm_weaving import LlmCallable, WeaveOutcome, cut_code, weave
 from .movement_render_contract import (  # #3560
     MOVEMENT_COUNT_RULE,
     apply_render_contract,
@@ -3441,9 +3441,14 @@ async def build_act2_narrative(
                 "act2_narrative": (
                     f"Récit dialectique indisponible — {outcome.failure} "
                     "(fail-loud, #1108)."
-                )
+                ),
+                **({cut_code("act2_narrative"): outcome.cut} if outcome.cut else {}),
             },
         )
+    # #3658 item 46a — the cut of the draft the READER receives. Tracked
+    # through the retry below: a cut first draft that the retry replaces is
+    # not the reader's text, and a cut retry that is not kept changes nothing.
+    _cut_motif = outcome.cut
     _dressed = _dress_act2_prose(outcome.narrative, state, evidence)
 
     # #3343/#3367 — the bounded ONE retry. #3159 gave the writer the ranking
@@ -3474,6 +3479,9 @@ async def build_act2_narrative(
             )
             if _after_total < _before_total:
                 _dressed = _second
+                # #3658 item 46a — the kept draft is now the retry's, so the
+                # cut that describes the reader's text is the retry's own.
+                _cut_motif = _retry.cut
             if _first_flagged:
                 _retry_motif = superlative_retry_motif(
                     "Acte II", len(_first_flagged), len(_dressed.superlative_sentences)
@@ -3583,7 +3591,9 @@ async def build_act2_narrative(
     # §4 self-check (honest, never grades on a curve).
     gate = ReadabilityGate()
     verdict = gate.check_body(narrative)
-    degraded: Dict[str, str] = {}
+    degraded: Dict[str, str] = (
+        {cut_code("act2_narrative"): _cut_motif} if _cut_motif else {}
+    )  # #3658 46a — the truncation of the draft the reader receives
     if verdict.band != "PASS":
         degraded["act2_narrative_gate"] = (
             f"Autocontrôle de lisibilité = {verdict.band}: "
