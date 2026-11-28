@@ -177,6 +177,7 @@ ACTING_PINS: Tuple[str, ...] = (
     "LLM_SEED",
     "LLM_REASONING_EFFORT",
     "LLM_ANTHROPIC_THINKING",
+    "LLM_ANTHROPIC_THINKING_BUDGET",
 )
 
 #: The codes a live act's gap is filed under, on the closed vocabulary the

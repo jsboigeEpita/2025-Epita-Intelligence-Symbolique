@@ -48,7 +48,7 @@ from argumentation_analysis.services.llm_cache import OFF, CachedChatCompletion
 class _CaptureSKInner(ChatCompletionClientBase):
     """SK inner capturing the settings object each call carried."""
 
-    def __init__(self, model: str = "claude-haiku-5-5") -> None:
+    def __init__(self, model: str = "claude-sonnet-5-5") -> None:
         super().__init__(service_id="cap", ai_model_id=model)
         self._captured = []
 
@@ -100,7 +100,7 @@ def _run_sk(inner, settings) -> None:
     )
 
 
-async def _run_raw(client, model: str = "claude-haiku-5-5") -> None:
+async def _run_raw(client, model: str = "claude-sonnet-5-5") -> None:
     from argumentation_analysis.services.llm_cache import cached_raw_chat_completion
 
     await cached_raw_chat_completion(client, model=model, messages=[])
@@ -200,7 +200,7 @@ class TestTheThinkingKnobRidesBothFunnels:
         loud BEFORE a pass spends a call discovering it — and the error must
         say that, not a generic unknown-value message."""
         monkeypatch.setenv("LLM_ANTHROPIC_THINKING", "disabled")
-        with pytest.raises(ValueError, match="REFUSES|between_tools"):
+        with pytest.raises(ValueError, match="claude-sonnet-5-5"):
             from argumentation_analysis.services.llm_cache import (
                 cached_raw_chat_completion_sync,
             )
@@ -209,7 +209,7 @@ class TestTheThinkingKnobRidesBothFunnels:
                 chat=SimpleNamespace(completions=SimpleNamespace(create=MagicMock()))
             )
             cached_raw_chat_completion_sync(
-                client, model="claude-haiku-5-5", messages=[]
+                client, model="claude-sonnet-5-5", messages=[]
             )
 
     def test_the_knob_is_not_applied_off_the_anthropic_route(self, _off, monkeypatch):

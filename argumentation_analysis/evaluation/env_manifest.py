@@ -214,6 +214,7 @@ def _probe_overrides() -> Dict[str, Any]:
         # #3096 item 5 (R1126) — the thinking control a run explicitly set is
         # part of its record, exactly like the effort.
         "LLM_ANTHROPIC_THINKING",
+        "LLM_ANTHROPIC_THINKING_BUDGET",
     ]:
         val = os.environ.get(var)
         if val is not None:
