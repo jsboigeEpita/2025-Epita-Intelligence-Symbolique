@@ -23,7 +23,7 @@ def clean_diffs_in_file(file_path):
                     changes_made = True
             
             if changes_made:
-                with open(file_path, 'w', encoding='utf-8') as f:
+                with open(file_path, 'w', encoding='utf-8', newline="\n") as f:
                     json.dump(data, f, indent=4, ensure_ascii=False)
                 logging.info(f"Nettoyé: {file_path}")
             else:

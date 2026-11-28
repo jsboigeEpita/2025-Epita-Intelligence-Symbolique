@@ -183,7 +183,7 @@ async def repair_commit_file(kernel, prompt, file_path, narrative_context, semap
             commit_data["qualitative_analysis"] = new_analysis.model_dump()
 
             # Sauvegarder le fichier réparé
-            with open(file_path, 'w', encoding='utf-8') as f:
+            with open(file_path, 'w', encoding='utf-8', newline="\n") as f:
                 json.dump(commit_data, f, indent=4, ensure_ascii=False)
             logging.info(f"Régénération et sauvegarde réussies pour : {filename}")
             return True

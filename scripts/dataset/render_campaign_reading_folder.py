@@ -1264,7 +1264,7 @@ def main(argv: Optional[List[str]] = None) -> int:
             render_fiche(
                 f, load_json(d["state_path"]), d["zeroshot"], run_head, model, command
             ),
-            encoding="utf-8",
+            encoding="utf-8", newline="\n",
         )
 
     # 01_tableau_corpus — every number read from an artifact above.

@@ -62,7 +62,7 @@ def create_directories():
         # Créer un fichier README.md dans chaque répertoire
         readme_path = os.path.join(directory, "README.md")
         if not os.path.exists(readme_path):
-            with open(readme_path, "w", encoding="utf-8") as f:
+            with open(readme_path, "w", encoding="utf-8", newline="\n") as f:
                 f.write(f"# {directory}\n\n{description}\n")
 
         print(f"  ✓ {directory}")

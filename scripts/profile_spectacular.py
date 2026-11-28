@@ -664,7 +664,7 @@ def main():
     report = generate_report(profiling)
     report_path = project_root / "docs" / "reports" / "spectacular_profiling.md"
     report_path.parent.mkdir(parents=True, exist_ok=True)
-    report_path.write_text(report, encoding="utf-8")
+    report_path.write_text(report, encoding="utf-8", newline="\n")
     logger.info(f"Report saved: {report_path}")
 
     # Print summary to console

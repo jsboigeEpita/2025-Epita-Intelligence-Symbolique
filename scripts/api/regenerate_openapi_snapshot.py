@@ -38,7 +38,7 @@ def main():
 
     output_path = os.path.join(_PROJECT_ROOT, "api", "openapi.snapshot.json")
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
-    with open(output_path, "w", encoding="utf-8") as f:
+    with open(output_path, "w", encoding="utf-8", newline="\n") as f:
         json.dump(spec, f, indent=2, ensure_ascii=False)
 
     n_paths = len(spec.get("paths", {}))

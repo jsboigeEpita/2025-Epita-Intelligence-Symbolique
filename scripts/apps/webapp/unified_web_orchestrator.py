@@ -185,7 +185,7 @@ class WebAppValidationOrchestrator:
         default_config = self._get_default_config()
         self.config_path.parent.mkdir(parents=True, exist_ok=True)
 
-        with open(self.config_path, "w", encoding="utf-8") as f:
+        with open(self.config_path, "w", encoding="utf-8", newline="\n") as f:
             yaml.dump(default_config, f, default_flow_style=False, allow_unicode=True)
 
     def _get_default_config(self) -> Dict[str, Any]:

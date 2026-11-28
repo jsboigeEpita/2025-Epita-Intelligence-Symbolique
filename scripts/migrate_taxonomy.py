@@ -70,7 +70,7 @@ def convert_csv_to_json(csv_path, json_path):
     }
 
     # Sauvegarde la taxonomie hiérarchique en JSON
-    with open(json_path, "w", encoding="utf-8") as f:
+    with open(json_path, "w", encoding="utf-8", newline="\n") as f:
         json.dump(tree_data, f, indent=2, ensure_ascii=False)
 
     print(f"Taxonomy successfully converted to {json_path}")

@@ -279,7 +279,7 @@ class ComprehensiveDocumentationRecovery:
                 self.logger.info(f"  {fix.original_link} -> {fix.corrected_link}")
 
         # Sauvegarder le fichier modifié
-        file_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+        file_path.write_text("\n".join(lines) + "\n", encoding="utf-8", newline="\n")
 
     def process_documentation(self) -> None:
         """Traite toute la documentation du projet"""

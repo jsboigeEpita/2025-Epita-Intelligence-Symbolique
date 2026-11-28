@@ -168,7 +168,7 @@ print(response.data)  # Révélation automatique ou validation
             content += oracle_section
 
         # Écrire le README mis à jour
-        with open(readme_path, "w", encoding="utf-8") as f:
+        with open(readme_path, "w", encoding="utf-8", newline="\n") as f:
             f.write(content)
 
         self.update_log.append(

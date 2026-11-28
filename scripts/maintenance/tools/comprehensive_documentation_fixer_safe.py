@@ -268,7 +268,7 @@ class ComprehensiveDocumentationFixer:
 
             # Sauvegarder si modifié
             if modified:
-                with open(file_obj, "w", encoding="utf-8") as f:
+                with open(file_obj, "w", encoding="utf-8", newline="\n") as f:
                     f.write(content)
                 self.logger.info(f"Fichier corrigé: {file_path}")
 

@@ -91,17 +91,17 @@ def generate_multi_format(corpus_id: str, state_data: Dict[str, Any]) -> None:
 
     # JSON
     json_path = OUT_DIR / f"corpus_{corpus_id}.json"
-    json_path.write_text(exporter.to_json(pretty=True), encoding="utf-8")
+    json_path.write_text(exporter.to_json(pretty=True), encoding="utf-8", newline="\n")
     logger.info("  JSON  → %s", json_path.name)
 
     # XML
     xml_path = OUT_DIR / f"corpus_{corpus_id}.xml"
-    xml_path.write_text(exporter.to_xml(), encoding="utf-8")
+    xml_path.write_text(exporter.to_xml(), encoding="utf-8", newline="\n")
     logger.info("  XML   → %s", xml_path.name)
 
     # Markdown
     md_path = OUT_DIR / f"corpus_{corpus_id}.md"
-    md_path.write_text(exporter.to_markdown(), encoding="utf-8")
+    md_path.write_text(exporter.to_markdown(), encoding="utf-8", newline="\n")
     logger.info("  MD    → %s", md_path.name)
 
     # CSV bundle
@@ -111,7 +111,7 @@ def generate_multi_format(corpus_id: str, state_data: Dict[str, Any]) -> None:
 
     # HTML
     html_path = OUT_DIR / f"corpus_{corpus_id}.html"
-    html_path.write_text(exporter.to_html(), encoding="utf-8")
+    html_path.write_text(exporter.to_html(), encoding="utf-8", newline="\n")
     logger.info("  HTML  → %s", html_path.name)
 
 
@@ -123,7 +123,7 @@ def generate_balance_report(corpus_id: str, conversation_log: list) -> None:
     report = analyzer.analyze(conversation_log)
 
     path = OUT_DIR / f"balance_corpus_{corpus_id}.md"
-    path.write_text(report.to_markdown(), encoding="utf-8")
+    path.write_text(report.to_markdown(), encoding="utf-8", newline="\n")
     logger.info("  Balance → %s", path.name)
 
 
@@ -147,13 +147,13 @@ def generate_cross_ref_graph(corpus_id: str, state_data: Dict[str, Any]) -> None
             node.label = nid
 
     json_path = OUT_DIR / f"cross_ref_graph_corpus_{corpus_id}.json"
-    json_path.write_text(graph.to_json(), encoding="utf-8")
+    json_path.write_text(graph.to_json(), encoding="utf-8", newline="\n")
 
     dot_path = OUT_DIR / f"cross_ref_graph_corpus_{corpus_id}.dot"
-    dot_path.write_text(graph.to_dot(), encoding="utf-8")
+    dot_path.write_text(graph.to_dot(), encoding="utf-8", newline="\n")
 
     mmd_path = OUT_DIR / f"cross_ref_graph_corpus_{corpus_id}.mmd"
-    mmd_path.write_text(graph.to_mermaid(), encoding="utf-8")
+    mmd_path.write_text(graph.to_mermaid(), encoding="utf-8", newline="\n")
 
     logger.info("  CrossRef → JSON + DOT + Mermaid")
 
@@ -194,10 +194,10 @@ def generate_reprompt_trace(
         )
 
     path = OUT_DIR / f"reprompt_trace_corpus_{corpus_id}.json"
-    path.write_text(extractor.to_json(), encoding="utf-8")
+    path.write_text(extractor.to_json(), encoding="utf-8", newline="\n")
 
     md_path = OUT_DIR / f"reprompt_trace_corpus_{corpus_id}.md"
-    md_path.write_text(extractor.to_markdown(), encoding="utf-8")
+    md_path.write_text(extractor.to_markdown(), encoding="utf-8", newline="\n")
 
     logger.info("  RePrompt → JSON + MD (%d traces)", len(extractor.traces))
 
@@ -257,7 +257,7 @@ def generate_readme(corpus_summaries: Dict[str, Dict[str, Any]]) -> None:
     ])
 
     path = OUT_DIR / "README.md"
-    path.write_text("\n".join(lines), encoding="utf-8")
+    path.write_text("\n".join(lines), encoding="utf-8", newline="\n")
     logger.info("  README → %s", path.name)
 
 

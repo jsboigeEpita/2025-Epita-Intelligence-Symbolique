@@ -168,7 +168,7 @@ class QuickDocumentationFixer:
 
             # Écrire le fichier modifié si nécessaire
             if file_modified:
-                with open(file_path, "w", encoding="utf-8") as f:
+                with open(file_path, "w", encoding="utf-8", newline="\n") as f:
                     f.writelines(modified_lines)
                 self.logger.info(f"✅ Fichier corrigé: {file_path}")
 
