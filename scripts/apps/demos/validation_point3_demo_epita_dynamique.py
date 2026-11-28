@@ -841,7 +841,7 @@ def sauvegarder_validation_point3(
 *Validation Point 3/5 terminée avec succès - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}*
 """
 
-    with open(rapport_file, "w", encoding="utf-8") as f:
+    with open(rapport_file, "w", encoding="utf-8", newline="\n") as f:
         f.write(rapport_content)
 
     logger.info(f"📄 Rapport validation Point 3 généré: {rapport_file}")

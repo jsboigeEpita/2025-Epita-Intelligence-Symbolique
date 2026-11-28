@@ -319,7 +319,7 @@ Compatible avec la structure Oracle Enhanced v2.1.0
             # Mettre à jour les imports pour Oracle Enhanced v2.1.0
             content = self._update_imports_for_v2_1_0(content)
 
-            with open(file_path, "w", encoding="utf-8") as f:
+            with open(file_path, "w", encoding="utf-8", newline="\n") as f:
                 f.write(content)
 
         except Exception as e:

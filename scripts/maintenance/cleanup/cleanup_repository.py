@@ -93,7 +93,7 @@ def main():
         if not env_example_path.exists():
             print(f"Création du fichier exemple .env.example...")
             try:
-                with open(env_example_path, "w") as f:
+                with open(env_example_path, "w", encoding="utf-8", newline="\n") as f:
                     f.write(
                         """# Exemple de configuration pour le projet d'analyse argumentative
 # Copiez ce fichier vers .env et modifiez les valeurs selon votre configuration

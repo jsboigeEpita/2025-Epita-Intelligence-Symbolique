@@ -184,7 +184,7 @@ def add_import_to_file(file_path: Path, import_statement: str, dry_run: bool = F
             return False
         
         if not dry_run:
-            with open(file_path, 'w', encoding='utf-8') as f:
+            with open(file_path, 'w', encoding='utf-8', newline="\n") as f:
                 f.write(new_content)
         
         return True

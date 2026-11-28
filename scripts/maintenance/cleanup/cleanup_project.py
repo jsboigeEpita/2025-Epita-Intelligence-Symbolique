@@ -261,7 +261,7 @@ def update_gitignore():
 
     # Si des nouvelles entrées doivent être ajoutées
     if new_entries:
-        with open(gitignore_path, "a", encoding="utf-8") as f:
+        with open(gitignore_path, "a", encoding="utf-8", newline="\n") as f:
             f.write("\n# Ajouté par le script de nettoyage\n")
             for entry in new_entries:
                 f.write(f"{entry}\n")
