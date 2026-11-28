@@ -697,33 +697,44 @@ class TestFirstReadingCompletionCap:
             state.raw_text, {"_state_object": state}
         )
         # its OWN cap, named apart from the extraction capacity constant
-        assert ic._FIRST_READING_MAX_TOKENS == 24576
-        assert captured.get("max_completion_tokens") == 24576
+        assert ic._FIRST_READING_MAX_TOKENS == 13824
+        assert captured.get("max_completion_tokens") == 13824
         # the call went through the persona seam (the fake answer "{}" is a
         # parse_error — the witness measures the KWARGS, not the answer)
         assert payload.get("status") == "parse_error"
 
-    def test_the_cap_is_sized_from_the_measure_and_fits_its_phase_budget(self):
-        """#3511 item 46d — the cap's two bounds, on the numbers that set it.
+    def test_the_cap_is_sized_on_the_deadline_the_transport_applies(self):
+        """#3511 item 46d, re-derived in #3658 item 46h — the cap's two bounds.
 
         The 24/11 measure (R1211): on 15 uncut calls completion ran from 4 226
         to 11 617 tokens, 5 of 15 above 8 192, and the slowest call took
-        44.0 s. The cap must cover that maximum with headroom, and its
-        generation must fit the phase's own budget — read from the workflows,
-        not restated here, so lowering the budget below the cap reddens.
+        44.0 s. The cap must still cover that maximum.
+
+        46d checked the cap against the phase's 180 s BUDGET. The transport
+        does not apply 180 s to a call: it rewrites each attempt to
+        ``compose_attempt_deadline(180)`` — 80 s — so the second bound is the
+        deadline measured on that seam, not the budget it is derived from. A
+        cap that needs longer than the attempt cannot stop on ``length``; it
+        expires, is retried (billed twice), and the phase can end empty.
         """
         from argumentation_analysis.orchestration import invoke_callables as ic
         from argumentation_analysis.orchestration import workflows as wf
+        from tests.support.attempt_deadline import (
+            PROMPT_ALLOWANCE_SECONDS,
+            RATE_TOKENS_PER_SECOND,
+            effective_deadline,
+        )
 
         measured_max = 11_617  # tokens, the largest measured completion
         slowest_seconds = 44.0  # that maximum's own call
-        conservative_rate = 210  # tokens per second, the c22 route's rate
 
         cap = ic._FIRST_READING_MAX_TOKENS
-        assert cap >= 2 * measured_max, cap
+        # the trade 46h made, named: covering the measure, without the 2.1×
+        # margin 46d took — the deadline binds before the margin does
+        assert cap > measured_max, cap
         # the route's slowest measured call is FASTER than the rate used
-        # here, so the budget check below is the conservative one
-        assert measured_max / slowest_seconds > conservative_rate
+        # here, so the bound below is the conservative one
+        assert measured_max / slowest_seconds > RATE_TOKENS_PER_SECOND
 
         budgets = [
             definition.get_phase("first_reading").timeout_seconds
@@ -737,7 +748,14 @@ class TestFirstReadingCompletionCap:
         ]
         assert budgets, "no workflow carries the first_reading phase"
         assert all(budget for budget in budgets), budgets
-        assert cap / conservative_rate < min(budgets), (cap, budgets)
+        deadlines = [effective_deadline(budget) for budget in budgets]
+        spent = cap / RATE_TOKENS_PER_SECOND + PROMPT_ALLOWANCE_SECONDS
+        assert spent <= min(deadlines), (cap, budgets, deadlines)
+        # the deadline BINDS: it is below the client's own timeout, so this
+        # witness measures the composition and not a copy of it
+        from argumentation_analysis.config.settings import settings
+
+        assert min(deadlines) < settings.network.default_timeout, deadlines
 
     async def test_other_personas_send_the_shared_phase_cap(self, monkeypatch):
         """#3658 item 36b supersedes this file's original "no cap" contract:
