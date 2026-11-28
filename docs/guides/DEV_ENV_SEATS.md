@@ -28,7 +28,7 @@ pytest 9.1.1 also drops directory-conftest fixtures (named AND autouse) whenever
 
 **No `.gitattributes` change.** The convention is on the writers, not on the checkout: a `.gitattributes` rule would rewrite the bytes of every seat that checks the file out, including the cassette fixtures some guards hash.
 
-**Witness.** `tests/unit/scripts/test_cassette_lf_bytes_3714.py` forces the platform's line ending to CRLF (`os.linesep`) — on a POSIX runner, text mode already writes LF, so a writer without an explicit `newline` would look correct there — and requires the tracked files to carry no carriage return. It is red on `main` (4 failures) and green with the fix.
+**Witness.** `tests/unit/scripts/test_cassette_lf_bytes_3714.py` carries two instruments. The **byte witnesses** write through each writer and require no carriage return in the bytes; they run only on a seat whose text mode writes CRLF — the seat is *measured* (a raw text-mode write, read back in bytes), and on a seat whose text mode already writes LF they skip with that reason, because a writer that omits `newline=` would look correct there. The **source census** (`test_every_named_writer_declares_its_separator`) reads the code instead: one row per writer, each row's function passing `newline` explicitly, with a mutation control — the same AST with the keyword dropped in memory reddens — so it runs on any seat. It is red on `main` (4 failures) and green with the fix. Patching `os.linesep` was the first attempt at a control and is inert: CPython's C `TextIOWrapper` never reads it (measured on po-2023 under `projet-is` and `projet-is-lock`, before and after `open` — the text-mode write emitted CRLF either way).
 
 ## User-site shadowing
 
