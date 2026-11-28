@@ -36,7 +36,9 @@ from __future__ import annotations
 import copy
 import dataclasses
 import hashlib
+import io
 import json
+import sys
 import types
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Mapping, Optional, Sequence
@@ -154,6 +156,7 @@ def build_cycle(
     *,
     name: str = "c1",
     extra: Iterable[str] = (),
+    degraded_copies: int = 0,
 ) -> Path:
     """A harvested cycle under ``results_root/panel_cycles/<name>``."""
     from argumentation_analysis.core.shared_state import UnifiedAnalysisState
@@ -196,8 +199,32 @@ def build_cycle(
         (cycle / "signatures" / f"signature_{doc}.json").write_text(
             _dump(signature), encoding="utf-8"
         )
+    # #3658 item 46g-3 (R1220 a) — copies the judge reads as degraded arms:
+    # a non-argumentative record (no act ran, so nothing is replayed) that
+    # carries empty acts AND the closed report, which is arm_health's own
+    # conjunctive rule. The signature records no act either, so the preflight
+    # reads the pair as the honest non-argumentative shape it is.
+    copies = []
+    for index in range(degraded_copies):
+        copy_id = f"doc_copy{index + 1}"
+        state = _record(cycle, docs[0])
+        signature = _record(cycle, docs[0], "signature")
+        for key in ("act1_framing", "act2_narrative", "act3_conclusion"):
+            state.pop(key, None)
+            signature["state"].pop(key, None)
+        state["restitution_acts_degraded"] = {"act2_narrative": {"empty_retry": 1}}
+        signature["opaque_id"] = copy_id
+        signature["document_classification"] = fidelity.BRANCH_NON_ARGUMENTATIVE
+        (cycle / "states" / f"state_full_{copy_id}.json").write_text(
+            _dump(state), encoding="utf-8"
+        )
+        (cycle / "signatures" / f"signature_{copy_id}.json").write_text(
+            _dump(signature), encoding="utf-8"
+        )
+        copies.append(copy_id)
+    panel_size = len(docs) + len(list(extra)) + len(copies)
     (cycle / "cycle.json").write_text(
-        json.dumps({"panel_size": len(docs) + len(list(extra))}), encoding="utf-8"
+        json.dumps({"panel_size": panel_size}), encoding="utf-8"
     )
     (cycle / "pipeline.json").write_text(
         _dump(
@@ -205,11 +232,7 @@ def build_cycle(
                 "rc": 0,
                 "head": "a" * 40,
                 "head_after": "a" * 40,
-                "harvest": {
-                    "copied": len(docs) + len(list(extra)),
-                    "missing": 0,
-                    "stale": 0,
-                },
+                "harvest": {"copied": panel_size, "missing": 0, "stale": 0},
             }
         ),
         encoding="utf-8",
@@ -1114,13 +1137,46 @@ def test_a_tag_whose_self_check_fails_keeps_rc_one(
 
 
 def test_the_run_announces_its_call_bound_before_the_first_call(
-    tmp_path: Path, rig: tuple, capsys: pytest.CaptureFixture
+    tmp_path: Path, rig: tuple, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """The bound is said out loud before anything is spent, not deduced from
-    the bill afterwards."""
-    runtime, _ = rig
+    the bill afterwards — and in the unit the provider bills.
+
+    #3658 item 46g-3 (R1220 d-e): a call is what the acts ask for, and the
+    transport replays each one on its own policy, so the number that bounds the
+    spend is ``calls x attempts``. The witness reads stdout at the first act
+    call: the announcement's own text is there, with the derived request bound,
+    before a single request is paid.
+    """
+    runtime, harness = rig
     cycle = build_cycle(tmp_path)
     tag = tmp_path / "panel_cycles" / "tag1"
+    attempts = live._transport_attempts_per_call()
+    assert attempts > 1, "the transport's retry policy is what this test bounds"
+    buffer = io.StringIO()
+    monkeypatch.setattr(sys, "stdout", buffer)
+    seen: List[str] = []
+
+    class _Spy:
+        """The first provider call, remembering what had been printed."""
+
+        name = "spy-46g-3"
+
+        def __init__(self, payload: Any) -> None:
+            self.payload = payload
+            self.calls = 0
+            self.total = 0
+
+        async def invoke(self, input_text: Any, context: Any = None) -> Any:
+            self.calls += 1
+            self.total += 1
+            if not seen:
+                seen.append(buffer.getvalue())
+            return dict(self.payload)
+
+    spy = _Spy(harness.providers["act1_framing"].payload)
+    harness.providers["act1_framing"] = spy
+    harness.registry.providers["act1_framing"] = spy
 
     report = live.run(
         cycle,
@@ -1132,13 +1188,19 @@ def test_the_run_announces_its_call_bound_before_the_first_call(
         results_root=tmp_path,
     )
 
-    said = capsys.readouterr().out
-    assert f"at most {live.ACT_CALLS_PER_DOCUMENT} model calls each" in said
-    assert f"at most {len(DOCS) * live.ACT_CALLS_PER_DOCUMENT} call(s)" in said
+    calls_bound = len(DOCS) * live.ACT_CALLS_PER_DOCUMENT
+    requests_bound = calls_bound * attempts
+    assert seen, "the acts never ran: the ordering witness would be vacuous"
+    before = seen[0]
+    assert f"at most {live.ACT_CALLS_PER_DOCUMENT} model calls each" in before
+    assert f"replayed by the transport up to {attempts} time(s)" in before
+    assert f"at most {requests_bound} paid request(s)" in before
     assert report["call_budget"] == {
         "documents": len(DOCS),
         "per_document": live.ACT_CALLS_PER_DOCUMENT,
-        "bound": len(DOCS) * live.ACT_CALLS_PER_DOCUMENT,
+        "bound": calls_bound,
+        "transport_attempts_per_call": attempts,
+        "bound_requests": requests_bound,
         "made": len(DOCS) * len(c.ACTS),
         "per_document_made": {doc: len(c.ACTS) for doc in DOCS},
     }
@@ -1261,6 +1323,81 @@ def test_the_batch_stops_at_the_judges_own_degraded_threshold(
     # the stop is a saving, measured: only the documents that ran were paid
     assert report["counts"]["model_calls"] == threshold * len(c.ACTS)
     assert harness.paid() == threshold * len(c.ACTS)
+
+
+def test_a_panel_whose_copies_reach_the_threshold_pays_nothing(
+    tmp_path: Path, rig: tuple
+) -> None:
+    """#3658 item 46g-3 (R1220 a) — the judges read the whole panel, copies
+    included. Copies that already reach their threshold are the panel they
+    refuse, so nothing is replayed, nothing is paid, and no tag is written."""
+    from scripts.dataset import judge_panel as judged
+
+    runtime, harness = rig
+    threshold = judged.DEGRADED_ARM_REFUSAL_THRESHOLD
+    cycle = build_cycle(tmp_path, degraded_copies=threshold)
+    tag = tmp_path / "panel_cycles" / "tag1"
+
+    report = live.run(
+        cycle,
+        tag,
+        None,
+        [],
+        observed=seat(),
+        runtime=runtime,
+        results_root=tmp_path,
+    )
+
+    assert report["ok"] is False
+    assert report["stage"] == live.STAGE_RECORDS
+    assert f"DEGRADED_ARM_REFUSAL_THRESHOLD={threshold}" in report["refused"]
+    assert report["copied_degraded"] == [
+        f"doc_copy{index}" for index in range(1, threshold + 1)
+    ]
+    assert harness.paid() == 0
+    assert not tag.exists()
+
+
+def test_a_panel_the_judges_would_refuse_is_never_a_measurement(
+    tmp_path: Path, rig: tuple, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """#3658 item 46g-3 (R1220 a), the record's half — the guard the judges
+    apply is the guard this tag carries. Standing in for a self-check that
+    finds the panel at their threshold (the copies' early refusal above is the
+    other half), the tag is refused, named, and keeps ``rc`` 1."""
+    runtime, _ = rig
+    cycle = build_cycle(tmp_path)
+    tag = tmp_path / "panel_cycles" / "tag1"
+    real = live._self_check
+
+    def _at_the_threshold(
+        destination: Path,
+        docs: Sequence[str],
+        results_root: Path = c.RESULTS_ROOT,
+        candidate: Optional[Mapping[str, Any]] = None,
+    ) -> Dict[str, Any]:
+        check = real(destination, docs, results_root, candidate)
+        check["guard"].update({"degraded_arms": 9, "would_refuse": True})
+        return check
+
+    monkeypatch.setattr(live, "_self_check", _at_the_threshold)
+
+    report = live.run(
+        cycle,
+        tag,
+        list(DOCS),
+        [],
+        observed=seat(),
+        runtime=runtime,
+        results_root=tmp_path,
+    )
+
+    assert report["ok"] is False
+    assert "the panel the judges would read holds 9 degraded document(s)" in (
+        report["refused"]
+    )
+    assert "DEGRADED_ARM_REFUSAL_THRESHOLD" in report["refused"]
+    assert json.loads((tag / "pipeline.json").read_text(encoding="utf-8"))["rc"] == 1
 
 
 def test_a_copy_of_the_record_is_a_pair_the_judges_stage_reads(

@@ -214,8 +214,81 @@ def test_the_live_path_reaches_the_live_runner_by_name(
     assert rc == 7
     args, kwargs = seen[0]
     assert args[0] == cycle and args[1] == dest
-    assert args[2] is None and kwargs == {}
+    assert args[2] is None
+    # #3658 item 46g-3 (R1220 b) — the launcher forwards the probe declaration
+    # it parsed, never a default of its own.
+    assert kwargs == {"probe": False}
     assert args[3][-2:] == ["--acts", ra.LIVE]
+
+
+def test_the_launcher_forwards_a_probe_the_live_path_declares(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """#3658 item 46g-3 (R1220 b) — the flag exists on the launcher, and what it
+    parsed is what the live runner receives: a launcher that accepted ``--probe``
+    and dropped it would let a subset look like the cycle's panel."""
+    from scripts.panel import act_replay_live as live
+
+    cycle = _write_cycle(tmp_path)
+    dest = tmp_path / "dest"
+    seen: List[Any] = []
+
+    def _recorded(*args: Any, **kwargs: Any) -> int:
+        seen.append((args, kwargs))
+        return 7
+
+    monkeypatch.setattr(live, "main", _recorded)
+
+    rc = ra.main(
+        [
+            "--cycle-dir", str(cycle),
+            "--dest", str(dest),
+            "--acts", ra.LIVE,
+            "--doc-ids", "doc_a",
+            "--probe",
+        ]
+    )
+
+    assert rc == 7
+    args, kwargs = seen[0]
+    assert args[2] == ["doc_a"]
+    assert kwargs == {"probe": True}
+
+
+def test_a_probe_on_the_recorded_path_is_refused_not_ignored(
+    tmp_path: Path, capsys: pytest.CaptureFixture
+) -> None:
+    """The recorded path replays nothing it could name a subset of: the flag is
+    refused by name instead of being accepted and doing nothing (#3658 46g-3 b)."""
+    cycle = _write_cycle(tmp_path)
+    dest = tmp_path / "dest"
+
+    rc = ra.main(
+        ["--cycle-dir", str(cycle), "--dest", str(dest), "--doc-ids", "doc_a", "--probe"]
+    )
+
+    said = _last_json_object(capsys.readouterr().out)
+    assert rc == ra.EXIT_USAGE
+    assert said["stage"] == ra.STAGE_PREFLIGHT
+    assert said["refused"].startswith("--probe needs --acts live")
+    assert not dest.exists()
+
+
+def test_a_probe_without_a_panel_is_refused(
+    tmp_path: Path, capsys: pytest.CaptureFixture
+) -> None:
+    """A probe names the documents it covers; naming none is not a probe."""
+    cycle = _write_cycle(tmp_path)
+    dest = tmp_path / "dest"
+
+    rc = ra.main(
+        ["--cycle-dir", str(cycle), "--dest", str(dest), "--acts", ra.LIVE, "--probe"]
+    )
+
+    said = _last_json_object(capsys.readouterr().out)
+    assert rc == ra.EXIT_USAGE
+    assert said["refused"].startswith("--probe: needs --panel-file or --doc-ids")
+    assert not dest.exists()
 
 
 # ---------------------------------------------------------------------------
