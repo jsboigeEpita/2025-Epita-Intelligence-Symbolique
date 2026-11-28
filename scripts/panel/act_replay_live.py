@@ -200,6 +200,12 @@ USAGE_NOTE = (
 #: calls at most, so this only catches a provider that ignores cancellation.
 WALL_BUDGET_S = 900.0
 
+#: #3658 item 46g — the most model calls one document can cost: Act I makes
+#: one, Acts II and III each make a primary call and one bounded retry (#3343).
+#: The bound is printed before the first call, so the spend is announced rather
+#: than discovered in the bill; the calls actually made are counted apart.
+ACT_CALLS_PER_DOCUMENT = 5
+
 
 class Refused(Exception):
     """The replay cannot run as asked. Named, never silent."""
@@ -1486,6 +1492,7 @@ def run(
     observed: Optional[Observed] = None,
     runtime: Optional[Runtime] = None,
     results_root: Path = c.RESULTS_ROOT,
+    probe: bool = False,
 ) -> Dict[str, Any]:
     """The whole live replay: preflight, gate, control, the paid acts, the tag.
 
@@ -1493,15 +1500,35 @@ def run(
     ``ok`` whether the tag is a measurement. Nothing is written before the
     identity control has given the record back, and the tag's first
     ``pipeline.json`` says ``rc`` 1.
+
+    ``probe`` (#3658 item 46g) declares the named panel a subset chosen on
+    purpose: only those documents are replayed, the rest of the cycle is named
+    in ``report["probe"]`` and in the tag, and the tag carries one document, so
+    a judges stage given the whole panel refuses it (``unharvested`` names the
+    documents it is missing) instead of grading a probe as a panel.
     """
     cycle_dir, destination = Path(cycle_dir), Path(destination)
     report: Dict[str, Any] = {
         "provenance": provenance(argv, cycle_dir, destination, panel)
     }
-    verdict = preflight(cycle_dir, destination, panel)
+    verdict = preflight(cycle_dir, destination, panel, probe=probe)
     if not verdict.ok:
         report.update(
             {"ok": False, "stage": STAGE_PREFLIGHT, "preflight": verdict.as_dict()}
+        )
+        return report
+    # #3658 item 46g — this instrument only READS the cycle, so its inputs must
+    # be byte-identical once the acts are done. The map is taken here, before
+    # anything of the replay has touched the cycle: the preflight writes
+    # nothing and the tag is a separate directory, so a difference past this
+    # point means something wrote where nothing was allowed to.
+    from scripts.panel.replay_acts import InputsUnreadable, cycle_inputs, input_drift
+
+    try:
+        inputs_before = cycle_inputs(cycle_dir)
+    except InputsUnreadable as exc:
+        report.update(
+            {"ok": False, "stage": STAGE_CYCLE, "refused": f"cycle input: {exc}"}
         )
         return report
     problem = tag_problem(destination, results_root)
@@ -1536,6 +1563,29 @@ def run(
             {"ok": False, "stage": STAGE_RECORDS, "refused": f"{type(exc).__name__}"}
         )
         return report
+    probe_scope: Optional[Dict[str, Any]] = None
+    if probe:
+        # #3658 item 46g — the probe's scope, named: the documents it covers
+        # are the ones it named, and the rest of the cycle is declared left out
+        # here and in the tag. Nothing is dropped silently.
+        named = set(panel or ())
+        covered = [doc for doc in docs if doc in named]
+        if not covered:
+            report.update(
+                {
+                    "ok": False,
+                    "stage": STAGE_RECORDS,
+                    "refused": "the probe names no document of this cycle",
+                }
+            )
+            return report
+        probe_scope = {
+            "named": len(named),
+            "covered": covered,
+            "left_out": [doc for doc in docs if doc not in named],
+            "cycle_documents": len(docs),
+        }
+        docs = covered
     environment, recorded_model, problems = recorded_settings(signatures)
     seat_input = observed or observe()
     seat = gate(environment, recorded_model, seat_input)
@@ -1631,6 +1681,21 @@ def run(
     )
     assembled_rows: List[Dict[str, Any]] = []
     stopped: Optional[str] = None
+    stop_why: Optional[str] = None
+    degraded_docs: List[str] = []
+    calls_by_doc: Dict[str, int] = {}
+    from scripts.dataset import judge_panel as judged
+
+    threshold = judged.DEGRADED_ARM_REFUSAL_THRESHOLD
+    call_bound = len(live_docs) * ACT_CALLS_PER_DOCUMENT
+    # #3658 item 46g — the bound is announced BEFORE the first call, so the
+    # spend is a declared one. What the run actually spends is counted below.
+    print(
+        f"[act_replay] {len(live_docs)} document(s) to replay live: at most "
+        f"{ACT_CALLS_PER_DOCUMENT} model calls each (Acts II and III retry once), "
+        f"so at most {call_bound} call(s) before this run ends.",
+        flush=True,
+    )
     for doc in live_docs:
         if stopped is not None:
             copied[doc] = f"not_run: the batch stopped at {stopped}"
@@ -1660,8 +1725,37 @@ def run(
         )
         _write_pair(destination, doc, assembled.state, assembled.signature)
         assembled_rows.append(assembled.row)
+        # #3658 item 46g — what this document really cost, from the run's own
+        # usage map, every phase bucket counted (a call outside the three acts
+        # is a call). Counted even when the assembly failed: it was paid.
+        calls_by_doc[doc] = sum(
+            int(bucket.get("calls") or 0)
+            for bucket in replayed.usage.values()
+            if _is_phase_bucket(bucket)
+        )
         if assembled.failure is not None:
             stopped = doc
+            stop_why = f"the replay failed on {doc}: {assembled.failure}"
+            continue
+        try:
+            health = judged.arm_health(assembled.state, assembled.signature)
+        except Exception as exc:  # noqa: BLE001 — one document, named, fail closed
+            stopped = doc
+            stop_why = f"arm health unreadable on {doc}: {type(exc).__name__}"
+            continue
+        if health.get("pipeline_degraded"):
+            # The judges' own rule, applied while the batch runs: one degraded
+            # document is tolerated, and at their threshold the panel is one
+            # the judges stage would refuse — spending the rest of it would be
+            # paying for a refusal.
+            degraded_docs.append(doc)
+            if len(degraded_docs) >= threshold:
+                stopped = doc
+                stop_why = (
+                    f"the batch stopped: {len(degraded_docs)} degraded document(s) "
+                    f"reach DEGRADED_ARM_REFUSAL_THRESHOLD={threshold} — the "
+                    "judges' own rule would refuse this panel"
+                )
     for doc, reason in copied.items():
         shutil.copyfile(
             cycle_dir / "states" / f"state_full_{doc}.json",
@@ -1686,6 +1780,7 @@ def run(
             assembled_rows,
             check,
             count_ok=count_ok,
+            probe=probe_scope,
         )
 
     # Every pair is on disk, and the record still refuses: a run that dies here
@@ -1694,7 +1789,19 @@ def run(
     # it reads must already carry the completed harvest.
     _write_pipeline(destination, _record(False, {"ok": False, "guard": {}}))
     self_check = _self_check(destination, docs, results_root, _record(True, {}))
-    ok = stopped is None and self_check["ok"]
+    # #3658 item 46g — the cycle was only read: the same map again, past the
+    # acts and the copies, and a difference refuses the tag (rc 1) naming the
+    # file. A file that cannot be read at all refuses by name too — a
+    # fingerprint with a hole in it proves nothing.
+    try:
+        inputs_after = cycle_inputs(cycle_dir)
+    except InputsUnreadable as exc:
+        report.update(
+            {"ok": False, "stage": STAGE_RECORDS, "refused": f"cycle input: {exc}"}
+        )
+        return report
+    drifted = input_drift(inputs_before, inputs_after)
+    ok = stopped is None and self_check["ok"] and not drifted
     counts: Dict[str, Any] = {
         "documents": len(docs),
         "live": sum(1 for row in assembled_rows if row.get("mode") == LIVE),
@@ -1714,6 +1821,8 @@ def run(
         "control_documents": len(control_rows),
         "control_ok": sum(1 for row in control_rows if row["ok"]),
         "degraded_arms": self_check["guard"]["degraded_arms"],
+        "model_calls": sum(calls_by_doc.values()),
+        "call_bound": call_bound,
     }
     _write_pipeline(destination, _record(ok, self_check))
     report.update(
@@ -1721,16 +1830,35 @@ def run(
             "ok": ok,
             "stage": STAGE_DONE,
             "counts": counts,
+            "probe": probe_scope,
+            "call_budget": {
+                "documents": len(live_docs),
+                "per_document": ACT_CALLS_PER_DOCUMENT,
+                "bound": call_bound,
+                "made": sum(calls_by_doc.values()),
+                "per_document_made": dict(calls_by_doc),
+            },
+            "cycle_inputs": {
+                "files": len(inputs_before),
+                "unchanged": not drifted,
+                "drifted": drifted,
+                "before": inputs_before,
+                "after": inputs_after,
+            },
             "documents": assembled_rows,
             "self_check": self_check,
         }
     )
     if not ok:
-        report["refused"] = (
-            f"the batch stopped at {stopped}"
-            if stopped is not None
-            else "the self-check failed"
-        )
+        if stopped is not None:
+            report["refused"] = stop_why or f"the batch stopped at {stopped}"
+        elif drifted:
+            report["refused"] = (
+                "the cycle's inputs moved during the measurement: "
+                + ", ".join(drifted[:4])
+            )
+        else:
+            report["refused"] = "the self-check failed"
     return report
 
 
@@ -1792,9 +1920,10 @@ def _final_record(
     rows: Sequence[Mapping[str, Any]],
     self_check: Mapping[str, Any],
     count_ok: bool,
+    probe: Optional[Mapping[str, Any]] = None,
 ) -> Dict[str, Any]:
     live_rows = [row for row in rows if row.get("mode") == LIVE]
-    return {
+    record: Dict[str, Any] = {
         "rc": 0 if count_ok and head_before == head_after else 1,
         "stage": LIVE,
         "instrument": INSTRUMENT,
@@ -1820,6 +1949,12 @@ def _final_record(
             "guard_would_refuse": self_check.get("guard", {}).get("would_refuse"),
         },
     }
+    if probe is not None:
+        # The tag says it is a probe, in the file the judges read: a tag that
+        # covered one document of a ten-document cycle must never look like a
+        # panel that happened to hold one.
+        record["probe"] = dict(probe)
+    return record
 
 
 def _write_pipeline(destination: Path, record: Mapping[str, Any]) -> None:
@@ -1929,15 +2064,23 @@ def main(
     argv: Optional[Sequence[str]] = None,
     *,
     results_root: Path = c.RESULTS_ROOT,
+    probe: bool = False,
 ) -> int:
     """Run the replay and print its summary; the report follows the tag.
 
     ``results_root`` is the run's own seam (:func:`run` already carries it): the
     launcher passes the cycle's, and no production caller passes anything.
+    ``probe`` says the named panel is a declared subset (:func:`run`), which the
+    preflight has to know before it can let a partial panel through.
     """
     invoked = list(sys.argv[1:] if argv is None else argv)
     report = run(
-        Path(cycle_dir), Path(destination), panel, invoked, results_root=results_root
+        Path(cycle_dir),
+        Path(destination),
+        panel,
+        invoked,
+        results_root=results_root,
+        probe=probe,
     )
     tag = Path(destination)
     if tag.is_dir():
@@ -1946,7 +2089,7 @@ def main(
         )
         summary = {
             key: report.get(key)
-            for key in ("ok", "stage", "counts", "refused", "refusals")
+            for key in ("ok", "stage", "counts", "probe", "refused", "refusals")
             if report.get(key) is not None
         }
         print(json.dumps(summary, indent=1, sort_keys=True))
@@ -1982,6 +2125,16 @@ def cli(argv: Optional[Sequence[str]] = None) -> int:
     )
     parser.add_argument("--panel-file", default=None, type=Path)
     parser.add_argument("--doc-ids", default=None)
+    parser.add_argument(
+        "--probe",
+        action="store_true",
+        help=(
+            "the named panel is a declared subset of the cycle: the documents "
+            "left out are named instead of refusing the run (the tag then "
+            "carries one document, and a judges stage given the whole panel "
+            "refuses it as unharvested)"
+        ),
+    )
     args = parser.parse_args(sys.argv[1:] if argv is None else list(argv))
     panel: Optional[List[str]] = None
     if args.panel_file is not None or args.doc_ids is not None:
@@ -2006,7 +2159,9 @@ def cli(argv: Optional[Sequence[str]] = None) -> int:
                 )
             )
             return EXIT_USAGE
-    return main(args.cycle_dir, args.dest, panel, sys.argv[1:])
+    if args.probe and not panel:
+        parser.error("--probe: needs --panel-file or --doc-ids to name the subset")
+    return main(args.cycle_dir, args.dest, panel, sys.argv[1:], probe=bool(args.probe))
 
 
 if __name__ == "__main__":

@@ -383,6 +383,45 @@ def test_a_file_added_into_the_cycle_during_the_run_is_named(
     )
 
 
+def test_the_fingerprint_reads_in_blocks_and_still_covers_the_whole_file(
+    tmp_path: Path,
+) -> None:
+    """The block size bounds memory, not what is proved: a file larger than one
+    block hashes to the hash of the whole file, tail included."""
+    cycle = tmp_path / "cycle"
+    (cycle / "states").mkdir(parents=True)
+    payload = b"x" * ((ra._DIGEST_BLOCK * 2) + 17)
+    (cycle / "states" / "state_full_big.json").write_bytes(payload)
+
+    got = ra.cycle_inputs(cycle)
+
+    assert got["states/state_full_big.json"] == hashlib.sha256(payload).hexdigest()
+    # the tail is what makes the assertion above non-vacuous
+    assert ra._DIGEST_BLOCK < len(payload)
+
+
+def test_an_unreadable_input_is_refused_by_name(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A map with a silent hole would prove nothing about the file it skipped:
+    the fingerprint refuses, naming the file and the error's type."""
+    cycle = _write_cycle(tmp_path)
+    target = cycle / "states" / f"state_full_{DOCS[0]}.json"
+    real_open = Path.open
+
+    def _open(self: Path, *args: Any, **kwargs: Any) -> Any:
+        if self == target:
+            raise PermissionError("invented refusal")
+        return real_open(self, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "open", _open)
+
+    with pytest.raises(ra.InputsUnreadable) as raised:
+        ra.cycle_inputs(cycle)
+
+    assert str(raised.value) == f"states/state_full_{DOCS[0]}.json: PermissionError"
+
+
 def test_the_command_line_summary_names_what_drifted(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
