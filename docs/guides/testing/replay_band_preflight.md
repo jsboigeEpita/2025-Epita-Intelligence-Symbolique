@@ -96,16 +96,16 @@ Measured on `myia-po-2023`: without them the gate stops at `requires GITHUB_TOKE
 GITHUB_REPOSITORY`; with them, `run 45513278355 exported 587 cassettes; declared non-job delta 0
 (sk_patches: 0); disk carries 587`.
 
-The token is not the whole story. On `myia-ai-01` (27/11) step 1's gate does not pass: the run's
-logs are unreachable over TLS there — Python's default context under Windows, as the
-coordinator read it. The request goes through `urllib.request.urlopen`, and the gate treats an
-unreachable log as a provenance verdict like any other (`RunLogError`, rc 3), never a silent
-skip. The same gate passes from `myia-po-2023` with that default context (re-read on
-`b612ab24e`), so the difference is on that seat. It is filed as #3716, not carried here as a
-seat variant: a seat that drops `--verify-run` has not taken step 1. The plain import still runs
-`verify_manifest` — the manifest to the directory (count and digest) and to the recording
-environment — and cannot do what the flag adds, resolving the record run id against the run's
-own log.
+The token is not the whole story. A Windows seat whose **user intermediate store** has cached the
+Let's Encrypt intermediates `YR1`/`YR2` used to refuse here — `ssl.create_default_context()`
+loads that store as trust anchors, the chain then needed `ISRG Root YR`, and neither the conda
+bundle nor any Windows store carries it. The gate no longer reads that store: the run's log is
+fetched through a context anchored on the certifi bundle (`scripts/cassettes/import.py`,
+`_run_log_ssl_context`, #3716), verification on, no fallback. A refusal there is still a
+provenance verdict like any other (`RunLogError`, rc 3), never a silent skip: a seat that drops
+`--verify-run` has not taken step 1. The plain import still runs `verify_manifest` — the manifest
+to the directory (count and digest) and to the recording environment — and cannot do what the
+flag adds, resolving the record run id against the run's own log.
 
 The recipe as it stands above, followed as written on `myia-po-2023` against `main` `b612ab24e`
 (27/11): step 1 in its literal form, with whichever account `gh` holds active, exits 0 and writes
