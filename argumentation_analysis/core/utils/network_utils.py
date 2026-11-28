@@ -613,6 +613,77 @@ class ReasoningEffortTransport(httpx.AsyncBaseTransport):
         await self._wrapped_transport.aclose()
 
 
+# --- #3719 — l'erreur du fournisseur atteint l'appelant comme elle est ------
+#
+# Mesuré le 28/11 (#3719) : sur la route nommée Anthropic, l'endpoint a refusé
+# chaque acte d'un 400, et le journal s'est lu comme une panne réseau —
+# ``APIConnectionError('Connection error.')`` par acte, chaque 400 envoyé
+# TROIS fois, le message de l'endpoint absent du journal.
+#
+# Pourquoi : ``LoggingHttpTransport`` LÈVE le 400 (``httpx.HTTPStatusError``),
+# et cette levée est juste au-dessus du transport — là où #2324 l'a posée, et
+# là où ses témoins la figent. Mais le SDK OpenAI est AU-DESSUS du client
+# httpx, et il lit une exception qui sort de ``send()`` comme une panne de
+# connexion : il l'emballe dans ``APIConnectionError('Connection error.')`` et
+# la rejoue. Le corps ne survit que dans ``__cause__`` — que ni le texte de
+# l'erreur SK ni les lignes de journal ne lisent.
+#
+# La réparation est UNE couche, la plus EXTERNE : pour les statuts que le SDK
+# ne rejoue pas, elle REND la réponse d'erreur au SDK, qui lève alors son
+# propre ``BadRequestError`` — statut et corps — après UN seul envoi. Les
+# statuts que le SDK rejoue (408, 409, 429, 5xx) gardent le chemin qu'ils
+# avaient : leurs rejeux sont ceux du SDK.
+#
+# La couche est posée AU-DESSUS de ``ReasoningEffortTransport`` : la
+# réparation #2324 lit un 400 pour décider son rejeu adapté, et elle doit
+# continuer à le voir.
+
+#: #3719 — les statuts que le SDK OpenAI rejoue LUI-MÊME (mesuré sur le SDK
+#: du gate, openai 3.3.0 : 408, 409, 429 et 5xx). Tout autre statut remonte
+#: immédiatement, corps compris. La liste est nommée ICI, jamais recopiée.
+_SDK_REPLAYED_STATUSES = frozenset({408, 409, 429})
+
+
+def _sdk_replays_status(status_code: int) -> bool:
+    """Whether the OpenAI SDK replays this status on its own.
+
+    Une réponse rendue au SDK pour un statut qu'il rejoue changerait deux
+    choses qui ne sont pas à nous : le délai qu'il attend (``Retry-After``,
+    jusqu'à deux minutes, en ``time.sleep`` bloquant — le budget de phase de
+    180 s ne le logerait pas, #3435) et le type de l'erreur finale. Ces
+    statuts gardent donc le chemin d'aujourd'hui.
+    """
+    return status_code in _SDK_REPLAYED_STATUSES or status_code >= 500
+
+
+class SdkFacingTransport(httpx.AsyncBaseTransport):
+    """#3719 — la couche que le SDK OpenAI voit : une réponse d'erreur lui est
+    rendue, pour les statuts qu'il ne rejoue pas.
+
+    Elle est la plus EXTERNE de la chaîne : au-dessus de
+    ``ReasoningEffortTransport``, qui a besoin de voir le 400 pour adapter son
+    rejeu (#2324). La réponse rendue n'est JAMAIS fermée : le SDK lit son
+    corps pour en tirer le message, et une réponse fermée sans corps lu lui
+    ferait perdre la raison du refus.
+    """
+
+    def __init__(self, transport: httpx.AsyncBaseTransport):
+        self._transport = transport
+
+    async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
+        try:
+            return await self._transport.handle_async_request(request)
+        except httpx.HTTPStatusError as exc:
+            if _sdk_replays_status(exc.response.status_code):
+                raise
+            # La réponse a déjà été lue par la couche qui a levé (LoggingHttp-
+            # Transport) : son corps est là, et le SDK le lira.
+            return exc.response
+
+    async def aclose(self) -> None:
+        await self._transport.aclose()
+
+
 # --- #3447 — le disjoncteur piloté depuis la coroutine, sans tornado -------
 #
 # ``CircuitBreaker.call_async`` (pybreaker 1.4.1) est construit sur
@@ -745,10 +816,13 @@ class ResilientAsyncTransport(httpx.AsyncBaseTransport):
         return await _call_through_breaker(_inner)
 
 
-def get_resilient_async_client() -> httpx.AsyncClient:
-    """
-    Retourne un client httpx.AsyncClient configuré avec un transport résilient
-    et un logging détaillé.
+def _resilient_transport_chain() -> httpx.AsyncBaseTransport:
+    """La chaîne de production, du fil vers l'appelant.
+
+    Du fil vers l'extérieur : le budget par tentative (#3435), la résilience
+    (tenacity + disjoncteur), le journal, puis la réparation
+    ``reasoning_effort`` (#2324), qui doit rester la couche la plus externe
+    pour que le journal montre le corps RÉELLEMENT parti sur le fil.
     """
     base_transport = httpx.AsyncHTTPTransport()
     # #3435 — la borne par tentative vit SOUS la couche résiliente : tenacity
@@ -764,10 +838,37 @@ def get_resilient_async_client() -> httpx.AsyncClient:
     # #2324 : l'injection reasoning_effort est la couche la plus EXTERNE —
     # le log de la requête montre alors exactement le corps parti sur le fil
     # (avec le champ injecté), pas un corps que l'API n'a jamais vu.
-    final_transport = ReasoningEffortTransport(logged_transport)
+    return ReasoningEffortTransport(logged_transport)
 
+
+def get_resilient_async_client() -> httpx.AsyncClient:
+    """
+    Retourne un client httpx.AsyncClient configuré avec un transport résilient
+    et un logging détaillé.
+
+    Ce client LÈVE le statut d'erreur (``httpx.HTTPStatusError``) : c'est le
+    contrat que #2324 a posé et que ses témoins figent. Il ne doit pas être
+    confié au SDK OpenAI, qui lit cette exception comme une panne de
+    connexion — le client confié au SDK est ``get_sdk_facing_async_client``
+    (#3719).
+    """
     return httpx.AsyncClient(
-        transport=final_transport, timeout=settings.network.default_timeout
+        transport=_resilient_transport_chain(),
+        timeout=settings.network.default_timeout,
+    )
+
+
+def get_sdk_facing_async_client() -> httpx.AsyncClient:
+    """#3719 — le client confié au SDK OpenAI.
+
+    La même chaîne, une couche plus haut : une réponse d'erreur que le SDK ne
+    rejoue pas lui revient comme RÉPONSE, et le SDK lève alors son propre
+    erreur typée — statut et corps — après UN envoi, au lieu de classer le
+    refus comme une panne de connexion et de le rejouer trois fois.
+    """
+    return httpx.AsyncClient(
+        transport=SdkFacingTransport(_resilient_transport_chain()),
+        timeout=settings.network.default_timeout,
     )
 
 

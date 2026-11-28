@@ -21,7 +21,9 @@ from semantic_kernel.connectors.ai.chat_completion_client_base import (
     ChatCompletionClientBase,
 )
 from semantic_kernel.const import DEFAULT_SERVICE_NAME
-from argumentation_analysis.core.utils.network_utils import get_resilient_async_client
+from argumentation_analysis.core.utils.network_utils import (
+    get_sdk_facing_async_client,
+)
 from argumentation_analysis.config.settings import (
     AzureOpenAISettings,
     DEFAULT_CHAT_MODEL_ID,
@@ -594,7 +596,11 @@ def create_llm_service(
     # Log the resolved config so silent divergence is visible (#2281)
     _log_resolved_llm_config(api_key, log_base_url, model_id, route_source)
 
-    resilient_client = get_resilient_async_client()
+    # #3719 — le client que le SDK OpenAI reçoit rend au SDK une réponse d'erreur
+    # qu'il ne rejoue pas, pour qu'il lève son propre erreur typée (statut et
+    # corps) après un seul envoi. Les statuts qu'il rejoue lui-même (408, 409,
+    # 429, 5xx) gardent le chemin qu'ils avaient.
+    resilient_client = get_sdk_facing_async_client()
     # Typed as the SK base so the authentic OpenAI/Azure instance, and the
     # cache wrapper (CachedChatCompletion) added below in record/replay mode,
     # are all valid assignments (BO-3 #1473 PR2).

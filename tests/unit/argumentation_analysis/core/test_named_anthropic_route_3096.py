@@ -165,7 +165,7 @@ def test_the_kernel_factory_builds_the_named_route(monkeypatch):
     monkeypatch.setattr(llm_service, "AsyncOpenAI", _FakeAsyncOpenAI)
     monkeypatch.setattr(llm_service, "OpenAIChatCompletion", _FakeOpenAIChatCompletion)
     monkeypatch.setattr(
-        llm_service, "get_resilient_async_client", lambda: SimpleNamespace()
+        llm_service, "get_sdk_facing_async_client", lambda: SimpleNamespace()
     )
 
     llm_service.create_llm_service(force_authentic=True)
