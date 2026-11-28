@@ -18,7 +18,7 @@ stripped (present).
 
 Since #3679 the band is on another route: the named Anthropic route
 (`ANTHROPIC_CHAT_MODEL_ID=claude-haiku-5-5`), where the model id hashed is that one, verbatim.
-The OpenRouter case above still holds for a seat that declares it — and the two `ANTHROPIC_*`
+The OpenRouter case above still holds for a seat that declares it — and the `ANTHROPIC_*`
 variables below are now the ones that select the band's route.
 
 A second gap adds calls instead of re-keying them. A `.env` that sets
@@ -35,8 +35,8 @@ Measured (#3690) on `main` `df82a458e`: six lookups in two tests, and `miss_repl
 # 1. Import the committed cassettes into a replay store (once per store).
 python scripts/cassettes/import.py tests/fixtures/llm_cassettes .cache/llm_replay_band --purge --verify-run
 
-# 2. Replay the band's population with the CI route — the three empty vars are the point:
-OPENROUTER_API_KEY="" OPENROUTER_BASE_URL="" SELF_HOSTED_LLM_ENDPOINT="" \
+# 2. Replay the band's population with the CI route — the four empty vars are the point:
+OPENROUTER_API_KEY="" OPENROUTER_BASE_URL="" SELF_HOSTED_LLM_ENDPOINT="" ANTHROPIC_BASE_URL="" \
 OPENAI_API_KEY=replay-band-no-live-anti-1019 \
 ANTHROPIC_API_KEY=replay-band-no-live-anti-1019 ANTHROPIC_CHAT_MODEL_ID=claude-haiku-5-5 \
 LLM_CACHE_MODE=replay LLM_CACHE_DIR=.cache/llm_replay_band \
@@ -53,15 +53,65 @@ nothing else should run under that pair. Never print the key to check which one 
 `tests/unit/test_record_lane_route_parity_3679.py` reads the route from the two workflow
 files and holds the recorder and the replayer to one route.
 
+**Empty `ANTHROPIC_BASE_URL` too.** A Claude Code seat exports it (the harness proxy).
+`llm_service` reads it as the named route's base URL, and `endpoint_compat` classifies the
+provider from that URL: a non-Anthropic base sends `response_format {"type": "json_object"}`,
+and those calls then enter the raw key. It is in the process environment, not in `.env`, so
+emptying the file does not drop it. Measured on `3ff8640e0` (the population CI's band run
+45517998474 replays), one line apart:
+
+| the run | counters | pytest |
+| --- | --- | --- |
+| without `ANTHROPIC_BASE_URL=""` | `hit=43`, `miss_replay=20` on 8 distinct keys | 19 failed, 33 passed |
+| with it | `hit=1745`, `miss_replay=0`, `miss_record=0`, `live=0` | 52 passed, 2 skipped, 1 xfailed |
+
+The second row is CI's row. A seat that inherits the variable reads those misses as a family
+(20 lookups on 8 distinct keys), not as one drifted prompt.
+
+Read the same way on a second seat, `myia-ai-01` (27/11, the coordinator's reading), dropping
+the variable from the environment instead of emptying it (`env -u ANTHROPIC_BASE_URL`): 19
+failed and 20 entries missing with it inherited, 52 passed and none missing with it dropped.
+Two seats, two ways of removing one variable, one family.
+
 Measured on `fix/penalty-register-order-3394`, before #3679 moved the band to the Anthropic
 route: 52 passed, `hit=1856` — the same count as the CI job — and `miss_replay=7`. Without
-the two empty vars the same run is 23 failed / 28 passed, `hit=30`, `miss_replay=32`, which
-is not a measurement of the cassettes. The counts of the current cassettes are those of the
-CI job on the same commit.
+the two empty OpenRouter vars the same run is 23 failed / 28 passed, `hit=30`, `miss_replay=32`,
+which is not a measurement of the cassettes. The counts of the current cassettes are those of
+the CI job on the same commit.
 
-Measured again on `main` `df82a458e` with the three empty vars and a store holding every
-committed key (#3690): 51 passed, `hit=1702`, `miss_replay=0`. The same seat without
-`SELF_HOSTED_LLM_ENDPOINT=""` reads `miss_replay=6`.
+Measured again on `main` `df82a458e` with `SELF_HOSTED_LLM_ENDPOINT=""` among the empties and a
+store holding every committed key (#3690): 51 passed, `hit=1702`, `miss_replay=0`. The same seat
+without that empty reads `miss_replay=6`.
+
+**Step 1's `--verify-run` reads the record run from the GitHub API.** CI has `GITHUB_TOKEN` and
+`GITHUB_REPOSITORY`; a bare seat has neither, and the provenance gate refuses there — the plain
+import does not need them. On a seat, export both before step 1:
+
+```bash
+export GH_TOKEN="$(gh auth token)"
+export GITHUB_REPOSITORY=jsboigeEpita/2025-Epita-Intelligence-Symbolique
+```
+
+Measured on `myia-po-2023`: without them the gate stops at `requires GITHUB_TOKEN/GH_TOKEN and
+GITHUB_REPOSITORY`; with them, `run 45513278355 exported 587 cassettes; declared non-job delta 0
+(sk_patches: 0); disk carries 587`.
+
+The token is not the whole story. On `myia-ai-01` (27/11) step 1's gate does not pass: the run's
+logs are unreachable over TLS there — Python's default context under Windows, as the
+coordinator read it. The request goes through `urllib.request.urlopen`, and the gate treats an
+unreachable log as a provenance verdict like any other (`RunLogError`, rc 3), never a silent
+skip. The same gate passes from `myia-po-2023` with that default context (re-read on
+`b612ab24e`), so the difference is on that seat. It is filed as #3716, not carried here as a
+seat variant: a seat that drops `--verify-run` has not taken step 1. The plain import still runs
+`verify_manifest` — the manifest to the directory (count and digest) and to the recording
+environment — and cannot do what the flag adds, resolving the record run id against the run's
+own log.
+
+The recipe as it stands above, followed as written on `myia-po-2023` against `main` `b612ab24e`
+(27/11): step 1 in its literal form, with whichever account `gh` holds active, exits 0 and writes
+587; step 2 reads `52 passed, 2 skipped, 1 xfailed`; the workflow's own gate
+(`scripts.cassettes.replay_gate_check`) reads `live=0 hit=1745 miss_record=0 miss_replay=0`. That
+is CI's row on the same commit.
 
 ## Reading the counters
 
@@ -71,7 +121,9 @@ committed key (#3690): 51 passed, `hit=1702`, `miss_replay=0`. The same seat wit
 - **One or two keys** — a prompt changed. The PR that changes a prompt is the one that
   invalidates a cassette; the re-record (`record-llm-cassettes.yml`, manual, paid) rides the
   same PR. The miss message now names the model it hashed (#3411).
-- **A fixed family of keys, identical run after run** — a seat `.env` gap (e.g. the
-  SELF_HOSTED keys missing on some seats, R1288; `SELF_HOSTED_LLM_ENDPOINT` set, #3690). It
-  is not the branch; the CI job is the instrument that decides. A family that survives the
-  recipe above names a gap this page does not carry yet.
+- **A fixed family of keys, identical run after run** — a seat gap: a `.env` entry the recipe
+  does not drop (e.g. the SELF_HOSTED keys missing on some seats, R1288;
+  `SELF_HOSTED_LLM_ENDPOINT` set, #3690) or a process variable it does not empty
+  (`ANTHROPIC_BASE_URL`, above — its family is the raw-path calls, whose settings carry
+  `response_format`). It is not the branch; the CI job is the instrument that decides. A family
+  that survives the recipe above names a gap this page does not carry yet.
