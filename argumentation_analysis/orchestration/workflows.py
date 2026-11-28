@@ -1291,7 +1291,18 @@ def build_spectacular_workflow() -> WorkflowDefinition:
             # best-effort — the DAG pays for what it can use.
             depends_on=["extract"],
             optional=True,
-            timeout_seconds=120,
+            # #3658 item 46h — the historian's persona call carries the shared
+            # ``PHASE_MAX_TOKENS`` (8 192). A call that runs to that cap takes
+            # ~40 s at c22's 205 tok/s plus 46b's 12 s of prompt handling, and
+            # 120 s composes an attempt deadline of only
+            # ``min(90, (120 - 10 - 10) / 2)`` = 50 s: the attempt would expire
+            # before the cap, be re-issued by tenacity (billed and discarded)
+            # and could leave the phase empty. 180 s composes 80 s, the same
+            # attempt deadline every other persona phase and the acts carry —
+            # one arithmetic for the workflow. The population witness
+            # (tests/unit/argumentation_analysis/test_completion_cap_census_3658.py)
+            # reads this value from here, not from a copy.
+            timeout_seconds=180,
         )
         .add_phase(
             "strategist",

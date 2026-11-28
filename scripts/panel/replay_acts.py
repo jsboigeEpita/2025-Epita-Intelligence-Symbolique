@@ -612,6 +612,16 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         help="the panel's ids, comma or space separated (the campaign's parser)",
     )
     parser.add_argument(
+        "--probe",
+        action="store_true",
+        help=(
+            f"with --acts {LIVE}: the named panel is a declared subset of the "
+            "cycle (see the live runner's --probe) — what it leaves out is named "
+            "in the tag instead of refusing the run. Refused with the recorded "
+            "path, which replays nothing and has no subset to declare"
+        ),
+    )
+    parser.add_argument(
         "--acts",
         default=RECORDED,
         choices=(RECORDED, LIVE),
@@ -648,13 +658,51 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             )
             return EXIT_USAGE
 
+    # #3658 item 46g-3 (R1220 b) — the launcher takes the same path as the live
+    # API, so it carries the same flag. A probe names a subset, and only the
+    # live path has a subset to name: refusing here is what keeps the flag from
+    # being accepted and then ignored.
+    if args.probe and args.acts != LIVE:
+        print(
+            json.dumps(
+                {
+                    "ok": False,
+                    "stage": STAGE_PREFLIGHT,
+                    "refused": (
+                        f"--probe needs --acts {LIVE}: the recorded path replays "
+                        "nothing it could name a subset of"
+                    ),
+                },
+                indent=1,
+                sort_keys=True,
+            )
+        )
+        return EXIT_USAGE
+    if args.probe and not panel:
+        print(
+            json.dumps(
+                {
+                    "ok": False,
+                    "stage": STAGE_PREFLIGHT,
+                    "refused": (
+                        "--probe: needs --panel-file or --doc-ids to name the subset"
+                    ),
+                },
+                indent=1,
+                sort_keys=True,
+            )
+        )
+        return EXIT_USAGE
+
     if args.acts == LIVE:
         # Imported here, after the panel is parsed and before anything is read:
         # the live runner answers the same preflight itself, so a cycle that
         # does not hold still imports no text builder.
         from scripts.panel.act_replay_live import main as live_main
 
-        return live_main(args.cycle_dir, args.dest, panel, invoked)
+        return live_main(
+            args.cycle_dir, args.dest, panel, invoked, probe=bool(args.probe)
+        )
 
     report = replay(args.cycle_dir, args.dest, panel, acts=args.acts, argv=invoked)
     if report.get("stage") == STAGE_PREFLIGHT and not report.get("ok"):

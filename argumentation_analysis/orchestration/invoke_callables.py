@@ -690,14 +690,27 @@ def _expose_finish_reason(call: Any, result: Any, settings: Any) -> None:
 #   (#3658), so a cap is spent before the answer's first visible token.
 # At 8 192 the reading stopped on the longest document and kept 7 moves.
 #
-# 24 576 (3 × 8 192) is 2.1× the measured maximum and fits the phase's own
-# 180 s budget (``workflows.py``, the ``first_reading`` phase): the slowest
-# measured call ran 11 617 tokens in 44.0 s — about 264 tokens per second, so
-# 24 576 takes about 93 s — and at c22's slower ~210 tokens per second it
-# takes about 117 s. Override via FIRST_READING_MAX_TOKENS (set 0 to omit the
+# #3658 item 46h — 46d sized the value at 24 576 (2.1× the measured maximum)
+# against the phase's own 180 s budget, reading "the slowest measured call ran
+# 11 617 tokens in 44.0 s — about 264 tokens per second". The transport does
+# not apply 180 s to a call: ``PhaseBudgetTransport`` rewrites each ATTEMPT to
+# ``compose_attempt_deadline(180)`` = 80 s (``(180 - 10 - 10) / 2``, under the
+# 90 s client default), and tenacity re-issues an attempt that expires — the
+# generation is billed and discarded, and the phase can end empty. At 24 576 a
+# reading that runs to its cap needs ~120 s at c22's 205 tok/s: it can never
+# stop on ``length``. The cap is now sized on that deadline, as 46f did for
+# the acts: (80 - 12) s × 205 tok/s ≈ 13 940, and 13 824 (the acts' own value
+# — same deadline, same route, one arithmetic for both prose caps) spends
+# 67.4 s + 12 s of prompt handling = 79.4 s inside the 80 s attempt. It stays
+# above the 11 617-token maximum measured on 15 calls, with ~19 % headroom
+# instead of 2.1×: the deadline binds, and the trade is named rather than left
+# to look like a margin. Raising the phase's ``timeout_seconds`` is NOT the
+# lever here — the composition is capped at ``settings.network.default_timeout``
+# (90 s), which would deliver at most ~16 380 tokens, still far below 24 576;
+# the cap had to move. Override via FIRST_READING_MAX_TOKENS (set 0 to omit the
 # parameter entirely); an override is a measuring tool, the default is what
 # production runs.
-_FIRST_READING_MAX_TOKENS = _env_number("FIRST_READING_MAX_TOKENS", 24576, int)
+_FIRST_READING_MAX_TOKENS = _env_number("FIRST_READING_MAX_TOKENS", 13824, int)
 
 
 async def _guarded_chat_completion(client: Any, **kwargs: Any) -> Any:

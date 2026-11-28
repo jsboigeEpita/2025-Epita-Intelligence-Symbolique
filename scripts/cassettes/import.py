@@ -46,6 +46,7 @@ import io
 import json
 import os
 import re
+import ssl
 import sys
 import urllib.error
 import urllib.request
@@ -73,6 +74,33 @@ _MANIFEST_LINE_RE = re.compile(r"Manifest: .*\(run (\d+), (\d+) cassettes\)")
 
 class RunLogError(Exception):
     """The run's logs could not serve a cassette-export count (#2326)."""
+
+
+def _run_log_ssl_context() -> "ssl.SSLContext":
+    """The trust store the record run's logs are verified against (#3716).
+
+    ``ssl.create_default_context()`` with no ``cafile`` also loads the
+    platform store; on Windows that includes the user's INTERMEDIATE store
+    (``Cert:\\CurrentUser\\CA``) as trust anchors. A seat whose store had
+    cached the Let's Encrypt intermediates ``YR1``/``YR2`` then built the
+    chain through them and needed their issuer, ``ISRG Root YR``, which
+    neither the conda bundle nor any Windows store carries — the call failed
+    with ``unable to get issuer certificate`` while every other client on the
+    same seat succeeded (measured on ``myia-ai-01``, twice: 09/11 and 27/11).
+
+    Anchoring on the bundle is what makes the repair durable: a ``cafile``
+    context does not read the platform store at all, so Windows re-caching
+    those intermediates cannot bring the refusal back.
+
+    ``certifi`` is in ``conda-lock.yml``; ``truststore`` is not, so the bundle
+    is the one dependency this may lean on. Verification stays ON — this
+    narrows the store, it never disables the check — and there is deliberately
+    no fallback to a default context on failure: a refusal stays a
+    ``RunLogError`` carrying the same line, which is a provenance verdict.
+    """
+    import certifi
+
+    return ssl.create_default_context(cafile=certifi.where())
 
 
 def _run_export_count(
@@ -109,7 +137,9 @@ def _run_export_count(
         },
     )
     try:
-        with urlopen(req, timeout=30) as resp:
+        with urlopen(
+            req, timeout=30, context=_run_log_ssl_context()
+        ) as resp:
             data = resp.read()
     except urllib.error.HTTPError as exc:
         if exc.code == 404:

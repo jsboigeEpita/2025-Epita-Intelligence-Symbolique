@@ -155,7 +155,14 @@ def refresh_manifest(fixtures_dir: Path, *, note: str) -> bool:
     manifest["cassette_count"] = len(keys)
     manifest["keys_sha256"] = patch["keys_sha256"]
     manifest_path.write_text(
-        json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8"
+        json.dumps(manifest, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+        # #3714 item 50 — the manifest is a TRACKED file: its bytes must not
+        # depend on the seat. In text mode, "\n" becomes the platform's line
+        # ending, and a seat with core.autocrlf=false commits the CRLF (35 of
+        # 36 lines, measured) — the whole file then differs from main where
+        # the patch touches 17 lines. The writer owns its bytes.
+        newline="\n",
     )
     print(
         f"refresh_manifest: {manifest_path} re-bound ({len(keys)} cassettes, "
@@ -241,6 +248,10 @@ def export_one(
     out.write_text(
         json.dumps({"key": key, "value": value}, ensure_ascii=False, indent=2),
         encoding="utf-8",
+        # #3714 item 50 — the cassette is a TRACKED file too, and its bytes
+        # are compared (and hashed) across seats: the writer owns them, like
+        # the rekey scripts already do ("bytes in, bytes out").
+        newline="\n",
     )
     return "ok"
 
@@ -360,7 +371,11 @@ def main(argv: list[str] | None = None) -> int:
             manifest["year_hint_cassettes"] = hint_keys
         manifest_path = args.fixtures_dir / MANIFEST_NAME
         manifest_path.write_text(
-            json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8"
+            json.dumps(manifest, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+            # #3714 item 50 — same rule as refresh_manifest: the manifest's
+            # bytes are the commit's bytes, whatever the seat.
+            newline="\n",
         )
         print(
             f"Manifest: {manifest_path} (run {run_id}, {len(fixture_keys)} cassettes)"
