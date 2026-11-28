@@ -1483,6 +1483,23 @@ def replayable(
     return False, f"{branch}: this mode has no acts by design"
 
 
+def _transport_attempts_per_call() -> int:
+    """How many transport attempts one model call may cost, read from the
+    policy that applies them.
+
+    #3658 item 46g-3 (R1220 d) — the announcement counted the acts' own
+    retries and not the transport's. The acts run on the LLM service's client,
+    whose ``ResilientAsyncTransport`` retries each request up to
+    ``NETWORK_RETRY_STOP_AFTER_ATTEMPT`` times, so a "call" is up to that many
+    paid requests. The number is READ from the settings that produce it
+    (``argumentation_analysis.config.settings``), never copied into the panel:
+    a second literal would drift the day the policy moves.
+    """
+    from argumentation_analysis.config.settings import settings
+
+    return max(1, int(settings.network.retry_stop_after_attempt))
+
+
 def run(
     cycle_dir: Path,
     destination: Path,
@@ -1637,6 +1654,37 @@ def run(
             }
         )
         return report
+    # #3658 item 46g-3 (R1220 a) — the documents copied as they are can reach
+    # the judges' own threshold on their own. The judges read the whole panel,
+    # copies included, so a batch that only counted its live documents would
+    # spend the panel on one they refuse. Read here, free: the copies are the
+    # cycle's own records, and nothing is created or paid before this refusal.
+    from scripts.dataset import judge_panel as judged
+
+    threshold = judged.DEGRADED_ARM_REFUSAL_THRESHOLD
+    copied_degraded: List[str] = []
+    for doc in copied:
+        try:
+            row = judged.arm_health(states[doc], signatures[doc])
+        except Exception:  # noqa: BLE001 — unreadable is named by the self-check
+            continue
+        if row.get("pipeline_degraded"):
+            copied_degraded.append(doc)
+    if len(copied_degraded) >= threshold:
+        report.update(
+            {
+                "ok": False,
+                "stage": STAGE_RECORDS,
+                "refused": (
+                    f"the panel's copied document(s) already reach "
+                    f"DEGRADED_ARM_REFUSAL_THRESHOLD={threshold} on their own "
+                    f"({', '.join(copied_degraded)}): the judges would refuse "
+                    "this panel, so nothing is replayed"
+                ),
+                "copied_degraded": list(copied_degraded),
+            }
+        )
+        return report
     # ---- the identity control, free, before the destination exists ----
     control_rows: List[Dict[str, Any]] = []
     for doc in live_docs:
@@ -1682,18 +1730,24 @@ def run(
     assembled_rows: List[Dict[str, Any]] = []
     stopped: Optional[str] = None
     stop_why: Optional[str] = None
-    degraded_docs: List[str] = []
+    # #3658 item 46g-3 (R1220 a) — the count the batch stops on is the panel's,
+    # not its live documents': the copies are in it from the start.
+    degraded_docs: List[str] = list(copied_degraded)
     calls_by_doc: Dict[str, int] = {}
-    from scripts.dataset import judge_panel as judged
-
-    threshold = judged.DEGRADED_ARM_REFUSAL_THRESHOLD
     call_bound = len(live_docs) * ACT_CALLS_PER_DOCUMENT
+    # #3658 item 46g-3 (R1220 d) — a "call" is what the acts ask for; each one
+    # is replayed by the transport on its own policy, so the spend is announced
+    # in the unit the provider bills: requests.
+    transport_attempts = _transport_attempts_per_call()
+    requests_bound = call_bound * transport_attempts
     # #3658 item 46g — the bound is announced BEFORE the first call, so the
     # spend is a declared one. What the run actually spends is counted below.
     print(
         f"[act_replay] {len(live_docs)} document(s) to replay live: at most "
         f"{ACT_CALLS_PER_DOCUMENT} model calls each (Acts II and III retry once), "
-        f"so at most {call_bound} call(s) before this run ends.",
+        f"each call replayed by the transport up to {transport_attempts} time(s) "
+        f"(NETWORK_RETRY_STOP_AFTER_ATTEMPT), so at most {requests_bound} paid "
+        f"request(s) before this run ends.",
         flush=True,
     )
     for doc in live_docs:
@@ -1801,7 +1855,18 @@ def run(
         )
         return report
     drifted = input_drift(inputs_before, inputs_after)
-    ok = stopped is None and self_check["ok"] and not drifted
+    # #3658 item 46g-3 (R1220 a) — the guard the judges apply is the guard this
+    # record carries: a panel at their threshold is one they would refuse, so a
+    # tag calling itself a measurement would be false. ``ok`` says it, and the
+    # refusal below names the count instead of leaving it in the self-check.
+    guard = self_check.get("guard") or {}
+    would_refuse = bool(guard.get("would_refuse"))
+    ok = (
+        stopped is None
+        and self_check["ok"]
+        and not drifted
+        and not would_refuse
+    )
     counts: Dict[str, Any] = {
         "documents": len(docs),
         "live": sum(1 for row in assembled_rows if row.get("mode") == LIVE),
@@ -1835,6 +1900,8 @@ def run(
                 "documents": len(live_docs),
                 "per_document": ACT_CALLS_PER_DOCUMENT,
                 "bound": call_bound,
+                "transport_attempts_per_call": transport_attempts,
+                "bound_requests": requests_bound,
                 "made": sum(calls_by_doc.values()),
                 "per_document_made": dict(calls_by_doc),
             },
@@ -1856,6 +1923,13 @@ def run(
             report["refused"] = (
                 "the cycle's inputs moved during the measurement: "
                 + ", ".join(drifted[:4])
+            )
+        elif would_refuse:
+            report["refused"] = (
+                f"the panel the judges would read holds {guard.get('degraded_arms')} "
+                f"degraded document(s), at DEGRADED_ARM_REFUSAL_THRESHOLD="
+                f"{guard.get('threshold')}: they would refuse it, so this tag is "
+                "not a measurement"
             )
         else:
             report["refused"] = "the self-check failed"

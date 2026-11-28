@@ -886,6 +886,29 @@ def run_cycle(
     status.event("credit_before", **(summary["credit_before"] or {}))
     if cfg.stage != "pipeline" and not cfg.judges:
         return finish("no judge given: pass --judge NAME=MODEL", EXIT_STOPPED)
+    # #3658 item 46g-3 (R1220 c) — a tag that declares itself a probe is not a
+    # panel, and no stage that reads the panel may read it as one. Two halves,
+    # both named, and both BEFORE the zero-shot and harvest checks so the probe
+    # is answered as a probe rather than as a cycle that is falling short: a
+    # panel that is not the probe's covered set is refused with its scope in
+    # the reason (the generic "unharvested"/"no zero-shot" leaves the reader
+    # guessing whether the cycle is broken or the tag is a declared subset),
+    # and a matching subset is graded with its scope in the summary, so nobody
+    # takes that pass for the cycle's panel.
+    probe = (recorded_pipeline(cfg) or {}).get("probe")
+    if cfg.stage != "pipeline" and isinstance(probe, dict):
+        covered = [str(doc) for doc in probe.get("covered") or []]
+        if sorted(panel) != sorted(covered):
+            return finish(
+                f"the tag declares itself a probe on {len(covered)} of "
+                f"{probe.get('cycle_documents')} document(s) "
+                f"({', '.join(covered)}): the {cfg.stage} stage must be given "
+                "that panel — a probe graded against another panel is not a "
+                "measurement of the cycle",
+                EXIT_STOPPED,
+            )
+        summary["probe"] = dict(probe)
+
     absent = missing_zeroshot(cfg, panel)
     if absent:
         status.event("zeroshot_missing", documents=absent)
