@@ -638,7 +638,7 @@ def main():
     md_report = analyzer.generate_report(report)
 
     report_file = reports_dir / "migration_duplicates_analysis.md"
-    with open(report_file, "w", encoding="utf-8") as f:
+    with open(report_file, "w", encoding="utf-8", newline="\n") as f:
         f.write(md_report)
 
     # Génère le script de nettoyage
@@ -646,12 +646,12 @@ def main():
     cleanup_script = analyzer.generate_cleanup_script(report)
 
     cleanup_file = reports_dir / "cleanup_migration_duplicates.py"
-    with open(cleanup_file, "w", encoding="utf-8") as f:
+    with open(cleanup_file, "w", encoding="utf-8", newline="\n") as f:
         f.write(cleanup_script)
 
     # Sauvegarde des données JSON pour analyse programmatique
     json_file = reports_dir / "migration_duplicates_data.json"
-    with open(json_file, "w", encoding="utf-8") as f:
+    with open(json_file, "w", encoding="utf-8", newline="\n") as f:
         json.dump(asdict(report), f, indent=2, ensure_ascii=False)
 
     print(f"\n🎉 Analyse terminée !")

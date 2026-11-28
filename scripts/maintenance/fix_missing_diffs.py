@@ -103,7 +103,7 @@ def fix_commit_audit_file(json_file: Path, file_statuses: dict[str, str]):
     if needs_update:
         data["files_changed"] = new_files_changed
         try:
-            with open(json_file, 'w', encoding='utf-8') as f:
+            with open(json_file, 'w', encoding='utf-8', newline="\n") as f:
                 json.dump(data, f, indent=2, ensure_ascii=False)
             print(f"✅ Fichier mis à jour : {json_file.name}")
         except IOError as e:

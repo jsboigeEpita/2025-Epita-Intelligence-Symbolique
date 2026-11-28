@@ -131,7 +131,7 @@ def get_oracle_info() -> Dict[str, Any]:
 '''
 
         oracle_init_path = self.oracle_dir / "__init__.py"
-        with open(oracle_init_path, "w", encoding="utf-8") as f:
+        with open(oracle_init_path, "w", encoding="utf-8", newline="\n") as f:
             f.write(oracle_init_content)
 
         self.refactor_log.append("✅ Consolidation imports Oracle __init__.py")
@@ -160,7 +160,7 @@ __all__ = [
 '''
 
         orchestration_init_path = self.orchestration_dir / "__init__.py"
-        with open(orchestration_init_path, "w", encoding="utf-8") as f:
+        with open(orchestration_init_path, "w", encoding="utf-8", newline="\n") as f:
             f.write(orchestration_init_content)
 
         self.refactor_log.append("✅ Consolidation imports Orchestration __init__.py")
@@ -339,7 +339,7 @@ def oracle_error_handler(context: str = ""):
 '''
 
         error_handler_path = self.oracle_dir / "error_handling.py"
-        with open(error_handler_path, "w", encoding="utf-8") as f:
+        with open(error_handler_path, "w", encoding="utf-8", newline="\n") as f:
             f.write(error_handler_content)
 
         self.refactor_log.append("✅ Module de gestion d'erreurs Oracle créé")
@@ -360,7 +360,7 @@ def oracle_error_handler(context: str = ""):
                 "et ce script ne régénère plus le contrat depuis un gabarit."
             )
         interface_content = interface_path.read_text(encoding="utf-8")
-        with open(interface_path, "w", encoding="utf-8") as f:
+        with open(interface_path, "w", encoding="utf-8", newline="\n") as f:
             f.write(interface_content)
 
         self.refactor_log.append("✅ Interfaces Oracle standardisées")

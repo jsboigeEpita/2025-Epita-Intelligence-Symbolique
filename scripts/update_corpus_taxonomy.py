@@ -97,7 +97,7 @@ def main():
     )
 
     # Write updated corpus
-    with open(CORPUS_PATH, "w", encoding="utf-8") as f:
+    with open(CORPUS_PATH, "w", encoding="utf-8", newline="\n") as f:
         json.dump(corpus, f, ensure_ascii=False, indent=2)
         f.write("\n")
 

@@ -382,7 +382,7 @@ def print_fallacy_family_table(families_by_corpus: dict, metrics_list: list):
 
 def save_json(data: dict, path: Path):
     """Save data as formatted JSON."""
-    with open(path, "w", encoding="utf-8") as f:
+    with open(path, "w", encoding="utf-8", newline="\n") as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
     print(f"  Saved: {path}")
 

@@ -251,7 +251,7 @@ class TestOracleErrorDecorator:
 '''
 
         test_path = self.tests_dir / "test_error_handling.py"
-        with open(test_path, "w", encoding="utf-8") as f:
+        with open(test_path, "w", encoding="utf-8", newline="\n") as f:
             f.write(test_content)
 
         self.update_log.append("✅ Tests error_handling.py créés")
@@ -273,7 +273,7 @@ class TestOracleErrorDecorator:
                 "ne régénère plus les tests depuis un gabarit."
             )
         content = test_path.read_text(encoding="utf-8")
-        with open(test_path, "w", encoding="utf-8") as f:
+        with open(test_path, "w", encoding="utf-8", newline="\n") as f:
             f.write(content)
 
         self.update_log.append("✅ Tests interfaces.py recopiés (source vivante)")
@@ -289,7 +289,7 @@ class TestOracleErrorDecorator:
                 "ce script ne régénère plus les tests depuis un gabarit."
             )
         content = integration_test_path.read_text(encoding="utf-8")
-        with open(integration_test_path, "w", encoding="utf-8") as f:
+        with open(integration_test_path, "w", encoding="utf-8", newline="\n") as f:
             f.write(content)
 
         self.update_log.append("✅ Tests d'intégration recopiés (source vivante)")
@@ -333,10 +333,10 @@ def standard_oracle_response_error():
         # Ajouter au conftest existant
         conftest_path = self.root_dir / "conftest.py"
         if conftest_path.exists():
-            with open(conftest_path, "a", encoding="utf-8") as f:
+            with open(conftest_path, "a", encoding="utf-8", newline="\n") as f:
                 f.write(conftest_update)
         else:
-            with open(conftest_path, "w", encoding="utf-8") as f:
+            with open(conftest_path, "w", encoding="utf-8", newline="\n") as f:
                 f.write(conftest_update)
 
         self.update_log.append("✅ Conftest.py mis à jour avec nouvelles fixtures")

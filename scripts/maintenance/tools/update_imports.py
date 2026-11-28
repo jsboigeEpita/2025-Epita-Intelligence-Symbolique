@@ -114,7 +114,7 @@ def update_imports_in_file(file_path, dry_run=True):
 
         # Écrire le contenu mis à jour si des modifications ont été effectuées
         if total_replacements > 0 and not dry_run:
-            with open(file_path, "w", encoding="utf-8") as f:
+            with open(file_path, "w", encoding="utf-8", newline="\n") as f:
                 f.write(updated_content)
 
         return total_replacements, updated_content

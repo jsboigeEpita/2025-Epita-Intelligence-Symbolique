@@ -105,7 +105,7 @@ Documentation maintenue et fonctionnelle.
 Dernière mise à jour: {datetime.now().strftime('%Y-%m-%d %H:%M')}
 """
 
-            with open(readme_path, "w", encoding="utf-8") as f:
+            with open(readme_path, "w", encoding="utf-8", newline="\n") as f:
                 f.write(readme_content)
 
             self.recovery_log.append("README.md minimal créé")
@@ -131,7 +131,7 @@ python scripts/maintenance/analyze_obsolete_documentation.py --quick-scan
 ```
 """
 
-            with open(docs_readme, "w", encoding="utf-8") as f:
+            with open(docs_readme, "w", encoding="utf-8", newline="\n") as f:
                 f.write(docs_content)
 
             self.recovery_log.append("docs/README.md créé")

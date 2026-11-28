@@ -13,23 +13,41 @@ No ``.gitattributes`` change is involved (that would rewrite the bytes every
 seat checks out, including cassettes some guards hash) — this item is only
 about the writers.
 
-The control is what makes the witness able to fail: on a POSIX runner, text
-mode already writes LF, so a writer without an explicit ``newline`` would look
-correct there. The witness therefore forces the platform's line ending to
-CRLF (``os.linesep``), which is what a text-mode writer consults at write
-time, and then requires the bytes to carry no carriage return. On ``main`` the
-forced CRLF lands in the file and the witness reddens.
+Two instruments, and why two
+----------------------------
+**Bytes, where the seat can discriminate.** A byte witness only means
+something on a seat whose text mode writes CRLF: on a POSIX runner text mode
+already writes LF, so a writer that omits ``newline=`` would look correct
+there. The seat is therefore *measured*, not assumed — a raw text-mode write,
+read back in bytes — and the four byte witnesses skip with that reason on a
+seat that cannot discriminate. (An earlier version of this file patched
+``os.linesep`` to force the outcome. That is inert: CPython's C
+``TextIOWrapper`` never reads ``os.linesep``, measured on po-2023 under both
+``projet-is`` and ``projet-is-lock`` — the write still emitted CRLF after the
+patch, whether it was applied before or after ``open``. A control that cannot
+change the result is not a control.)
+
+**The census, everywhere.** ``test_every_named_writer_declares_its_separator``
+parses the source with ``ast`` and requires each named writer to pass
+``newline`` explicitly, with a mutation control proving the assertion can fail:
+the same AST with the keyword dropped in memory reddens, without touching the
+file. It is deliberately independent of
+``scripts/security/verify_text_writer_line_endings`` (the census guard of
+#3723): that module resolves *which* writes reach a tracked file — a question
+this witness does not ask. This one asks whether the named writers fix their
+separator, and that is readable from the four files themselves. It runs on any
+seat.
 
 Seat free: a temporary directory, one diskcache, no network, no key.
 """
 
 from __future__ import annotations
 
+import ast
 import importlib
 import json
-import os
 from pathlib import Path
-from typing import Dict
+from typing import Dict, Tuple
 
 import pytest
 
@@ -37,17 +55,52 @@ cassette_export = importlib.import_module("scripts.cassettes.export")
 
 CASSETTE_KEY = "a" * 64
 
+# One key per writer -- ``(script, function)``. An earlier table keyed the
+# dict by script path, so ``scripts/cassettes/export.py`` appeared twice and
+# only the second row survived: two of the three writers were never checked.
+WRITERS: Tuple[Tuple[str, str], ...] = (
+    ("scripts/cassettes/export.py", "refresh_manifest"),
+    ("scripts/cassettes/export.py", "export_one"),
+    ("scripts/cassettes/export.py", "main"),
+    ("scripts/api/regenerate_openapi_snapshot.py", "write_snapshot"),
+)
+
+REPO_ROOT = Path(__file__).resolve().parents[3]
+
+
+def _text_mode_bytes(directory: Path) -> bytes:
+    """What a plain text-mode write produces on this seat."""
+    path = directory / "probe.text-mode.txt"
+    path.write_text("a\nb\n", encoding="utf-8")
+    return path.read_bytes()
+
+
+def _pinned_bytes(directory: Path) -> bytes:
+    """The same content, written with an explicit ``newline="\\n"``."""
+    path = directory / "probe.pinned.txt"
+    with open(path, "w", encoding="utf-8", newline="\n") as handle:
+        handle.write("a\nb\n")
+    return path.read_bytes()
+
+
+def _seat_is_discriminating(directory: Path) -> bool:
+    """Whether this seat's text mode turns ``"\\n"`` into CRLF (measured)."""
+    return b"\r\n" in _text_mode_bytes(directory)
+
 
 @pytest.fixture()
-def crlf_seat(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Emulate a seat whose text mode writes CRLF.
+def crlf_seat(tmp_path: Path) -> None:
+    """Run the byte witnesses only on a seat where they can fail.
 
-    ``open(..., newline=None)`` translates ``"\\n"`` to ``os.linesep`` at write
-    time, so this is exactly the seat that produced the 35-of-36 CRLF
-    manifest. A writer that passes ``newline="\\n"`` is unaffected — which is
-    the point of the witness.
+    Skipping is the honest outcome on a seat whose text mode already writes
+    LF: the witness would pass for every writer, including a broken one.
     """
-    monkeypatch.setattr(os, "linesep", "\r\n")
+    if not _seat_is_discriminating(tmp_path):
+        pytest.skip(
+            "this seat's text mode already writes LF: a writer that omits "
+            "newline= would look correct here, so the byte witnesses cannot "
+            "discriminate -- the source census covers this seat"
+        )
 
 
 def _crlf_report(data: bytes) -> str:
@@ -139,9 +192,7 @@ def test_the_record_job_export_writes_lf_bytes_on_a_crlf_seat(
     assert manifest.is_file(), "the record path wrote no manifest"
     for path in (manifest, fixtures / f"{CASSETTE_KEY}.json"):
         data = path.read_bytes()
-        assert b"\r" not in data, (
-            f"{path.name} carries CRLF: " + _crlf_report(data)
-        )
+        assert b"\r" not in data, f"{path.name} carries CRLF: " + _crlf_report(data)
 
 
 def test_the_openapi_snapshot_writer_writes_lf_bytes_on_a_crlf_seat(
@@ -159,27 +210,150 @@ def test_the_openapi_snapshot_writer_writes_lf_bytes_on_a_crlf_seat(
     assert b"\r" not in data, "the snapshot carries CRLF: " + _crlf_report(data)
 
 
-def test_the_census_names_every_writer_of_a_tracked_file_under_scripts() -> None:
-    """The census is a table, and it must not shrink silently: each writer
-    named here still exists, and each target it writes is a tracked file.
+def test_the_seat_probe_separates_the_text_mode_from_the_explicit_separator(
+    tmp_path: Path,
+) -> None:
+    """Non-vacuity of the probe the fixture above relies on.
 
-    The table is the deliverable of the census: a writer missing from it is a
-    defect this witness cannot see, so the table is asserted against the code
-    that carries the writers.
+    Two writes of the same content, one through the seat's text mode and one
+    with ``newline="\\n"``. The pinned one never carries a CR -- if it did,
+    the witnesses would blame a writer that is correct. And the text-mode one
+    settles which of the two situations this seat is in, so the fixture's
+    skip is a measurement and not a guess.
     """
-    root = Path(__file__).resolve().parents[3]
-    tracked: Dict[str, str] = {
-        "scripts/cassettes/export.py": "MANIFEST.json",
-        "scripts/cassettes/export.py": "cassette fixture",
-        "scripts/api/regenerate_openapi_snapshot.py": "api/openapi.snapshot.json",
-    }
-    assert tracked, "the census table is empty"
-    for script, target in tracked.items():
-        assert (root / script).is_file(), script
-        assert target
+    plain = _text_mode_bytes(tmp_path)
+    pinned = _pinned_bytes(tmp_path)
 
-    # The writers that were NAMED and left alone, with the reason each one is
-    # outside the population (their bytes are not committed).
+    assert b"\r" not in pinned, (
+        'an explicit newline="\\n" still carried a CR: the byte witnesses '
+        "would redden on a writer that is right"
+    )
+    if _seat_is_discriminating(tmp_path):
+        assert b"\r\n" in plain, (
+            "the probe says this seat discriminates, and its own text-mode "
+            "write carries no CRLF: the probe and the write disagree"
+        )
+    else:
+        assert b"\r\n" not in plain, (
+            "the probe says this seat cannot discriminate, and its text-mode "
+            "write carries CRLF: the byte witnesses ran for nothing"
+        )
+
+
+# --------------------------------------------------------------------------
+# the census: one key per writer, and an assertion able to fail
+# --------------------------------------------------------------------------
+def _enclosing_function(tree: ast.AST, lineno: int) -> str:
+    """The name of the innermost function a line sits in."""
+    best: ast.AST | None = None
+    for node in ast.walk(tree):
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            end = getattr(node, "end_lineno", node.lineno)
+            if node.lineno <= lineno <= end and (
+                best is None or node.lineno > getattr(best, "lineno", 0)
+            ):
+                best = node
+    return getattr(best, "name", "")
+
+
+def _is_write(node: ast.AST) -> bool:
+    """Whether a call writes text: ``write_text``, or ``open`` in a write mode."""
+    if not isinstance(node, ast.Call):
+        return False
+    name = getattr(node.func, "attr", "") or getattr(node.func, "id", "")
+    if name == "write_text":
+        return True
+    if name != "open":
+        return False
+    mode: ast.AST | None = node.args[1] if len(node.args) >= 2 else None
+    for keyword in node.keywords:
+        if keyword.arg == "mode":
+            mode = keyword.value
+    return (
+        isinstance(mode, ast.Constant)
+        and isinstance(mode.value, str)
+        and any(flag in mode.value for flag in ("w", "a", "x"))
+    )
+
+
+def _write_calls(source: str, function: str) -> list[ast.Call]:
+    """The text-mode writes of one named function."""
+    tree = ast.parse(source)
+    return [
+        node
+        for node in ast.walk(tree)
+        if _is_write(node) and _enclosing_function(tree, node.lineno) == function
+    ]
+
+
+def _declares_newline(call: ast.Call) -> bool:
+    """Whether a write fixes its separator instead of taking the seat's."""
+    return any(keyword.arg == "newline" for keyword in call.keywords)
+
+
+def _undeclared(source: str, function: str) -> list[int]:
+    """The lines of writes in one function that do not fix their separator."""
+    return [
+        call.lineno
+        for call in _write_calls(source, function)
+        if not _declares_newline(call)
+    ]
+
+
+def test_every_named_writer_declares_its_separator() -> None:
+    """One row per writer, and each row's function passes ``newline``.
+
+    The row also asserts the count: a second write appearing in one of these
+    functions fails here rather than slipping past a table that only names
+    functions. Adding a writer means adding its row, deliberately.
+    """
+    assert len(WRITERS) == len(set(WRITERS)), "a writer is listed twice"
+    for script, function in WRITERS:
+        path = REPO_ROOT / script
+        assert path.is_file(), script
+        calls = _write_calls(path.read_text(encoding="utf-8"), function)
+        assert len(calls) == 1, (
+            f"{script}:{function} carries {len(calls)} write calls: the table "
+            "names one writer per row, so a new write needs its own row"
+        )
+        call = calls[0]
+        assert _declares_newline(call), (
+            f"{script}:{function} writes at line {call.lineno} without an "
+            'explicit newline="\\n": its bytes would be the seat\'s'
+        )
+
+
+def test_the_census_check_reddens_when_a_writer_drops_its_separator() -> None:
+    """The mutation control: same source, keyword removed in memory."""
+    script, function = "scripts/cassettes/export.py", "main"
+    source = (REPO_ROOT / script).read_text(encoding="utf-8")
+    assert _undeclared(source, function) == [], "the real file is undefended"
+
+    tree = ast.parse(source)
+    dropped = False
+    for node in ast.walk(tree):
+        if _is_write(node) and _enclosing_function(tree, node.lineno) == function:
+            keywords = [kw for kw in node.keywords if kw.arg == "newline"]
+            if keywords:
+                node.keywords.remove(keywords[0])
+                dropped = True
+                break
+    assert dropped, f"no newline= keyword found in {script}:{function}"
+
+    mutated = ast.unparse(tree)
+    assert _undeclared(mutated, function), (
+        "dropping newline= in memory did not redden the census assertion: "
+        "the assertion cannot fail"
+    )
+
+
+def test_the_writers_named_and_left_alone_still_exist() -> None:
+    """The writers named and left outside the population, with their reason.
+
+    Their bytes are not committed, so the rule does not apply -- but they are
+    still named, so that a later move of one of them into a tracked path is
+    noticed instead of being rediscovered from a byte diff.
+    """
     named_only: Dict[str, str] = {
         "scripts/cassettes/rekey_capture.py": (
             "scratch report at REKEY_CAPTURE_OUT (env-var path): not tracked"
@@ -199,22 +373,5 @@ def test_the_census_names_every_writer_of_a_tracked_file_under_scripts() -> None
         ),
     }
     for script, reason in named_only.items():
-        assert (root / script).is_file(), script
+        assert (REPO_ROOT / script).is_file(), script
         assert reason
-
-
-def test_the_control_really_forces_crlf(tmp_path: Path) -> None:
-    """Non-vacuity: without this control the witness could pass on a POSIX
-    runner where text mode already writes LF — which is exactly why the
-    control exists."""
-    path = tmp_path / "control.txt"
-    original = os.linesep
-    try:
-        os.linesep = "\r\n"
-        path.write_text("a\nb\n", encoding="utf-8")
-    finally:
-        os.linesep = original
-    assert b"\r\n" in path.read_bytes(), (
-        "the control did not force CRLF: the witness would pass on a POSIX "
-        "runner for the wrong reason"
-    )

@@ -43,6 +43,9 @@ is not an egress guard: read the ``LLM egress (#1787)`` line of the run before
 its pass count. On a linked git worktree the JVM tests and the key-gated tests
 skip in silence — read ``-rs`` (§3.3 of the same page).
 
+``--paths`` writes LF on every seat: a consumer reads these lines as paths, and
+the seat's line end is not one of them (#3733).
+
 Exit code: 0, or pytest's with ``--run``; 2 when git cannot answer.
 """
 
@@ -55,7 +58,7 @@ import sys
 import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path, PurePosixPath
-from typing import Dict, Iterable, List, Mapping, Optional, Sequence, Tuple
+from typing import Dict, Iterable, List, Mapping, Optional, Sequence, TextIO, Tuple
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 CI_YML = REPO_ROOT / ".github" / "workflows" / "ci.yml"
@@ -315,6 +318,24 @@ def pytest_command(paths: Sequence[str], workers: int = 0) -> List[str]:
     return command
 
 
+def write_paths(stream: TextIO, paths: Sequence[str]) -> None:
+    """One path per line, LF whatever the seat; no path is no line.
+
+    A text stream whose newline is left unset turns each ``\\n`` written into
+    ``os.linesep``: on a Windows seat a consumer reads ``tests/a.py\\r``, a path
+    no file answers to, on every line of the set. The line end is the
+    contract's, not the seat's, the same way #3723 fences it for a tracked
+    file. With an empty set the old ``print("\\n".join(paths))`` wrote one
+    empty line, that is one empty path; a line list with nothing in it is
+    empty.
+    """
+    reconfigure = getattr(stream, "reconfigure", None)
+    if reconfigure is not None:
+        reconfigure(newline="\n")
+    stream.write("".join(f"{path}\n" for path in paths))
+    stream.flush()
+
+
 def report(found: Neighbours, touched: Sequence[str], base: str) -> str:
     """What a reader needs before running: the groups, and what was left out."""
     paths = found.run_paths()
@@ -389,7 +410,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     paths = found.run_paths()
 
     if args.paths:
-        print("\n".join(paths))
+        write_paths(sys.stdout, paths)
         return EXIT_OK
     print(report(found, touched, args.base))
     if not paths:

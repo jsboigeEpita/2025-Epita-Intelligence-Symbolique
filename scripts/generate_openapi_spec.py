@@ -61,7 +61,7 @@ output_path = os.path.join(
 )
 os.makedirs(os.path.dirname(output_path), exist_ok=True)
 
-with open(output_path, "w", encoding="utf-8") as f:
+with open(output_path, "w", encoding="utf-8", newline="\n") as f:
     json.dump(spec, f, indent=2, ensure_ascii=False)
 
 print(f"OpenAPI spec written to {output_path}")

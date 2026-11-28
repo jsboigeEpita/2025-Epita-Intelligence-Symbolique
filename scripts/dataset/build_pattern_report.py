@@ -323,20 +323,20 @@ def build_report(signatures: List[Dict[str, Any]],
 
     # Write report
     report_path.parent.mkdir(parents=True, exist_ok=True)
-    report_path.write_text(md, encoding="utf-8")
+    report_path.write_text(md, encoding="utf-8", newline="\n")
 
     # Write SVGs
     svg_dir = output_dir / "discourse_patterns"
     svg_dir.mkdir(parents=True, exist_ok=True)
 
     (svg_dir / "heatmap_fallacies.svg").write_text(
-        generate_heatmap_svg(coocc.get("pairs", [])), encoding="utf-8")
+        generate_heatmap_svg(coocc.get("pairs", [])), encoding="utf-8", newline="\n")
     (svg_dir / "asymmetry_chart.svg").write_text(
-        generate_asymmetry_svg(asymmetry), encoding="utf-8")
+        generate_asymmetry_svg(asymmetry), encoding="utf-8", newline="\n")
 
     for cid in cluster_ids[:5]:
         (svg_dir / f"spectrum_radar_{cid}.svg").write_text(
-            generate_radar_svg(spectrum, cid), encoding="utf-8")
+            generate_radar_svg(spectrum, cid), encoding="utf-8", newline="\n")
 
     return report_path
 

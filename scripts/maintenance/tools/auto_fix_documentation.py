@@ -171,7 +171,7 @@ class DocumentationAutoFixer:
                     updated_content = re.sub(pattern, replacement, updated_content)
 
             # Sauvegarder le fichier mis à jour
-            with open(file_full_path, "w", encoding="utf-8") as f:
+            with open(file_full_path, "w", encoding="utf-8", newline="\n") as f:
                 f.write(updated_content)
 
             # Supprimer le backup si succès
