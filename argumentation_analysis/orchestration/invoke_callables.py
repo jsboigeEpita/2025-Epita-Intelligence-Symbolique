@@ -553,17 +553,38 @@ _PHASE_MAX_TOKENS = _env_number("PHASE_MAX_TOKENS", 8192, int)
 # - the acts' phase budget is 180 s each (``workflows.py``: act1_framing,
 #   act2_narrative, act3_conclusion), and the two long acts make up to TWO
 #   calls (the primary and the bounded one retry, #3343).
-# - two calls must fit 180 s → at most ~90 s per call → at most ~18 900
-#   tokens per call at 210 tok/s.
-# 16 384 (2^14) is the value: ~78 s per call, ~156 s for two calls, ~24 s of
-# margin for prompt handling. It is TWICE the cap that failed, and it covers
-# the measures the issue carried: doc_J's Act II spent 26 225 completion
-# tokens over 2 calls (~13.1 k per call), and the Sonnet c21 maximum was
-# 14.4 k per document over 2 calls — both fit under 16 384 with ~20 % headroom.
+#
+# #3658 item 46f — the bound that actually binds is NOT ``180 / 2``. The
+# executor publishes the phase budget and ``PhaseBudgetTransport`` cuts EACH
+# transport attempt at ``compose_attempt_deadline(180)``
+# = min(90, max(1.5, (180 - 10 - 10) / 2)) = **80 s** (``network_utils.py``;
+# ``NetworkSettings``: ``default_timeout`` 90, ``retry_wait_max`` 10, margin
+# 10). At 205 to 215 tokens per second — the LOW end is the one that binds —
+# the 16 384-token value read 76 to 80 s: 0 to 4 s for the prompt and the
+# first token. A call that ran to the cap could therefore hit the timeout
+# instead of stopping on ``length``; it was re-issued (the first generation
+# billed and discarded) and the phase could be cancelled with the act empty
+# and unreported, so the #3458 guard saw nothing.
+#
+# So the cap is re-derived on the deadline the transport applies, with 46b's
+# own allowance of 12 s of prompt handling per call:
+#   (80 s - 12 s) x 205 tok/s = 13 940 tokens -> the largest fitting value.
+# 13 824 (13.5 x 1024) is the value: 67.4 s at the low rate, leaving 12.6 s of
+# slack inside the deadline — 12 s for the prompt allowance and 0.6 s over
+# (15.7 s of slack at 215 tok/s) — and 5.5 % above the measured per-call
+# maximum (doc_J's Act II spent 26 225 completion tokens over 2 calls, ~13.1 k
+# per call; the Sonnet c21 maximum was 14.4 k per document over 2 calls). The
+# ~20 % headroom 46b wanted no longer fits inside this deadline: a call that
+# needs more now stops on ``length`` and is NAMED (item 46a) instead of
+# expiring silently and being billed twice.
+#
+# The other lever the coordinator offered — raising the three acts'
+# ``timeout_seconds`` — is deliberately NOT taken here: it moves the composed
+# deadline for every document of every cycle, while the cap is the act's OWN
+# ceiling. One lever at a time; the witness records the constraint either way.
 #
 # Override via ACT_MAX_TOKENS; 0 omits the param (the pre-fix wire form).
-# Raising the PHASE budget instead is NOT this fix's business: the acts fit it.
-_ACT_MAX_TOKENS = _env_number("ACT_MAX_TOKENS", 16384, int)
+_ACT_MAX_TOKENS = _env_number("ACT_MAX_TOKENS", 13824, int)
 
 
 # The declared fields that can carry the cap, in the order a settings class
