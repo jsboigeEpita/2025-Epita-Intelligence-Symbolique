@@ -12,11 +12,14 @@ Script de nettoyage complet du projet qui effectue les opérations suivantes :
 - Création du répertoire `data` s'il n'existe pas
 - Mise à jour du fichier `.gitignore`
 - Suppression des rapports obsolètes
-- Vérification que les fichiers sensibles ne sont pas suivis par Git
+- Vérification que les fichiers sensibles ne sont pas suivis par Git (même instrument que `cleanup_repository.py` : défectueuse, #3738)
 
 **Utilisation :**
 ```bash
-python scripts/cleanup/cleanup_project.py
+# affiche ce qui serait fait, sans rien écrire ni supprimer
+python scripts/maintenance/cleanup/cleanup_project.py --dry-run
+
+python scripts/maintenance/cleanup/cleanup_project.py
 ```
 
 ### 2. cleanup_obsolete_files.py
@@ -39,16 +42,16 @@ Script pour gérer la suppression sécurisée des fichiers obsolètes du projet,
 **Utilisation :**
 ```bash
 # Simulation (dry-run)
-python scripts/cleanup/cleanup_obsolete_files.py --dry-run
+python scripts/maintenance/cleanup/cleanup_obsolete_files.py --dry-run
 
 # Lister les fichiers obsolètes
-python scripts/cleanup/cleanup_obsolete_files.py --list
+python scripts/maintenance/cleanup/cleanup_obsolete_files.py --list
 
 # Suppression avec logs détaillés
-python scripts/cleanup/cleanup_obsolete_files.py --verbose
+python scripts/maintenance/cleanup/cleanup_obsolete_files.py --verbose
 
 # Restauration des fichiers
-python scripts/cleanup/cleanup_obsolete_files.py --restore
+python scripts/maintenance/cleanup/cleanup_obsolete_files.py --restore
 ```
 
 ### 3. cleanup_repository.py
@@ -56,17 +59,23 @@ python scripts/cleanup/cleanup_obsolete_files.py --restore
 Script de nettoyage du dépôt Git qui effectue les opérations suivantes :
 - Création d'un fichier `.env.example` comme modèle
 - Suppression des dossiers vides qui ne devraient pas être versionnés
-- Suppression des fichiers temporaires Python du suivi Git
-- Vérification que les fichiers sensibles comme `.env` sont bien ignorés par Git
+- Retrait du suivi Git des fichiers temporaires Python (bytecode), sans les supprimer du disque
+- Retrait du suivi Git des `.jar` que les règles d'exclusion du dépôt ignorent déjà (#3735) ; les autres restent suivis et sont nommés
+- Vérification que les fichiers sensibles comme `.env` sont bien ignorés par Git — défectueuse : un `.env` suivi et non modifié est annoncé « correctement ignoré » (#3738)
+
+Git y est lancé en liste d'arguments, depuis la racine du dépôt : la portée d'un pattern ne dépend ni du shell ni du répertoire d'appel (#3735).
 
 **Utilisation :**
 ```bash
-python scripts/cleanup/cleanup_repository.py
+# montre la portée chemin par chemin, sans rien écrire, supprimer ni désindexer
+python scripts/maintenance/cleanup/cleanup_repository.py --dry-run
+
+python scripts/maintenance/cleanup/cleanup_repository.py
 ```
 
 ## Bonnes pratiques
 
-1. **Exécuter les scripts depuis la racine du projet** pour garantir que les chemins relatifs fonctionnent correctement.
+1. **Le retrait du suivi de `cleanup_repository.py` se lance de n'importe quel répertoire** (#3735) : git y est lancé en liste d'arguments, depuis la racine du dépôt. La vérification des fichiers sensibles des deux scripts est défectueuse, de la racine comme d'ailleurs (#3738).
 2. **Toujours exécuter en mode simulation d'abord** avec l'option `--dry-run` pour les scripts qui la supportent.
 3. **Vérifier les fichiers concernés** avant de procéder à des suppressions.
 4. **Conserver les archives** générées par `cleanup_obsolete_files.py` pour pouvoir restaurer les fichiers si nécessaire.

@@ -12,6 +12,12 @@ si bien que le modèle était écrit dans `scripts/argumentation_analysis/.env.e
 un chemin ignoré par git — au lieu de celui du dépôt.
 
 `--dry-run` affiche ce qui serait fait, sans rien écrire, supprimer ni désindexer.
+Pour le retrait du suivi, il montre la portée chemin par chemin (#3735).
+
+Le retrait du suivi (#3735) lance git en liste d'arguments, depuis la racine : la
+portée d'un pattern ne dépend ni du shell ni du répertoire de l'appelant. Pour les
+`.jar`, ne sont retirés que les fichiers suivis que les règles d'exclusion du dépôt
+ignorent déjà ; les autres restent suivis, et sont nommés.
 """
 
 import argumentation_analysis.core.environment
@@ -67,40 +73,140 @@ def run_git_command(command):
         return False, f"Erreur: {e.stderr}"
 
 
-def remove_files_from_git_tracking(pattern, is_dir=False, dry_run=False):
-    """Supprime les fichiers correspondant au pattern du suivi Git sans les supprimer du système.
-    Utilise une approche simple compatible avec cmd.exe."""
-    # Commande de base
-    base_cmd = "git rm --cached"
-    if is_dir:
-        base_cmd += " -r"
+def _git(*args: str, stdin: bytes | None = None) -> subprocess.CompletedProcess[bytes]:
+    """Git, en liste d'arguments, depuis la racine du dépôt — jamais via un shell (#3735).
 
-    if dry_run:
-        print(f"[dry-run] {base_cmd} {pattern}")
+    Le pattern est confié à git tel quel : c'est lui qui le lit (un `*` de
+    pathspec traverse les `/`), et la portée ne dépend alors ni du shell ni du
+    répertoire de l'appelant. Les sorties restent des octets ; les chemins de
+    l'index et les messages sont décodés en UTF-8 là où on les lit.
+    """
+    return subprocess.run(
+        ["git", *args], cwd=PROJECT_ROOT, input=stdin, capture_output=True
+    )
+
+
+def _text(data: bytes) -> str:
+    return data.decode("utf-8", errors="replace").strip()
+
+
+def _nul(entries: list[str]) -> bytes:
+    """Les entrées séparées par un caractère nul : la forme que git lit sans décodage."""
+    return b"".join(entry.encode("utf-8") + b"\0" for entry in entries)
+
+
+def _ignored_by_the_rules(paths: list[str]) -> set[str]:
+    """Parmi ces chemins suivis, ceux que les règles d'exclusion du dépôt ignorent (#3735).
+
+    La réponse vient des règles du dépôt seul : ses `.gitignore` et son
+    `.git/info/exclude`. `core.excludesFile` est vidé pour la mesure — un fichier
+    d'exclusion global appartient à une machine, pas au dépôt, et ne décide pas à
+    sa place. `--no-index` : la réponse est celle des règles, pour un fichier
+    suivi comme pour un autre. Git rend les chemins ignorés séparés par un
+    caractère nul ; code 0 s'il y en a, 1 s'il n'y en a aucun.
+    """
+    result = _git(
+        "-c",
+        "core.excludesFile=",
+        "check-ignore",
+        "--no-index",
+        "-z",
+        "--stdin",
+        stdin=_nul(paths),
+    )
+    if result.returncode not in (0, 1):
+        raise RuntimeError(
+            f"git check-ignore a échoué (code {result.returncode}) : "
+            f"{_text(result.stderr)}"
+        )
+    return {path for path in result.stdout.decode("utf-8").split("\0") if path}
+
+
+def remove_files_from_git_tracking(
+    pattern: str, dry_run: bool = False, only_ignored: bool = False
+) -> bool:
+    """Retire du suivi Git les fichiers que le pattern atteint, sans les toucher sur le disque (#3735).
+
+    Git est lancé en liste d'arguments, depuis la racine du dépôt : la portée ne
+    dépend plus du shell (sous cmd.exe, il ne développe pas `*.jar`) ni du
+    répertoire de l'appelant. Le dry-run la montre chemin par chemin.
+
+    `only_ignored` borne le retrait aux fichiers atteints que les règles
+    d'exclusion du dépôt ignorent déjà. C'est la décision prise pour les `.jar` :
+    l'index suit les règles. Un fichier suivi que ces règles n'ignorent pas reste
+    suivi — le nettoyage ne le retire pas, et le nomme. La décision se lit dans
+    les règles à chaque exécution ; elle ne les précède pas.
+    """
+    listing = _git("ls-files", "-z", "--cached", "--", pattern)
+    if listing.returncode != 0:
+        print(
+            f"Échec de la recherche des fichiers '{pattern}' dans le suivi Git : "
+            f"{_text(listing.stderr)}"
+        )
+        return False
+    reached = [path for path in listing.stdout.decode("utf-8").split("\0") if path]
+    if not reached:
+        print(f"Aucun fichier suivi ne correspond à '{pattern}'.")
         return True
 
-    # Exécute la commande (ignorera les erreurs si aucun fichier ne correspond)
-    command = f"{base_cmd} {pattern}"
-    try:
-        result = subprocess.run(command, shell=True, capture_output=True, text=True)
-        if result.returncode == 0:
-            print(f"Fichiers correspondant à '{pattern}' supprimés du suivi Git.")
-            return True
-        else:
-            # Si la commande échoue parce qu'aucun fichier ne correspond, ce n'est pas une erreur
-            if "did not match any files" in result.stderr:
-                print(
-                    f"Aucun fichier correspondant à '{pattern}' n'a été trouvé dans le suivi Git."
-                )
-                return True
-            else:
-                print(
-                    f"Échec de la suppression des fichiers '{pattern}' du suivi Git: {result.stderr}"
-                )
-                return False
-    except Exception as e:
-        print(f"Erreur lors de l'exécution de la commande: {e}")
+    to_remove = list(reached)
+    kept: list[str] = []
+    if only_ignored:
+        try:
+            ignored = _ignored_by_the_rules(reached)
+        except RuntimeError as exc:
+            print(f"Rien n'est retiré du suivi pour '{pattern}' : {exc}")
+            return False
+        kept = [path for path in reached if path not in ignored]
+        to_remove = [path for path in reached if path in ignored]
+
+    print(
+        f"Le pattern '{pattern}' atteint {len(reached)} fichier(s) suivi(s) : "
+        f"{len(to_remove)} à retirer, {len(kept)} à conserver."
+    )
+    for path in kept:
+        fate = "serait conservé" if dry_run else "conservé"
+        print(
+            f"{'[dry-run] ' if dry_run else ''}{fate} — suivi, et aucune règle "
+            f"d'exclusion du dépôt ne l'ignore : {path}"
+        )
+    if not to_remove:
+        fate = "[dry-run] rien à retirer" if dry_run else "Rien à retirer"
+        print(f"{fate} du suivi pour '{pattern}'.")
+        return True
+
+    # Chaque chemin est confié à git en littéral (`:(literal)`) : un nom qui porte
+    # un crochet ne devient pas un gabarit atteignant aussi son voisin.
+    removal = ["rm", "--cached"]
+    if dry_run:
+        removal.append("-n")
+    result = _git(
+        *removal,
+        "--pathspec-from-file=-",
+        "--pathspec-file-nul",
+        stdin=_nul([f":(literal){path}" for path in to_remove]),
+    )
+    if result.returncode != 0:
+        print(
+            f"Échec du retrait des fichiers '{pattern}' du suivi Git : "
+            f"{_text(result.stderr)}"
+        )
         return False
+    done = [
+        line[len("rm '") : -1]
+        for line in result.stdout.decode("utf-8").splitlines()
+        if line.startswith("rm '") and line.endswith("'")
+    ]
+    if sorted(done) != sorted(to_remove):
+        print(
+            f"Le retrait s'est arrêté pour '{pattern}' : git annonce "
+            f"{len(done)} chemin(s), la décision en portait {len(to_remove)}."
+        )
+        return False
+    for path in done:
+        fate = "[dry-run] serait retiré" if dry_run else "Retiré"
+        print(f"{fate} du suivi : {path}")
+    return True
 
 
 def main(argv=None):
@@ -127,15 +233,17 @@ def main(argv=None):
 
     # Suppression des fichiers __pycache__ du suivi Git
     print("\nSuppression des dossiers __pycache__ du suivi Git...")
-    remove_files_from_git_tracking("*/__pycache__", is_dir=True, dry_run=dry_run)
+    remove_files_from_git_tracking("*/__pycache__", dry_run=dry_run)
 
     # Suppression des fichiers .pyc du suivi Git
     print("\nSuppression des fichiers .pyc du suivi Git...")
     remove_files_from_git_tracking("*.pyc", dry_run=dry_run)
 
-    # Suppression des fichiers .jar du suivi Git
+    # Suppression des fichiers .jar du suivi Git. Seuls sont retirés les fichiers
+    # suivis que les règles d'exclusion du dépôt ignorent déjà (#3735) : l'index
+    # suit les règles, les autres restent suivis.
     print("\nSuppression des fichiers .jar du suivi Git...")
-    remove_files_from_git_tracking("*.jar", dry_run=dry_run)
+    remove_files_from_git_tracking("*.jar", dry_run=dry_run, only_ignored=True)
 
     print("\n=== Gestion des fichiers de configuration ===")
 
