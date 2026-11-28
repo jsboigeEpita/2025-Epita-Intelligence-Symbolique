@@ -112,13 +112,17 @@ def _zip_response(log_text: str) -> io.BytesIO:
 def _fake_urlopen_with_log(
     log_text: str,
 ) -> Callable[[Any], io.BytesIO]:
-    def _urlopen(req: Any, timeout: float = 30.0) -> io.BytesIO:
+    def _urlopen(
+        req: Any, timeout: float = 30.0, context: Any = None
+    ) -> io.BytesIO:
         return _zip_response(log_text)
 
     return _urlopen
 
 
-def _fake_urlopen_404(req: Any, timeout: float = 30.0) -> io.BytesIO:
+def _fake_urlopen_404(
+    req: Any, timeout: float = 30.0, context: Any = None
+) -> io.BytesIO:
     raise urllib.error.HTTPError(
         str(getattr(req, "full_url", req)), 404, "Not Found", None, None
     )
