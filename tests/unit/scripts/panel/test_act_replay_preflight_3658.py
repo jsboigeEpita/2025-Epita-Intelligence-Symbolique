@@ -262,6 +262,55 @@ def test_a_file_the_panel_does_not_name_is_a_stray(
     assert _details(verdict)[1:] == ["copied=2 present=3", "panel_size=2 present=3"]
 
 
+def test_a_declared_probe_names_what_it_leaves_out(tmp_path: Path) -> None:
+    """#3658 item 46g — the paid path is measured on one document before the
+    panel is spent. Declared, the cycle's other documents are left out and
+    NAMED; the same panel undeclared stays the stray it always was, so a panel
+    silently narrower than its cycle is still a defect."""
+    cycle = _cycle(tmp_path)
+
+    declared = ap.preflight(cycle, _fresh(tmp_path), panel=["doc_x1"], probe=True)
+    silent = ap.preflight(cycle, _fresh(tmp_path), panel=["doc_x1"])
+
+    assert declared.ok, declared.problems
+    assert declared.probe is True
+    assert declared.panel == ("doc_x1",)
+    assert declared.left_out == ("doc_x2",)
+    assert declared.pairs_ok == 1
+    report = declared.as_dict()
+    assert report["probe"] is True
+    assert report["left_out"] == ["doc_x2"]
+
+    assert _kinds(silent) == [ap.STRAY_PAIR]
+    assert silent.probe is False
+    assert silent.left_out == ()
+
+
+def test_a_probe_still_refuses_a_document_it_names_without_its_pair(
+    tmp_path: Path,
+) -> None:
+    """The declaration lifts the stray refusal only: what the probe covers is
+    checked as strictly as a whole panel would be."""
+    cycle = _cycle(tmp_path)
+    _sig_path(cycle, "doc_x1").unlink()
+
+    verdict = ap.preflight(cycle, _fresh(tmp_path), panel=["doc_x1"], probe=True)
+
+    assert _kinds(verdict) == [ap.MISSING_PAIR]
+    assert not verdict.ok
+
+
+def test_a_probe_does_not_weaken_the_harvest_checks(tmp_path: Path) -> None:
+    """The harvest is the cycle's, not the probe's: a cycle that lost a pair
+    stays refused however narrow the probe is."""
+    cycle = _cycle(tmp_path, stale=1)
+
+    verdict = ap.preflight(cycle, _fresh(tmp_path), panel=["doc_x1"], probe=True)
+
+    assert not verdict.ok
+    assert ap.HARVEST_INCOMPLETE in _kinds(verdict)
+
+
 def test_a_panel_document_the_cycle_lacks_is_named_twice(tmp_path: Path) -> None:
     cycle = _cycle(tmp_path)
 
@@ -927,6 +976,40 @@ def test_the_cli_refuses_an_empty_panel_rather_than_checking_nothing(
 
     assert run.returncode == 2
     assert "empty" in run.stderr
+    assert run.stdout == ""
+
+
+def test_the_cli_probe_names_the_documents_it_leaves_out(tmp_path: Path) -> None:
+    cycle = _cycle(tmp_path)
+
+    run = _run_cli(
+        "--cycle-dir",
+        str(cycle),
+        "--dest",
+        str(_fresh(tmp_path)),
+        "--panel",
+        "doc_x1",
+        "--probe",
+    )
+
+    assert run.returncode == 0, run.stderr
+    report = json.loads(run.stdout)
+    assert report["ok"] is True
+    assert report["probe"] is True
+    assert report["left_out"] == ["doc_x2"]
+
+
+def test_the_cli_refuses_a_probe_that_names_nothing(tmp_path: Path) -> None:
+    """A probe is a subset of a named panel: without ``--panel`` there is no
+    subset to declare, and the whole cycle would be the thing measured."""
+    cycle = _cycle(tmp_path)
+
+    run = _run_cli(
+        "--cycle-dir", str(cycle), "--dest", str(_fresh(tmp_path)), "--probe"
+    )
+
+    assert run.returncode == 2
+    assert "--probe" in run.stderr
     assert run.stdout == ""
 
 
