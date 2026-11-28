@@ -510,12 +510,12 @@ def _apply_effort_to_raw_kwargs(
 # coordinator's paired pass, not a default this file picks (anti-pendulum).
 
 _ANTHROPIC_THINKING_ENV = "LLM_ANTHROPIC_THINKING"
-# The measured-accepted dictionary. Anything else fails loud below; when a
-# new value is measured good, it joins this tuple.
-_ANTHROPIC_THINKING_TYPES = ("between_tools",)
-# Named separately: values the endpoint itself refuses (400, measured) — the
-# knob must fail BEFORE a pass spends a call discovering it.
-_ANTHROPIC_THINKING_REFUSED = ("disabled", "enabled", "auto")
+# Measured on the OpenAI-compatible endpoint, not transferable across models:
+# Sonnet: #3096 comment 6527232924; Haiku: #3658 comment 7230855064.
+_ANTHROPIC_THINKING_TYPES = {
+    "claude-sonnet-5-5": ("between_tools",),
+    "claude-haiku-5-5": ("disabled", "enabled"),
+}
 _thinking_unannounced = True
 _thinking_barren_types: List[str] = []
 _thinking_misrouted = False
@@ -588,23 +588,6 @@ def anthropic_thinking_override(
     raw = (os.environ.get(_ANTHROPIC_THINKING_ENV) or "").strip().lower()
     if not raw:
         return None
-    if raw in _ANTHROPIC_THINKING_TYPES:
-        payload: Optional[Dict[str, Any]] = {"type": raw}
-    elif raw in _ANTHROPIC_THINKING_REFUSED:
-        raise ValueError(
-            f"{_ANTHROPIC_THINKING_ENV}={raw!r} — the endpoint REFUSES this "
-            "value (measured 400, #3096 comment 6527232924): on this model "
-            "thinking is on by default and "
-            "{'thinking': {'type': 'between_tools'}} is what turns the "
-            "hidden share off. Set between_tools or unset the variable."
-        )
-    else:
-        raise ValueError(
-            f"{_ANTHROPIC_THINKING_ENV}={raw!r} — expected one of "
-            f"{'/'.join(_ANTHROPIC_THINKING_TYPES)} (#3096 item 5). Fix the "
-            "value or unset the variable; a typo must not run a pass at the "
-            "endpoint default."
-        )
     if model_id is not None and not anthropic_route(model_id):
         if not _thinking_misrouted:
             _thinking_misrouted = True
@@ -616,9 +599,26 @@ def anthropic_thinking_override(
                 model_id,
             )
         return None
+    accepted = _ANTHROPIC_THINKING_TYPES.get(model_id or "")
+    if accepted is None:
+        raise ValueError(
+            f"No thinking measurement for model {model_id!r}; run "
+            f"python scripts/probe_anthropic_thinking.py --model {model_id or '<model>'}"
+        )
+    if raw not in accepted:
+        raise ValueError(
+            f"{_ANTHROPIC_THINKING_ENV}={raw!r} is not measured accepted for "
+            f"{model_id}; accepted: {', '.join(accepted)}."
+        )
     if _thinking_unannounced:
         _thinking_unannounced = False
         logger.info("#3096 item 5: Anthropic thinking set explicitly: %s", raw)
+    payload: Dict[str, Any] = {"type": raw}
+    budget = (os.environ.get("LLM_ANTHROPIC_THINKING_BUDGET") or "").strip()
+    if budget:
+        if raw != "enabled" or not budget.isdecimal() or int(budget) <= 0:
+            raise ValueError("LLM_ANTHROPIC_THINKING_BUDGET requires enabled and a positive integer")
+        payload["budget_tokens"] = int(budget)
     return payload
 
 
